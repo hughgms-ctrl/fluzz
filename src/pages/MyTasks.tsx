@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskCard } from "@/components/tasks/TaskCard";
+import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -11,6 +13,10 @@ import { CheckCircle2, Clock, PlayCircle } from "lucide-react";
 export default function MyTasks() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dueDateFilter, setDueDateFilter] = useState("all");
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["my-tasks", user?.id],
@@ -66,9 +72,43 @@ export default function MyTasks() {
     );
   }
 
-  const todoTasks = tasks?.filter((t) => t.status === "todo") || [];
-  const inProgressTasks = tasks?.filter((t) => t.status === "in_progress") || [];
-  const completedTasks = tasks?.filter((t) => t.status === "completed") || [];
+  // Apply filters
+  const filteredTasks = tasks?.filter((task) => {
+    const matchesSearch =
+      searchTerm === "" ||
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+    const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+
+    let matchesDueDate = true;
+    if (dueDateFilter !== "all" && task.due_date) {
+      const dueDate = new Date(task.due_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (dueDateFilter === "overdue") {
+        matchesDueDate = dueDate < today && task.status !== "completed";
+      } else if (dueDateFilter === "today") {
+        matchesDueDate = dueDate.toDateString() === today.toDateString();
+      } else if (dueDateFilter === "week") {
+        const weekFromNow = new Date(today);
+        weekFromNow.setDate(today.getDate() + 7);
+        matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
+      } else if (dueDateFilter === "month") {
+        const monthFromNow = new Date(today);
+        monthFromNow.setMonth(today.getMonth() + 1);
+        matchesDueDate = dueDate >= today && dueDate <= monthFromNow;
+      }
+    }
+
+    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate;
+  }) || [];
+
+  const todoTasks = filteredTasks.filter((t) => t.status === "todo");
+  const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
+  const completedTasks = filteredTasks.filter((t) => t.status === "completed");
 
   return (
     <AppLayout>
@@ -80,10 +120,21 @@ export default function MyTasks() {
           </p>
         </div>
 
+        <TaskFilters
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          priorityFilter={priorityFilter}
+          onPriorityChange={setPriorityFilter}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          dueDateFilter={dueDateFilter}
+          onDueDateChange={setDueDateFilter}
+        />
+
         <Tabs defaultValue="all" className="w-full">
           <TabsList>
             <TabsTrigger value="all">
-              Todas ({tasks?.length || 0})
+              Todas ({filteredTasks.length})
             </TabsTrigger>
             <TabsTrigger value="todo" className="gap-2">
               <Clock size={16} />
@@ -102,9 +153,9 @@ export default function MyTasks() {
           <TabsContent value="all" className="mt-6">
             <Card>
               <CardContent className="pt-6">
-                {tasks && tasks.length > 0 ? (
+                {filteredTasks.length > 0 ? (
                   <div className="space-y-3">
-                    {tasks.map((task) => (
+                    {filteredTasks.map((task) => (
                       <TaskCard
                         key={task.id}
                         task={task}
