@@ -28,7 +28,7 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("projects")
         .insert([
           {
@@ -37,17 +37,28 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
             description,
             status: "active",
           },
-        ]);
-      if (error) throw error;
+        ])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error("Erro ao criar projeto:", error);
+        throw error;
+      }
+      
+      console.log("Projeto criado com sucesso:", data);
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await queryClient.refetchQueries({ queryKey: ["projects"] });
       toast.success("Projeto criado com sucesso!");
       setName("");
       setDescription("");
       onOpenChange(false);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Erro na mutation:", error);
       toast.error("Erro ao criar projeto");
     },
   });
