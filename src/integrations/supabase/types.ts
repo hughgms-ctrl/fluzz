@@ -19,31 +19,39 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          mission: string | null
           section: string
           title: string
           updated_at: string | null
+          values: string | null
+          vision: string | null
         }
         Insert: {
           content: string
           created_at?: string | null
           id?: string
+          mission?: string | null
           section: string
           title: string
           updated_at?: string | null
+          values?: string | null
+          vision?: string | null
         }
         Update: {
           content?: string
           created_at?: string | null
           id?: string
+          mission?: string | null
           section?: string
           title?: string
           updated_at?: string | null
+          values?: string | null
+          vision?: string | null
         }
         Relationships: []
       }
-      process_documentation: {
+      company_news: {
         Row: {
-          area: string
           content: string
           created_at: string | null
           created_by: string | null
@@ -52,7 +60,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          area: string
           content: string
           created_at?: string | null
           created_by?: string | null
@@ -61,12 +68,56 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          area?: string
           content?: string
           created_at?: string | null
           created_by?: string | null
           id?: string
           title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      process_documentation: {
+        Row: {
+          area: string
+          checklist: string | null
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          objective: string | null
+          responsible: string | null
+          steps: string | null
+          title: string
+          tools: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          area: string
+          checklist?: string | null
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          objective?: string | null
+          responsible?: string | null
+          steps?: string | null
+          title: string
+          tools?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          area?: string
+          checklist?: string | null
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          objective?: string | null
+          responsible?: string | null
+          steps?: string | null
+          title?: string
+          tools?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -198,6 +249,41 @@ export type Database = {
         }
         Relationships: []
       }
+      subtasks: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          task_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          task_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          task_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -208,6 +294,7 @@ export type Database = {
           due_date: string | null
           id: string
           priority: string | null
+          process_id: string | null
           project_id: string
           status: string | null
           title: string
@@ -222,6 +309,7 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string | null
+          process_id?: string | null
           project_id: string
           status?: string | null
           title: string
@@ -236,12 +324,20 @@ export type Database = {
           due_date?: string | null
           id?: string
           priority?: string | null
+          process_id?: string | null
           project_id?: string
           status?: string | null
           title?: string
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_project_id_fkey"
             columns: ["project_id"]
