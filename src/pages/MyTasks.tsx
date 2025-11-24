@@ -17,15 +17,28 @@ export default function MyTasks() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dueDateFilter, setDueDateFilter] = useState("all");
+  const [projectFilter, setProjectFilter] = useState("all");
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["my-tasks", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, projects(id, name)")
         .eq("assigned_to", user!.id)
         .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: projects } = useQuery({
+    queryKey: ["my-projects-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -81,6 +94,7 @@ export default function MyTasks() {
 
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+    const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
 
     let matchesDueDate = true;
     if (dueDateFilter !== "all" && task.due_date) {
@@ -103,7 +117,7 @@ export default function MyTasks() {
       }
     }
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate;
+    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject;
   }) || [];
 
   const todoTasks = filteredTasks.filter((t) => t.status === "todo");
@@ -129,6 +143,9 @@ export default function MyTasks() {
           onStatusChange={setStatusFilter}
           dueDateFilter={dueDateFilter}
           onDueDateChange={setDueDateFilter}
+          projectFilter={projectFilter}
+          onProjectChange={setProjectFilter}
+          projects={projects}
         />
 
         <Tabs defaultValue="all" className="w-full">

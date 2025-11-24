@@ -18,6 +18,9 @@ interface TaskFiltersProps {
   onStatusChange: (value: string) => void;
   dueDateFilter: string;
   onDueDateChange: (value: string) => void;
+  projectFilter?: string;
+  onProjectChange?: (value: string) => void;
+  projects?: Array<{ id: string; name: string }>;
 }
 
 export const TaskFilters = ({
@@ -29,6 +32,9 @@ export const TaskFilters = ({
   onStatusChange,
   dueDateFilter,
   onDueDateChange,
+  projectFilter,
+  onProjectChange,
+  projects,
 }: TaskFiltersProps) => {
   return (
     <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
@@ -46,7 +52,26 @@ export const TaskFilters = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {projectFilter !== undefined && onProjectChange && (
+          <div className="space-y-2">
+            <Label htmlFor="project">Projeto</Label>
+            <Select value={projectFilter} onValueChange={onProjectChange}>
+              <SelectTrigger id="project">
+                <SelectValue placeholder="Todos os projetos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os projetos</SelectItem>
+                {projects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="priority">Prioridade</Label>
           <Select value={priorityFilter} onValueChange={onPriorityChange}>

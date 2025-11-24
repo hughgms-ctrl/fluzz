@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MoreVertical, Trash2, Calendar, User, FileText } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -24,6 +25,7 @@ interface TaskCardProps {
 }
 
 export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
+  const navigate = useNavigate();
   const [verified, setVerified] = useState(task.completed_verified || false);
   const [showDoc, setShowDoc] = useState(false);
   
@@ -57,11 +59,11 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/tasks/${task.id}`)}>
       <div className="space-y-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1">{task.title}</h3>
+            <h3 className="font-semibold text-foreground mb-1 hover:text-primary transition-colors">{task.title}</h3>
             {task.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">
                 {task.description}
@@ -70,7 +72,12 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 ml-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 ml-2" 
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreVertical size={16} />
               </Button>
             </DropdownMenuTrigger>
