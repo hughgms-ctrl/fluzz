@@ -1,4 +1,4 @@
-import { Home, FolderKanban, CheckSquare, User, LogOut } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,9 +15,16 @@ import {
 } from "@/components/ui/sidebar";
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Workspace", url: "/", icon: Briefcase },
+  { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Projetos", url: "/projects", icon: FolderKanban },
-  { title: "Perfil", url: "/profile", icon: User },
+  { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare },
+];
+
+const workspaceItems = [
+  { title: "Cultura", url: "/workspace/culture", icon: Heart },
+  { title: "Visão & Valores", url: "/workspace/vision", icon: Target },
+  { title: "Processos", url: "/workspace/processes", icon: FileText },
 ];
 
 export function AppSidebar() {
@@ -56,6 +63,37 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel className={isCollapsed ? "text-center" : ""}>
+            Empresa
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {workspaceItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className="hover:bg-accent transition-colors"
+                      activeClassName="bg-accent text-accent-foreground font-medium"
+                    >
+                      <item.icon className={isCollapsed ? "mx-auto" : "mr-3"} size={20} />
+                      {!isCollapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={signOut}>
                   <LogOut className={isCollapsed ? "mx-auto" : "mr-3"} size={20} />

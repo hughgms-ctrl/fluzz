@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -36,6 +36,19 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
   const [dueDate, setDueDate] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
+  const [documentation, setDocumentation] = useState("");
+
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -49,7 +62,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             priority,
             status,
             due_date: dueDate || null,
-            assigned_to: user!.id,
+            assigned_to: assignedTo || user!.id,
+            documentation: documentation || null,
           },
         ]);
       if (error) throw error;
@@ -72,6 +86,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     setPriority("medium");
     setStatus("todo");
     setDueDate("");
+    setAssignedTo("");
+    setDocumentation("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -148,6 +164,31 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assigned_to">Responsável</Label>
+            <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles?.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.full_name || "Sem nome"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="documentation">Documentação</Label>
+            <Textarea
+              id="documentation"
+              value={documentation}
+              onChange={(e) => setDocumentation(e.target.value)}
+              placeholder="Adicione documentação, links ou anotações importantes..."
+              rows={3}
             />
           </div>
           <div className="flex justify-end gap-2">
