@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      company_info: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          section: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          section: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          section?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      process_documentation: {
+        Row: {
+          area: string
+          content: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          area: string
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          area?: string
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -71,8 +128,10 @@ export type Database = {
       tasks: {
         Row: {
           assigned_to: string | null
+          completed_verified: boolean | null
           created_at: string | null
           description: string | null
+          documentation: string | null
           due_date: string | null
           id: string
           priority: string | null
@@ -83,8 +142,10 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          completed_verified?: boolean | null
           created_at?: string | null
           description?: string | null
+          documentation?: string | null
           due_date?: string | null
           id?: string
           priority?: string | null
@@ -95,8 +156,10 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          completed_verified?: boolean | null
           created_at?: string | null
           description?: string | null
+          documentation?: string | null
           due_date?: string | null
           id?: string
           priority?: string | null

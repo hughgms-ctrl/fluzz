@@ -1,0 +1,214 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { TaskCard } from "@/components/tasks/TaskCard";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { CheckCircle2, Clock, PlayCircle } from "lucide-react";
+
+export default function MyTasks() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ["my-tasks", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("assigned_to", user!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-tasks", user?.id] });
+      toast.success("Tarefa excluída com sucesso!");
+    },
+    onError: () => {
+      toast.error("Erro ao excluir tarefa");
+    },
+  });
+
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status })
+        .eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["my-tasks", user?.id] });
+      toast.success("Status atualizado!");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const todoTasks = tasks?.filter((t) => t.status === "todo") || [];
+  const inProgressTasks = tasks?.filter((t) => t.status === "in_progress") || [];
+  const completedTasks = tasks?.filter((t) => t.status === "completed") || [];
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Minhas Tarefas</h1>
+          <p className="text-muted-foreground mt-1">
+            Visualize e gerencie todas as tarefas atribuídas a você
+          </p>
+        </div>
+
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList>
+            <TabsTrigger value="all">
+              Todas ({tasks?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="todo" className="gap-2">
+              <Clock size={16} />
+              A Fazer ({todoTasks.length})
+            </TabsTrigger>
+            <TabsTrigger value="in_progress" className="gap-2">
+              <PlayCircle size={16} />
+              Em Progresso ({inProgressTasks.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="gap-2">
+              <CheckCircle2 size={16} />
+              Concluídas ({completedTasks.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-6">
+            <Card>
+              <CardContent className="pt-6">
+                {tasks && tasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {tasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDelete={() => deleteTaskMutation.mutate(task.id)}
+                        onStatusChange={(status) =>
+                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma tarefa atribuída a você ainda
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="todo" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>A Fazer</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {todoTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {todoTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDelete={() => deleteTaskMutation.mutate(task.id)}
+                        onStatusChange={(status) =>
+                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma tarefa para fazer
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="in_progress" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Em Progresso</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {inProgressTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {inProgressTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDelete={() => deleteTaskMutation.mutate(task.id)}
+                        onStatusChange={(status) =>
+                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma tarefa em progresso
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="completed" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Concluídas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {completedTasks.length > 0 ? (
+                  <div className="space-y-3">
+                    {completedTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        onDelete={() => deleteTaskMutation.mutate(task.id)}
+                        onStatusChange={(status) =>
+                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhuma tarefa concluída
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
+  );
+}

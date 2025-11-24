@@ -1,7 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Trash2, Calendar } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { MoreVertical, Trash2, Calendar, User, FileText } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,10 +24,28 @@ interface TaskCardProps {
 }
 
 export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
+  const [verified, setVerified] = useState(task.completed_verified || false);
+  const [showDoc, setShowDoc] = useState(false);
+  
   const priorityColors = {
     high: "destructive",
     medium: "default",
     low: "secondary",
+  };
+
+  const handleVerifyToggle = async (checked: boolean) => {
+    const { error } = await supabase
+      .from("tasks")
+      .update({ completed_verified: checked })
+      .eq("id", task.id);
+    
+    if (error) {
+      toast.error("Erro ao atualizar certificação");
+      return;
+    }
+    
+    setVerified(checked);
+    toast.success(checked ? "Tarefa certificada!" : "Certificação removida");
   };
 
   const statusLabels = {
@@ -92,6 +114,48 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
             </div>
           )}
         </div>
+
+        {task.assigned_to && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <User size={12} />
+            <span>Responsável atribuído</span>
+          </div>
+        )}
+
+        {task.status === "completed" && (
+          <div className="flex items-center gap-2 pt-2 border-t">
+            <Checkbox
+              id={`verify-${task.id}`}
+              checked={verified}
+              onCheckedChange={handleVerifyToggle}
+            />
+            <label
+              htmlFor={`verify-${task.id}`}
+              className="text-sm text-muted-foreground cursor-pointer"
+            >
+              Certificar conclusão
+            </label>
+          </div>
+        )}
+
+        {task.documentation && (
+          <div className="pt-2 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDoc(!showDoc)}
+              className="gap-2 h-8"
+            >
+              <FileText size={14} />
+              {showDoc ? "Ocultar" : "Ver"} Documentação
+            </Button>
+            {showDoc && (
+              <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                {task.documentation}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );
