@@ -1,4 +1,4 @@
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,6 +19,8 @@ const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: Home },
   { title: "Projetos", url: "/projects", icon: FolderKanban },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare },
+  { title: "Analytics", url: "/analytics", icon: BarChart3 },
+  { title: "Perfil", url: "/profile", icon: User },
 ];
 
 const workspaceItems = [
