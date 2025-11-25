@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,8 @@ import {
   Plus,
   Trash2,
   Save,
-  LinkIcon
+  LinkIcon,
+  Edit2
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -44,6 +45,16 @@ export default function TaskDetail() {
   const queryClient = useQueryClient();
   const [newSubtask, setNewSubtask] = useState("");
   const [isAddingProcess, setIsAddingProcess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTask, setEditedTask] = useState({
+    title: "",
+    description: "",
+    priority: "",
+    status: "",
+    setor: "",
+    due_date: "",
+    documentation: ""
+  });
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", id],
@@ -57,6 +68,20 @@ export default function TaskDetail() {
       return data;
     },
   });
+
+  useEffect(() => {
+    if (task) {
+      setEditedTask({
+        title: task.title || "",
+        description: task.description || "",
+        priority: task.priority || "medium",
+        status: task.status || "todo",
+        setor: task.setor || "",
+        due_date: task.due_date || "",
+        documentation: task.documentation || ""
+      });
+    }
+  }, [task]);
 
   const { data: processes } = useQuery({
     queryKey: ["processes"],
@@ -126,6 +151,28 @@ export default function TaskDetail() {
     },
   });
 
+  const updateTaskMutation = useMutation({
+    mutationFn: async (updates: any) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update(updates)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      setIsEditing(false);
+      toast.success("Tarefa atualizada!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar tarefa");
+    }
+  });
+
+  const handleSave = () => {
+    updateTaskMutation.mutate(editedTask);
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -168,10 +215,47 @@ export default function TaskDetail() {
             <ArrowLeft size={20} />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-foreground">{task.title}</h1>
+            {isEditing ? (
+              <Input
+                value={editedTask.title}
+                onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                className="text-3xl font-bold h-auto py-2"
+              />
+            ) : (
+              <h1 className="text-3xl font-bold text-foreground">{task.title}</h1>
+            )}
             <p className="text-muted-foreground mt-1">
               Projeto: {task.projects?.name || "Sem projeto"}
             </p>
+          </div>
+          <div className="flex gap-2">
+            {isEditing ? (
+              <>
+                <Button onClick={handleSave} disabled={updateTaskMutation.isPending}>
+                  <Save size={16} className="mr-2" />
+                  Salvar
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  setIsEditing(false);
+                  setEditedTask({
+                    title: task.title || "",
+                    description: task.description || "",
+                    priority: task.priority || "medium",
+                    status: task.status || "todo",
+                    setor: task.setor || "",
+                    due_date: task.due_date || "",
+                    documentation: task.documentation || ""
+                  });
+                }}>
+                  Cancelar
+                </Button>
+              </>
+            ) : (
+              <Button onClick={() => setIsEditing(true)}>
+                <Edit2 size={16} className="mr-2" />
+                Editar
+              </Button>
+            )}
           </div>
         </div>
 
@@ -183,36 +267,130 @@ export default function TaskDetail() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h3 className="font-semibold mb-2">Descrição</h3>
-                  <p className="text-muted-foreground">
-                    {task.description || "Sem descrição"}
-                  </p>
+                  <Label>Descrição</Label>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedTask.description}
+                      onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                      placeholder="Adicione uma descrição..."
+                      className="mt-2"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground mt-2">
+                      {task.description || "Sem descrição"}
+                    </p>
+                  )}
                 </div>
 
-                {task.documentation && (
-                  <div>
-                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                      <FileText size={16} />
-                      Documentação
-                    </h3>
-                    <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded">
-                      {task.documentation}
+                <div>
+                  <Label>Setor</Label>
+                  {isEditing ? (
+                    <Input
+                      value={editedTask.setor}
+                      onChange={(e) => setEditedTask({ ...editedTask, setor: e.target.value })}
+                      placeholder="Ex: Vendas, Marketing..."
+                      className="mt-2"
+                    />
+                  ) : (
+                    <p className="text-muted-foreground mt-2">
+                      {task.setor || "Sem setor definido"}
                     </p>
-                  </div>
-                )}
+                  )}
+                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
-                    {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
-                  </Badge>
-                  <Badge variant="outline">
-                    {statusLabels[task.status as keyof typeof statusLabels]}
-                  </Badge>
-                  {task.due_date && (
-                    <Badge variant={isOverdue ? "destructive" : "secondary"}>
-                      <Calendar size={12} className="mr-1" />
-                      {format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </Badge>
+                <div>
+                  <Label>Prioridade</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editedTask.priority}
+                      onValueChange={(value) => setEditedTask({ ...editedTask, priority: value })}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-2">
+                      <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
+                        {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Status</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editedTask.status}
+                      onValueChange={(value) => setEditedTask({ ...editedTask, status: value })}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">A Fazer</SelectItem>
+                        <SelectItem value="in_progress">Em Progresso</SelectItem>
+                        <SelectItem value="completed">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-2">
+                      <Badge variant="outline">
+                        {statusLabels[task.status as keyof typeof statusLabels]}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Prazo</Label>
+                  {isEditing ? (
+                    <Input
+                      type="date"
+                      value={editedTask.due_date}
+                      onChange={(e) => setEditedTask({ ...editedTask, due_date: e.target.value })}
+                      className="mt-2"
+                    />
+                  ) : (
+                    <div className="mt-2">
+                      {task.due_date ? (
+                        <Badge variant={isOverdue ? "destructive" : "secondary"}>
+                          <Calendar size={12} className="mr-1" />
+                          {format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                        </Badge>
+                      ) : (
+                        <p className="text-muted-foreground">Sem prazo definido</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <FileText size={16} />
+                    Documentação
+                  </Label>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedTask.documentation}
+                      onChange={(e) => setEditedTask({ ...editedTask, documentation: e.target.value })}
+                      placeholder="Adicione documentação adicional..."
+                      className="mt-2"
+                    />
+                  ) : (
+                    task.documentation ? (
+                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded mt-2">
+                        {task.documentation}
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground mt-2">Sem documentação</p>
+                    )
                   )}
                 </div>
               </CardContent>
