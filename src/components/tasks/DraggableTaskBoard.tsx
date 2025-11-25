@@ -1,6 +1,6 @@
 import { TaskCard } from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useState } from "react";
@@ -39,7 +39,8 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
       <div
         {...attributes}
         {...listeners}
-        className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1 bg-background rounded"
+        className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1 bg-background rounded hover:bg-accent"
+        aria-label="Arrastar tarefa"
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
       </div>
@@ -57,9 +58,15 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
   const [activeId, setActiveId] = useState<string | null>(null);
   
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -151,7 +158,7 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
       </div>
       <DragOverlay>
         {activeTask ? (
-          <div className="opacity-80">
+          <div className="opacity-80 rotate-2 shadow-xl">
             <TaskCard
               task={activeTask}
               onDelete={() => {}}
