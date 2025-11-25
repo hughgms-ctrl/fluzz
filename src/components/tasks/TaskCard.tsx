@@ -130,18 +130,17 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Não navegar se estiver em modo draggable ou clicando em elementos interativos
-    if (isDraggable) return;
-    
     const target = e.target as HTMLElement;
-    // Não navegar se clicou em input, button, ou dentro de dropdown
+    
+    // Não navegar se clicou em elementos interativos
     if (
       target.tagName === 'INPUT' ||
       target.tagName === 'BUTTON' ||
       target.closest('[role="menu"]') ||
-      target.closest('[role="button"]') ||
+      target.closest('button') ||
       target.closest('[data-radix-popper-content-wrapper]')
     ) {
+      e.stopPropagation();
       return;
     }
     
@@ -174,9 +173,8 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
             />
           ) : (
             <h3 
-              className="font-medium text-sm text-foreground hover:text-primary transition-colors flex-1"
-              onClick={(e) => {
-                if (!isDraggable) return;
+              className="font-medium text-sm text-foreground flex-1"
+              onDoubleClick={(e) => {
                 e.stopPropagation();
                 setIsEditingTitle(true);
               }}
