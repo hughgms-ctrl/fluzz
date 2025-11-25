@@ -21,9 +21,10 @@ interface TaskCardProps {
   task: any;
   onDelete: () => void;
   onStatusChange?: (status: string) => void;
+  isDraggable?: boolean;
 }
 
-export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
+export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }: TaskCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -130,8 +131,8 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
 
   return (
     <Card 
-      className="p-3 hover:shadow-md transition-shadow cursor-pointer group" 
-      onClick={() => navigate(`/tasks/${task.id}`)}
+      className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? 'cursor-default' : 'cursor-pointer'} group`}
+      onClick={isDraggable ? undefined : () => navigate(`/tasks/${task.id}`)}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
@@ -156,6 +157,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
             <h3 
               className="font-medium text-sm text-foreground hover:text-primary transition-colors flex-1"
               onClick={(e) => {
+                if (!isDraggable) return;
                 e.stopPropagation();
                 setIsEditingTitle(true);
               }}
