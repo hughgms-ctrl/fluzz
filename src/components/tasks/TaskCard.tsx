@@ -129,10 +129,29 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Não navegar se estiver em modo draggable ou clicando em elementos interativos
+    if (isDraggable) return;
+    
+    const target = e.target as HTMLElement;
+    // Não navegar se clicou em input, button, ou dentro de dropdown
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('[role="menu"]') ||
+      target.closest('[role="button"]') ||
+      target.closest('[data-radix-popper-content-wrapper]')
+    ) {
+      return;
+    }
+    
+    navigate(`/tasks/${task.id}`);
+  };
+
   return (
     <Card 
-      className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? 'cursor-default' : 'cursor-pointer'} group`}
-      onClick={isDraggable ? undefined : () => navigate(`/tasks/${task.id}`)}
+      className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? '' : 'cursor-pointer'} group`}
+      onClick={handleCardClick}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
@@ -169,47 +188,81 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
 
         <div className="flex flex-wrap gap-1.5 items-center">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Badge 
-                variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
-                className="cursor-pointer text-xs px-2 py-0 h-5"
-              >
-                {priorityLabels[task.priority as keyof typeof priorityLabels]}
-              </Badge>
+            <DropdownMenuTrigger 
+              asChild 
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+              }}
+            >
+              <button className="focus:outline-none">
+                <Badge 
+                  variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+                  className="cursor-pointer text-xs px-2 py-0 h-5 hover:opacity-80"
+                >
+                  {priorityLabels[task.priority as keyof typeof priorityLabels]}
+                </Badge>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-50 bg-popover">
-              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("high")}>
+            <DropdownMenuContent 
+              align="start" 
+              className="z-50 bg-popover"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                updatePriorityMutation.mutate("high");
+              }}>
                 Alta
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("medium")}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                updatePriorityMutation.mutate("medium");
+              }}>
                 Média
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("low")}>
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
+                updatePriorityMutation.mutate("low");
+              }}>
                 Baixa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <DropdownMenu>
-            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Badge className={`cursor-pointer text-xs px-2 py-0 h-5 ${statusColors[task.status as keyof typeof statusColors]}`}>
-                {statusLabels[task.status as keyof typeof statusLabels]}
-              </Badge>
+            <DropdownMenuTrigger 
+              asChild
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+              }}
+            >
+              <button className="focus:outline-none">
+                <Badge className={`cursor-pointer text-xs px-2 py-0 h-5 hover:opacity-80 ${statusColors[task.status as keyof typeof statusColors]}`}>
+                  {statusLabels[task.status as keyof typeof statusLabels]}
+                </Badge>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="z-50 bg-popover">
-              <DropdownMenuItem onClick={() => {
+            <DropdownMenuContent 
+              align="start" 
+              className="z-50 bg-popover"
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
                 if (onStatusChange) onStatusChange("todo");
                 else updateStatusMutation.mutate("todo");
               }}>
                 A Fazer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
                 if (onStatusChange) onStatusChange("in_progress");
                 else updateStatusMutation.mutate("in_progress");
               }}>
                 Fazendo
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
+              <DropdownMenuItem onClick={(e) => {
+                e.stopPropagation();
                 if (onStatusChange) onStatusChange("completed");
                 else updateStatusMutation.mutate("completed");
               }}>
