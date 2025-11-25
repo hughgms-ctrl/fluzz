@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, ArrowLeft, LayoutGrid, List, Users } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
-import { TaskBoard } from "@/components/tasks/TaskBoard";
+import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
@@ -27,6 +27,7 @@ export default function ProjectDetail() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dueDateFilter, setDueDateFilter] = useState("all");
+  const [setorFilter, setSetorFilter] = useState("all");
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState("");
 
@@ -117,6 +118,7 @@ export default function ProjectDetail() {
 
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+    const matchesSetor = setorFilter === "all" || task.setor === setorFilter;
 
     let matchesDueDate = true;
     if (dueDateFilter !== "all" && task.due_date) {
@@ -139,8 +141,10 @@ export default function ProjectDetail() {
       }
     }
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate;
+    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesSetor;
   }) || [];
+
+  const uniqueSetores = Array.from(new Set(tasks?.filter(t => t.setor).map(t => t.setor))) as string[];
 
   const isOwner = project?.user_id === user?.id;
 
@@ -254,6 +258,9 @@ export default function ProjectDetail() {
           onStatusChange={setStatusFilter}
           dueDateFilter={dueDateFilter}
           onDueDateChange={setDueDateFilter}
+          setorFilter={setorFilter}
+          onSetorChange={setSetorFilter}
+          setores={uniqueSetores}
         />
 
         {filteredTasks && filteredTasks.length === 0 ? (
@@ -269,7 +276,7 @@ export default function ProjectDetail() {
         ) : (
           <>
             {view === "board" ? (
-              <TaskBoard
+              <DraggableTaskBoard
                 tasks={filteredTasks || []}
                 onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
                 onUpdateStatus={(taskId, status) =>
