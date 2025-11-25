@@ -32,7 +32,7 @@ export const TaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: TaskBoardProp
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="p-3 space-y-2">
               {columnTasks.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   Nenhuma tarefa

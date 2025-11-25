@@ -9,8 +9,8 @@ interface TaskListProps {
 export const TaskList = ({ tasks, onDeleteTask }: TaskListProps) => {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="space-y-3">
+      <CardContent className="p-3">
+        <div className="space-y-2">
           {tasks.map((task) => (
             <TaskCard
               key={task.id}

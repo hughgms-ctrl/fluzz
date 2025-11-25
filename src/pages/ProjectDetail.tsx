@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, ArrowLeft, LayoutGrid, List, Users } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
@@ -26,6 +27,8 @@ export default function ProjectDetail() {
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dueDateFilter, setDueDateFilter] = useState("all");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [projectName, setProjectName] = useState("");
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", id],
@@ -36,7 +39,28 @@ export default function ProjectDetail() {
         .eq("id", id)
         .single();
       if (error) throw error;
+      setProjectName(data.name);
       return data;
+    },
+  });
+
+  const updateProjectNameMutation = useMutation({
+    mutationFn: async (newName: string) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ name: newName })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Nome do projeto atualizado!");
+      setIsEditingName(false);
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar nome");
+      setProjectName(project?.name || "");
     },
   });
 
@@ -120,6 +144,15 @@ export default function ProjectDetail() {
 
   const isOwner = project?.user_id === user?.id;
 
+  const handleNameBlur = () => {
+    if (projectName.trim() && projectName !== project?.name) {
+      updateProjectNameMutation.mutate(projectName.trim());
+    } else {
+      setIsEditingName(false);
+      setProjectName(project?.name || "");
+    }
+  };
+
   if (projectLoading || tasksLoading) {
     return (
       <AppLayout>
@@ -145,7 +178,7 @@ export default function ProjectDetail() {
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
             <Button
               variant="ghost"
               size="icon"
@@ -153,8 +186,30 @@ export default function ProjectDetail() {
             >
               <ArrowLeft size={20} />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">{project.name}</h1>
+            <div className="flex-1 min-w-0">
+              {isEditingName ? (
+                <Input
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  onBlur={handleNameBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleNameBlur();
+                    if (e.key === "Escape") {
+                      setProjectName(project?.name || "");
+                      setIsEditingName(false);
+                    }
+                  }}
+                  className="text-3xl font-bold h-12 max-w-2xl"
+                  autoFocus
+                />
+              ) : (
+                <h1 
+                  className="text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer"
+                  onClick={() => setIsEditingName(true)}
+                >
+                  {project.name}
+                </h1>
+              )}
               <p className="text-muted-foreground mt-1">{project.description}</p>
             </div>
           </div>

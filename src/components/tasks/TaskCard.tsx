@@ -1,8 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { MoreVertical, Trash2, Calendar, User, FileText } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,12 +10,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface TaskCardProps {
   task: any;
@@ -26,143 +24,182 @@ interface TaskCardProps {
 
 export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
   const navigate = useNavigate();
-  const [verified, setVerified] = useState(task.completed_verified || false);
-  const [showDoc, setShowDoc] = useState(false);
-  
+  const queryClient = useQueryClient();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [taskTitle, setTaskTitle] = useState(task.title);
+
   const priorityColors = {
     high: "destructive",
     medium: "default",
     low: "secondary",
   };
 
-  const handleVerifyToggle = async (checked: boolean) => {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ completed_verified: checked })
-      .eq("id", task.id);
-    
-    if (error) {
-      toast.error("Erro ao atualizar certificação");
-      return;
-    }
-    
-    setVerified(checked);
-    toast.success(checked ? "Tarefa certificada!" : "Certificação removida");
+  const priorityLabels = {
+    high: "Alta",
+    medium: "Média",
+    low: "Baixa",
   };
 
   const statusLabels = {
     todo: "A Fazer",
-    in_progress: "Em Progresso",
+    in_progress: "Fazendo",
     completed: "Concluído",
   };
 
+  const updateTitleMutation = useMutation({
+    mutationFn: async (newTitle: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ title: newTitle })
+        .eq("id", task.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Título atualizado!");
+      setIsEditingTitle(false);
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar título");
+      setTaskTitle(task.title);
+    },
+  });
+
+  const updatePriorityMutation = useMutation({
+    mutationFn: async (priority: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ priority })
+        .eq("id", task.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Prioridade atualizada!");
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status })
+        .eq("id", task.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
+      toast.success("Status atualizado!");
+    },
+  });
+
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
 
+  const handleTitleBlur = () => {
+    if (taskTitle.trim() && taskTitle !== task.title) {
+      updateTitleMutation.mutate(taskTitle.trim());
+    } else {
+      setIsEditingTitle(false);
+      setTaskTitle(task.title);
+    }
+  };
+
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/tasks/${task.id}`)}>
-      <div className="space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground mb-1 hover:text-primary transition-colors">{task.title}</h3>
-            {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {task.description}
-              </p>
-            )}
-          </div>
+    <Card 
+      className="p-3 hover:shadow-md transition-shadow cursor-pointer group" 
+      onClick={() => navigate(`/tasks/${task.id}`)}
+    >
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          {isEditingTitle ? (
+            <Input
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              onBlur={handleTitleBlur}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleTitleBlur();
+                if (e.key === "Escape") {
+                  setTaskTitle(task.title);
+                  setIsEditingTitle(false);
+                }
+                e.stopPropagation();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="font-medium text-sm h-7 flex-1"
+              autoFocus
+            />
+          ) : (
+            <h3 
+              className="font-medium text-sm text-foreground hover:text-primary transition-colors flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditingTitle(true);
+              }}
+            >
+              {task.title}
+            </h3>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 items-center">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-8 w-8 ml-2" 
-                onClick={(e) => e.stopPropagation()}
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Badge 
+                variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+                className="cursor-pointer text-xs px-2 py-0 h-5"
               >
-                <MoreVertical size={16} />
-              </Button>
+                {priorityLabels[task.priority as keyof typeof priorityLabels]}
+              </Badge>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onStatusChange && (
-                <>
-                  <DropdownMenuLabel>Alterar Status</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => onStatusChange("todo")}>
-                    A Fazer
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onStatusChange("in_progress")}>
-                    Em Progresso
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onStatusChange("completed")}>
-                    Concluído
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                <Trash2 className="mr-2" size={16} />
-                Excluir
+            <DropdownMenuContent align="start" className="z-50 bg-popover">
+              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("high")}>
+                Alta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("medium")}>
+                Média
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => updatePriorityMutation.mutate("low")}>
+                Baixa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
 
-        <div className="flex flex-wrap gap-2 items-center">
-          <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
-            {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
-          </Badge>
-          {!onStatusChange && (
-            <Badge variant="outline">
-              {statusLabels[task.status as keyof typeof statusLabels]}
-            </Badge>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Badge variant="outline" className="cursor-pointer text-xs px-2 py-0 h-5">
+                {statusLabels[task.status as keyof typeof statusLabels]}
+              </Badge>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="z-50 bg-popover">
+              <DropdownMenuItem onClick={() => {
+                if (onStatusChange) onStatusChange("todo");
+                else updateStatusMutation.mutate("todo");
+              }}>
+                A Fazer
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                if (onStatusChange) onStatusChange("in_progress");
+                else updateStatusMutation.mutate("in_progress");
+              }}>
+                Fazendo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                if (onStatusChange) onStatusChange("completed");
+                else updateStatusMutation.mutate("completed");
+              }}>
+                Concluído
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {task.due_date && (
             <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
-              <Calendar size={12} />
-              {format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
+              <Calendar size={10} />
+              {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
             </div>
           )}
         </div>
-
-        {task.assigned_to && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <User size={12} />
-            <span>Responsável atribuído</span>
-          </div>
-        )}
-
-        {task.status === "completed" && (
-          <div className="flex items-center gap-2 pt-2 border-t">
-            <Checkbox
-              id={`verify-${task.id}`}
-              checked={verified}
-              onCheckedChange={handleVerifyToggle}
-            />
-            <label
-              htmlFor={`verify-${task.id}`}
-              className="text-sm text-muted-foreground cursor-pointer"
-            >
-              Certificar conclusão
-            </label>
-          </div>
-        )}
-
-        {task.documentation && (
-          <div className="pt-2 border-t">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowDoc(!showDoc)}
-              className="gap-2 h-8"
-            >
-              <FileText size={14} />
-              {showDoc ? "Ocultar" : "Ver"} Documentação
-            </Button>
-            {showDoc && (
-              <p className="text-sm text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
-                {task.documentation}
-              </p>
-            )}
-          </div>
-        )}
       </div>
     </Card>
   );
