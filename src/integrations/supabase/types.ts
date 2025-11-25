@@ -296,6 +296,7 @@ export type Database = {
           priority: string | null
           process_id: string | null
           project_id: string
+          setor: string | null
           status: string | null
           title: string
           updated_at: string | null
@@ -311,6 +312,7 @@ export type Database = {
           priority?: string | null
           process_id?: string | null
           project_id: string
+          setor?: string | null
           status?: string | null
           title: string
           updated_at?: string | null
@@ -326,6 +328,7 @@ export type Database = {
           priority?: string | null
           process_id?: string | null
           project_id?: string
+          setor?: string | null
           status?: string | null
           title?: string
           updated_at?: string | null

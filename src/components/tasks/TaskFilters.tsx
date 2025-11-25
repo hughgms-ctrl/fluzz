@@ -18,9 +18,12 @@ interface TaskFiltersProps {
   onStatusChange: (value: string) => void;
   dueDateFilter: string;
   onDueDateChange: (value: string) => void;
+  setorFilter?: string;
+  onSetorChange?: (value: string) => void;
   projectFilter?: string;
   onProjectChange?: (value: string) => void;
   projects?: Array<{ id: string; name: string }>;
+  setores?: string[];
 }
 
 export const TaskFilters = ({
@@ -32,9 +35,12 @@ export const TaskFilters = ({
   onStatusChange,
   dueDateFilter,
   onDueDateChange,
+  setorFilter,
+  onSetorChange,
   projectFilter,
   onProjectChange,
   projects,
+  setores,
 }: TaskFiltersProps) => {
   return (
     <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
@@ -52,7 +58,7 @@ export const TaskFilters = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {projectFilter !== undefined && onProjectChange && (
           <div className="space-y-2">
             <Label htmlFor="project">Projeto</Label>
@@ -65,6 +71,25 @@ export const TaskFilters = ({
                 {projects?.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {setorFilter !== undefined && onSetorChange && (
+          <div className="space-y-2">
+            <Label htmlFor="setor">Setor</Label>
+            <Select value={setorFilter} onValueChange={onSetorChange}>
+              <SelectTrigger id="setor">
+                <SelectValue placeholder="Todos os setores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os setores</SelectItem>
+                {setores?.map((setor) => (
+                  <SelectItem key={setor} value={setor}>
+                    {setor}
                   </SelectItem>
                 ))}
               </SelectContent>

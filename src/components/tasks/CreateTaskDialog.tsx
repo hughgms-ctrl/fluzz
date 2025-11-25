@@ -38,6 +38,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [dueDate, setDueDate] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [documentation, setDocumentation] = useState("");
+  const [setor, setSetor] = useState("");
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles"],
@@ -64,6 +65,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             due_date: dueDate || null,
             assigned_to: assignedTo || user!.id,
             documentation: documentation || null,
+            setor: setor || null,
           },
         ]);
       if (error) throw error;
@@ -88,6 +90,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     setDueDate("");
     setAssignedTo("");
     setDocumentation("");
+    setSetor("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -156,6 +159,15 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="setor">Setor</Label>
+            <Input
+              id="setor"
+              value={setor}
+              onChange={(e) => setSetor(e.target.value)}
+              placeholder="Ex: Marketing, Vendas, TI..."
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="due_date">Data de Vencimento</Label>
