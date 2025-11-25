@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Outfit', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -56,6 +59,14 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        status: {
+          todo: "hsl(var(--status-todo))",
+          "todo-foreground": "hsl(var(--status-todo-foreground))",
+          "in-progress": "hsl(var(--status-in-progress))",
+          "in-progress-foreground": "hsl(var(--status-in-progress-foreground))",
+          completed: "hsl(var(--status-completed))",
+          "completed-foreground": "hsl(var(--status-completed-foreground))",
         },
       },
       boxShadow: {
