@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,22 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [taskTitle, setTaskTitle] = useState(task.title);
 
+  const { data: subtasks } = useQuery({
+    queryKey: ["subtasks", task.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subtasks")
+        .select("*")
+        .eq("task_id", task.id);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const totalSubtasks = subtasks?.length || 0;
+  const completedSubtasks = subtasks?.filter((s) => s.completed).length || 0;
+  const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
+
   const priorityColors = {
     high: "destructive",
     medium: "default",
@@ -44,6 +61,12 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
     todo: "A Fazer",
     in_progress: "Fazendo",
     completed: "Concluído",
+  };
+
+  const statusColors = {
+    todo: "bg-status-todo text-status-todo-foreground",
+    in_progress: "bg-status-in-progress text-status-in-progress-foreground",
+    completed: "bg-status-completed text-status-completed-foreground",
   };
 
   const updateTitleMutation = useMutation({
@@ -167,7 +190,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Badge variant="outline" className="cursor-pointer text-xs px-2 py-0 h-5">
+              <Badge className={`cursor-pointer text-xs px-2 py-0 h-5 ${statusColors[task.status as keyof typeof statusColors]}`}>
                 {statusLabels[task.status as keyof typeof statusLabels]}
               </Badge>
             </DropdownMenuTrigger>
@@ -200,6 +223,20 @@ export const TaskCard = ({ task, onDelete, onStatusChange }: TaskCardProps) => {
             </div>
           )}
         </div>
+
+        {totalSubtasks > 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${subtaskProgress}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {completedSubtasks}/{totalSubtasks}
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   );

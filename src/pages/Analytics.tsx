@@ -19,12 +19,12 @@ import {
 import { TrendingUp, CheckCircle2, Clock, AlertCircle } from "lucide-react";
 
 const COLORS = {
-  completed: "#22c55e",
-  in_progress: "#3b82f6",
-  todo: "#f59e0b",
-  high: "#ef4444",
-  medium: "#f59e0b",
-  low: "#22c55e",
+  completed: "hsl(142, 76%, 36%)",
+  in_progress: "hsl(43, 96%, 56%)",
+  todo: "hsl(217, 91%, 60%)",
+  high: "hsl(0, 84%, 60%)",
+  medium: "hsl(43, 96%, 56%)",
+  low: "hsl(142, 76%, 36%)",
 };
 
 export default function Analytics() {
@@ -39,7 +39,7 @@ export default function Analytics() {
           *,
           projects!inner(user_id)
         `)
-        .or(`projects.user_id.eq.${user!.id},assigned_to.eq.${user!.id}`);
+        .eq('projects.user_id', user!.id);
       if (error) throw error;
       return data;
     },
@@ -266,7 +266,7 @@ export default function Analytics() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="tarefas" fill="#4A90E2" />
+                <Bar dataKey="tarefas" fill="hsl(24.6, 95%, 53.1%)" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
