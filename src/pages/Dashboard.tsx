@@ -45,8 +45,11 @@ export default function Dashboard() {
   const activeProjects = projects?.filter(p => p.status === "active").length || 0;
   const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
   const pendingTasks = tasks?.filter(t => t.status !== "completed").length || 0;
+  const overdueTasks = tasks?.filter(t => 
+    t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed"
+  ) || [];
   const urgentTasks = tasks?.filter(t => 
-    t.due_date && new Date(t.due_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+    t.due_date && new Date(t.due_date) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) && t.status !== "completed"
   ).length || 0;
 
   const recentTasks = tasks?.slice(0, 5) || [];
@@ -118,18 +121,62 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
+          <Card className="hover:shadow-md transition-shadow border-destructive/50">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tarefas Urgentes
+              <CardTitle className="text-sm font-medium text-destructive">
+                Tarefas Atrasadas
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{urgentTasks}</div>
+              <div className="text-2xl font-bold text-destructive">{overdueTasks.length}</div>
             </CardContent>
           </Card>
         </div>
+
+        {overdueTasks.length > 0 && (
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-destructive">Tarefas Atrasadas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {overdueTasks.slice(0, 5).map((task: any) => {
+                  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+                  return (
+                    <Link key={task.id} to={`/tasks/${task.id}`}>
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{task.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.projects?.name || "Projeto desconhecido"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
+                            {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                          </Badge>
+                          <Badge variant="outline">
+                            {statusLabels[task.status as keyof typeof statusLabels]}
+                          </Badge>
+                          <span className="text-xs text-destructive font-medium whitespace-nowrap flex items-center gap-1">
+                            <Clock size={12} />
+                            {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              {overdueTasks.length > 5 && (
+                <p className="text-sm text-muted-foreground text-center mt-3">
+                  E mais {overdueTasks.length - 5} tarefa(s) atrasada(s)
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
@@ -142,32 +189,41 @@ export default function Dashboard() {
               </p>
             ) : (
               <div className="space-y-3">
-                {recentTasks.map((task: any) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">{task.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {task.projects?.name || "Projeto desconhecido"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
-                        {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
-                      </Badge>
-                      <Badge variant="outline">
-                        {statusLabels[task.status as keyof typeof statusLabels]}
-                      </Badge>
-                      {task.due_date && (
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                {recentTasks.map((task: any) => {
+                  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+                  return (
+                    <Link key={task.id} to={`/tasks/${task.id}`}>
+                      <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                        isOverdue 
+                          ? "border-destructive/30 bg-destructive/5 hover:bg-destructive/10" 
+                          : "border-border hover:bg-muted/50"
+                      }`}>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{task.title}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {task.projects?.name || "Projeto desconhecido"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
+                            {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                          </Badge>
+                          <Badge variant="outline">
+                            {statusLabels[task.status as keyof typeof statusLabels]}
+                          </Badge>
+                          {task.due_date && (
+                            <span className={`text-xs whitespace-nowrap flex items-center gap-1 ${
+                              isOverdue ? "text-destructive font-medium" : "text-muted-foreground"
+                            }`}>
+                              <Clock size={12} />
+                              {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
             <div className="mt-4">
