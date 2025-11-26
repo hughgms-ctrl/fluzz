@@ -543,16 +543,24 @@ export default function TaskDetail() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {taskProcesses?.map((tp: any) => (
-                  <div key={tp.id} className="flex items-center gap-2 p-3 bg-muted/50 rounded group">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{tp.process_documentation?.title}</p>
+                  <div key={tp.id} className="flex items-center gap-2 p-3 bg-muted/50 rounded group hover:bg-muted transition-colors">
+                    <div 
+                      className="flex-1 cursor-pointer"
+                      onClick={() => navigate(`/workspace/processes?processId=${tp.process_id}`)}
+                    >
+                      <p className="font-medium text-sm hover:text-primary transition-colors">
+                        {tp.process_documentation?.title}
+                      </p>
                       <p className="text-xs text-muted-foreground">{tp.process_documentation?.area}</p>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => unlinkProcessMutation.mutate(tp.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        unlinkProcessMutation.mutate(tp.id);
+                      }}
                     >
                       <Trash2 size={14} />
                     </Button>
