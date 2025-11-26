@@ -48,23 +48,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user's projects to assign tasks to
-    const { data: projects, error: projectsError } = await supabase
-      .from('projects')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('archived', false)
-      .limit(1);
-
-    if (projectsError) throw projectsError;
-
-    if (!projects || projects.length === 0) {
-      throw new Error('User has no active projects');
-    }
-
-    const projectId = projects[0].id;
-
-    // Generate tasks based on recurrence
+    // Generate tasks - routine tasks don't need a project
     const tasksToCreate = recurringTasks.map((rt: RecurringTask) => {
       const dueDate = calculateDueDate(rt.recurrence_type);
       
@@ -73,7 +57,7 @@ Deno.serve(async (req) => {
         description: rt.description,
         priority: rt.priority,
         status: 'todo',
-        project_id: projectId,
+        project_id: null, // Routine tasks are standalone
         assigned_to: userId,
         due_date: dueDate,
         recurring_task_id: rt.id,

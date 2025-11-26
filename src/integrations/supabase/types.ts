@@ -382,7 +382,7 @@ export type Database = {
           id: string
           priority: string | null
           process_id: string | null
-          project_id: string
+          project_id: string | null
           recurring_task_id: string | null
           setor: string | null
           status: string | null
@@ -399,7 +399,7 @@ export type Database = {
           id?: string
           priority?: string | null
           process_id?: string | null
-          project_id: string
+          project_id?: string | null
           recurring_task_id?: string | null
           setor?: string | null
           status?: string | null
@@ -416,7 +416,7 @@ export type Database = {
           id?: string
           priority?: string | null
           process_id?: string | null
-          project_id?: string
+          project_id?: string | null
           recurring_task_id?: string | null
           setor?: string | null
           status?: string | null
