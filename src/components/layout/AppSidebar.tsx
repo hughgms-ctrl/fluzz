@@ -28,6 +28,7 @@ const workspaceItems = [
   { title: "Cultura", url: "/workspace/culture", icon: Heart },
   { title: "Visão & Valores", url: "/workspace/vision", icon: Target },
   { title: "Processos", url: "/workspace/processes", icon: FileText },
+  { title: "Cargos e Rotinas", url: "/positions", icon: Briefcase },
 ];
 
 export function AppSidebar() {

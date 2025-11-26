@@ -77,6 +77,33 @@ export type Database = {
         }
         Relationships: []
       }
+      positions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       process_documentation: {
         Row: {
           area: string
@@ -252,6 +279,63 @@ export type Database = {
         }
         Relationships: []
       }
+      recurring_tasks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          position_id: string
+          priority: string | null
+          process_id: string | null
+          recurrence_config: Json | null
+          recurrence_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          position_id: string
+          priority?: string | null
+          process_id?: string | null
+          recurrence_config?: Json | null
+          recurrence_type: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          position_id?: string
+          priority?: string | null
+          process_id?: string | null
+          recurrence_config?: Json | null
+          recurrence_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_tasks_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_tasks_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subtasks: {
         Row: {
           completed: boolean | null
@@ -299,6 +383,7 @@ export type Database = {
           priority: string | null
           process_id: string | null
           project_id: string
+          recurring_task_id: string | null
           setor: string | null
           status: string | null
           title: string
@@ -315,6 +400,7 @@ export type Database = {
           priority?: string | null
           process_id?: string | null
           project_id: string
+          recurring_task_id?: string | null
           setor?: string | null
           status?: string | null
           title: string
@@ -331,6 +417,7 @@ export type Database = {
           priority?: string | null
           process_id?: string | null
           project_id?: string
+          recurring_task_id?: string | null
           setor?: string | null
           status?: string | null
           title?: string
@@ -349,6 +436,45 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_recurring_task_id_fkey"
+            columns: ["recurring_task_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_positions: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          position_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          position_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          position_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_positions_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
             referencedColumns: ["id"]
           },
         ]
