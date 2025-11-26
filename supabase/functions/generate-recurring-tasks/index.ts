@@ -9,6 +9,8 @@ interface Routine {
   id: string;
   name: string;
   recurrence_type: string;
+  start_date: string;
+  recurrence_config: any;
 }
 
 interface RoutineTask {
@@ -56,9 +58,20 @@ Deno.serve(async (req) => {
     }
 
     let totalTasksCreated = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     // For each routine, get its tasks and create actual tasks
     for (const routine of routines as Routine[]) {
+      const startDate = new Date(routine.start_date);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Only generate tasks if today is on or after the start date
+      if (today < startDate) {
+        console.log('Skipping routine', routine.name, '- start date not yet reached');
+        continue;
+      }
+
       const { data: routineTasks, error: tasksError } = await supabase
         .from('routine_tasks')
         .select('*')
@@ -72,7 +85,21 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const dueDate = calculateDueDate(routine.recurrence_type);
+      // Check if tasks already exist for this routine for the user today
+      const { data: existingTasks } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('routine_id', routine.id)
+        .eq('assigned_to', userId)
+        .gte('due_date', today.toISOString().split('T')[0])
+        .eq('status', 'todo');
+
+      if (existingTasks && existingTasks.length > 0) {
+        console.log('Tasks already exist for routine:', routine.name);
+        continue;
+      }
+
+      const dueDate = calculateDueDate(routine.recurrence_type, routine.start_date);
 
       // Create tasks for each routine task
       const tasksToCreate = (routineTasks as RoutineTask[]).map((rt) => ({
@@ -120,25 +147,56 @@ Deno.serve(async (req) => {
   }
 });
 
-function calculateDueDate(recurrenceType: string): string {
+function calculateDueDate(recurrenceType: string, startDate: string): string {
+  const start = new Date(startDate);
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+  
+  // If start date is in the future, use start date
+  if (start > today) {
+    return start.toISOString().split('T')[0];
+  }
+
+  // Calculate the next due date based on recurrence from start date
+  let nextDate = new Date(start);
   
   switch (recurrenceType) {
     case 'daily':
-      return today.toISOString().split('T')[0];
+      // Find the next daily occurrence from start date
+      const daysDiff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      nextDate.setDate(start.getDate() + daysDiff);
+      if (nextDate < today) {
+        nextDate.setDate(nextDate.getDate() + 1);
+      }
+      break;
     case 'weekly':
-      const nextWeek = new Date(today);
-      nextWeek.setDate(today.getDate() + 7);
-      return nextWeek.toISOString().split('T')[0];
+      // Find the next weekly occurrence from start date
+      const weeksDiff = Math.floor((today.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 7));
+      nextDate.setDate(start.getDate() + (weeksDiff * 7));
+      if (nextDate < today) {
+        nextDate.setDate(nextDate.getDate() + 7);
+      }
+      break;
     case 'monthly':
-      const nextMonth = new Date(today);
-      nextMonth.setMonth(today.getMonth() + 1);
-      return nextMonth.toISOString().split('T')[0];
+      // Find the next monthly occurrence from start date
+      const monthsDiff = Math.floor((today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth()));
+      nextDate.setMonth(start.getMonth() + monthsDiff);
+      if (nextDate < today) {
+        nextDate.setMonth(nextDate.getMonth() + 1);
+      }
+      break;
     case 'yearly':
-      const nextYear = new Date(today);
-      nextYear.setFullYear(today.getFullYear() + 1);
-      return nextYear.toISOString().split('T')[0];
+      // Find the next yearly occurrence from start date
+      const yearsDiff = today.getFullYear() - start.getFullYear();
+      nextDate.setFullYear(start.getFullYear() + yearsDiff);
+      if (nextDate < today) {
+        nextDate.setFullYear(nextDate.getFullYear() + 1);
+      }
+      break;
     default:
       return today.toISOString().split('T')[0];
   }
+  
+  return nextDate.toISOString().split('T')[0];
 }

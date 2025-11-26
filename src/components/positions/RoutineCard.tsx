@@ -26,6 +26,7 @@ interface RoutineCardProps {
     name: string;
     description: string | null;
     recurrence_type: string;
+    start_date: string;
   };
   positionId: string;
 }
