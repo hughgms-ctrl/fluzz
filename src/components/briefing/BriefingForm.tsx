@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,13 @@ interface BriefingFormProps {
   onSuccess?: () => void;
 }
 
-export default function BriefingForm({ projectId, onSuccess }: BriefingFormProps) {
+interface BriefingFormProps {
+  projectId: string;
+  onSuccess?: () => void;
+  briefingId?: string;
+}
+
+export default function BriefingForm({ projectId, onSuccess, briefingId }: BriefingFormProps) {
   const queryClient = useQueryClient();
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
   const [data, setData] = useState("");
@@ -27,12 +33,43 @@ export default function BriefingForm({ projectId, onSuccess }: BriefingFormProps
   const [precoPlayers, setPrecoPlayers] = useState("");
   const [precoConvidados, setPrecoConvidados] = useState("");
 
+  const { data: existingBriefing } = useQuery({
+    queryKey: ["briefing", briefingId],
+    queryFn: async () => {
+      if (!briefingId) return null;
+      const { data, error } = await supabase
+        .from("briefings")
+        .select("*")
+        .eq("id", briefingId)
+        .single();
+
+      if (error) throw error;
+      
+      // Populate form with existing data
+      setData(data.data);
+      setInvestimentoTrafego(data.investimento_trafego.toString());
+      setParticipantesPagantes(data.participantes_pagantes.toString());
+      setLocal(data.local);
+      setCurrency(data.currency as "BRL" | "USD");
+      
+      const precos = data.precos as any;
+      setPrecoNormal(precos.normal.toString());
+      setPrecoCasal(precos.casal.toString());
+      setPrecoMentorados(precos.mentorados.toString());
+      setPrecoPlayers(precos.players.toString());
+      setPrecoConvidados(precos.convidados.toString());
+      
+      return data;
+    },
+    enabled: !!briefingId,
+  });
+
   const createBriefingMutation = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { error } = await supabase.from("briefings").insert({
+      const briefingData = {
         project_id: projectId,
         data,
         investimento_trafego: parseFloat(investimentoTrafego),
@@ -47,14 +84,28 @@ export default function BriefingForm({ projectId, onSuccess }: BriefingFormProps
         },
         currency,
         created_by: user.id,
-      });
+      };
 
-      if (error) throw error;
+      if (briefingId) {
+        const { error } = await supabase
+          .from("briefings")
+          .update(briefingData)
+          .eq("id", briefingId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("briefings")
+          .insert(briefingData);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["briefings", projectId] });
-      toast.success("Briefing criado com sucesso!");
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ["briefing", briefingId] });
+      toast.success(briefingId ? "Briefing atualizado com sucesso!" : "Briefing criado com sucesso!");
+      if (!briefingId) {
+        resetForm();
+      }
       onSuccess?.();
     },
     onError: (error) => {
@@ -242,7 +293,7 @@ export default function BriefingForm({ projectId, onSuccess }: BriefingFormProps
               Limpar
             </Button>
             <Button type="submit" disabled={createBriefingMutation.isPending}>
-              {createBriefingMutation.isPending ? "Salvando..." : "Salvar Briefing"}
+              {createBriefingMutation.isPending ? "Salvando..." : (briefingId ? "Atualizar Briefing" : "Salvar Briefing")}
             </Button>
           </div>
         </form>

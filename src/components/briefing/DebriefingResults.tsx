@@ -59,11 +59,30 @@ export default function DebriefingResults({
 
   return (
     <div className="space-y-6">
-      {/* KPIs Principais */}
+      {/* KPI Principal: ROAS Ingressos */}
+      <Card className="border-2 border-primary shadow-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            ROAS Ingressos - Principal KPI
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <span className="text-5xl font-bold text-primary">{roasIngressos.toFixed(2)}x</span>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Retorno por Real Investido</p>
+              <p className="text-2xl font-semibold mt-1">{formatCurrency(debriefing.retorno_vendas_ingressos)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* KPIs Secundários */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-chart-1">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ROAS Evento</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">ROAS Evento (com Mentorias)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -89,7 +108,7 @@ export default function DebriefingResults({
 
         <Card className="border-chart-3">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">CPL</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Custo por Lead (CPL)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
@@ -102,30 +121,61 @@ export default function DebriefingResults({
       {/* Métricas Detalhadas */}
       <Card>
         <CardHeader>
-          <CardTitle>Métricas Detalhadas</CardTitle>
+          <CardTitle>Resumo Financeiro</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ROAS Ingressos</span>
-                <span className="font-semibold">{roasIngressos.toFixed(2)}x</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">ROAS Outras Estratégias</span>
-                <span className="font-semibold">{roasOutrasEstrategias.toFixed(2)}x</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-muted-foreground">Vendas de Ingressos</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Quantidade:</span>
+                  <span className="font-semibold">{debriefing.vendas_ingressos}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Retorno:</span>
+                  <span className="font-semibold">{formatCurrency(debriefing.retorno_vendas_ingressos)}</span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Leads</span>
-                <span className="font-semibold">{debriefing.leads}</span>
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-muted-foreground">Mentorias</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Vendidas:</span>
+                  <span className="font-semibold">{debriefing.mentorias_vendidas}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Valor:</span>
+                  <span className="font-semibold">{formatCurrency(debriefing.valor_vendas_mentorias)}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Participantes</span>
-                <span className="font-semibold">{debriefing.total_participantes}</span>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-muted-foreground">Outras Estratégias</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">ROAS:</span>
+                  <span className="font-semibold">{roasOutrasEstrategias.toFixed(2)}x</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Valor:</span>
+                  <span className="font-semibold">{formatCurrency(debriefing.valor_outras_estrategias)}</span>
+                </div>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-6">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Leads:</span>
+              <span className="font-semibold text-lg">{debriefing.leads}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Total Participantes:</span>
+              <span className="font-semibold text-lg">{debriefing.total_participantes}</span>
             </div>
           </div>
         </CardContent>
