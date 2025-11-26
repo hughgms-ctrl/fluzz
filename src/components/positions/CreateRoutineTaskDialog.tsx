@@ -35,8 +35,8 @@ export function CreateRoutineTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
-  const [projectId, setProjectId] = useState<string>("");
-  const [processId, setProcessId] = useState<string>("");
+  const [projectId, setProjectId] = useState<string>("none");
+  const [processId, setProcessId] = useState<string>("none");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -79,8 +79,8 @@ export function CreateRoutineTaskDialog({
         title,
         description,
         priority,
-        project_id: projectId || null,
-        process_id: processId || null,
+        project_id: projectId === "none" ? null : projectId,
+        process_id: processId === "none" ? null : processId,
       });
 
       if (error) throw error;
@@ -101,8 +101,8 @@ export function CreateRoutineTaskDialog({
     setTitle("");
     setDescription("");
     setPriority("medium");
-    setProjectId("");
-    setProcessId("");
+    setProjectId("none");
+    setProcessId("none");
   };
 
   return (
@@ -159,7 +159,7 @@ export function CreateRoutineTaskDialog({
                 <SelectValue placeholder="Selecione um projeto" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {projects?.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
@@ -176,7 +176,7 @@ export function CreateRoutineTaskDialog({
                 <SelectValue placeholder="Selecione um processo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {processes?.map((process) => (
                   <SelectItem key={process.id} value={process.id}>
                     {process.title}
