@@ -73,9 +73,21 @@ export default function TaskDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, projects(name), subtasks(*), process_documentation(id, title)")
+        .select("*, projects(name), subtasks(*)")
         .eq("id", id!)
         .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: taskProcesses } = useQuery({
+    queryKey: ["task-processes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_processes")
+        .select("*, process_documentation(id, title, area)")
+        .eq("task_id", id!);
       if (error) throw error;
       return data;
     },
@@ -152,15 +164,28 @@ export default function TaskDetail() {
   const linkProcessMutation = useMutation({
     mutationFn: async (processId: string) => {
       const { error } = await supabase
-        .from("tasks")
-        .update({ process_id: processId })
-        .eq("id", id!);
+        .from("task_processes")
+        .insert([{ task_id: id!, process_id: processId }]);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      queryClient.invalidateQueries({ queryKey: ["task-processes", id] });
       setIsAddingProcess(false);
       toast.success("Processo vinculado!");
+    },
+  });
+
+  const unlinkProcessMutation = useMutation({
+    mutationFn: async (taskProcessId: string) => {
+      const { error } = await supabase
+        .from("task_processes")
+        .delete()
+        .eq("id", taskProcessId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-processes", id] });
+      toast.success("Processo desvinculado!");
     },
   });
 
@@ -509,63 +534,82 @@ export default function TaskDetail() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Processo Vinculado</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Processos Vinculados</CardTitle>
+                  <Badge variant="secondary">
+                    {taskProcesses?.length || 0}
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent>
-                {task.process_documentation ? (
-                  <div className="space-y-2">
-                    <div className="p-3 bg-muted/50 rounded">
-                      <p className="font-medium">{task.process_documentation.title}</p>
+              <CardContent className="space-y-3">
+                {taskProcesses?.map((tp: any) => (
+                  <div key={tp.id} className="flex items-center gap-2 p-3 bg-muted/50 rounded group">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{tp.process_documentation?.title}</p>
+                      <p className="text-xs text-muted-foreground">{tp.process_documentation?.area}</p>
                     </div>
                     <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => navigate(`/workspace/processes`)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => unlinkProcessMutation.mutate(tp.id)}
                     >
-                      Ver Processo
+                      <Trash2 size={14} />
                     </Button>
                   </div>
-                ) : (
-                  <Dialog open={isAddingProcess} onOpenChange={setIsAddingProcess}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="w-full gap-2">
-                        <LinkIcon size={16} />
-                        Vincular Processo
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Vincular Processo</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Selecione um processo</Label>
-                          <Select onValueChange={(value) => linkProcessMutation.mutate(value)}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Escolher processo..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {processes?.map((process) => (
+                ))}
+                
+                <Dialog open={isAddingProcess} onOpenChange={setIsAddingProcess}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full gap-2">
+                      <LinkIcon size={16} />
+                      Vincular Processo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Vincular Processo</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Selecione um processo</Label>
+                        <Select onValueChange={(value) => linkProcessMutation.mutate(value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolher processo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {processes
+                              ?.filter((p) => !taskProcesses?.some((tp: any) => tp.process_id === p.id))
+                              .map((process) => (
                                 <SelectItem key={process.id} value={process.id}>
                                   {process.title} ({process.area})
                                 </SelectItem>
                               ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => {
-                            setIsAddingProcess(false);
-                            navigate("/workspace/processes");
-                          }}
-                        >
-                          Criar Novo Processo
-                        </Button>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setIsAddingProcess(false);
+                          navigate("/workspace/processes");
+                        }}
+                      >
+                        Criar Novo Processo
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {taskProcesses && taskProcesses.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => navigate(`/workspace/processes`)}
+                  >
+                    Ver Processos
+                  </Button>
                 )}
               </CardContent>
             </Card>
