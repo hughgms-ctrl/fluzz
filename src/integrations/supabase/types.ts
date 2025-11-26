@@ -346,6 +346,111 @@ export type Database = {
           },
         ]
       }
+      routine_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          priority: string | null
+          process_id: string | null
+          project_id: string | null
+          routine_id: string
+          task_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          process_id?: string | null
+          project_id?: string | null
+          routine_id: string
+          task_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string | null
+          process_id?: string | null
+          project_id?: string | null
+          routine_id?: string
+          task_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_tasks_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_tasks_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routines: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          position_id: string
+          recurrence_config: Json | null
+          recurrence_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          position_id: string
+          recurrence_config?: Json | null
+          recurrence_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          position_id?: string
+          recurrence_config?: Json | null
+          recurrence_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routines_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subtasks: {
         Row: {
           completed: boolean | null
@@ -394,6 +499,7 @@ export type Database = {
           process_id: string | null
           project_id: string | null
           recurring_task_id: string | null
+          routine_id: string | null
           setor: string | null
           status: string | null
           title: string
@@ -411,6 +517,7 @@ export type Database = {
           process_id?: string | null
           project_id?: string | null
           recurring_task_id?: string | null
+          routine_id?: string | null
           setor?: string | null
           status?: string | null
           title: string
@@ -428,6 +535,7 @@ export type Database = {
           process_id?: string | null
           project_id?: string | null
           recurring_task_id?: string | null
+          routine_id?: string | null
           setor?: string | null
           status?: string | null
           title?: string
@@ -453,6 +561,13 @@ export type Database = {
             columns: ["recurring_task_id"]
             isOneToOne: false
             referencedRelation: "recurring_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
             referencedColumns: ["id"]
           },
         ]
