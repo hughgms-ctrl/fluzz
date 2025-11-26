@@ -12,7 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, Copy } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MoreVertical, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProjectCardProps {
@@ -25,6 +35,7 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
   const queryClient = useQueryClient();
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState(project.name);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const updateNameMutation = useMutation({
     mutationFn: async (newName: string) => {
@@ -165,6 +176,16 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
                   <Copy className="mr-2 h-4 w-4" />
                   {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
                 </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir Projeto
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -182,6 +203,30 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
           </div>
         </div>
       </CardContent>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Projeto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir permanentemente o projeto <strong>{project.name}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+                setShowDeleteDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };
