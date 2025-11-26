@@ -31,6 +31,7 @@ interface WorkspaceContextType {
   canManageMembers: boolean;
   canCreateTasks: boolean;
   refetchWorkspace: () => Promise<void>;
+  changeWorkspace: (workspaceId: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -42,49 +43,85 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchWorkspace = async () => {
+  const fetchWorkspace = async (preferredWorkspaceId?: string) => {
     if (!user) {
+      setWorkspace(null);
+      setWorkspaceMember(null);
+      setWorkspaces([]);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+
     try {
-      // Buscar workspace do usuário
+      // Buscar todos os memberships do usuário
       const { data: memberData, error: memberError } = await supabase
         .from("workspace_members")
         .select("*")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", user.id);
 
       if (memberError) {
         console.error("Erro ao buscar membro do workspace:", memberError);
-        setLoading(false);
         return;
       }
 
-      setWorkspaceMember(memberData);
+      if (!memberData || memberData.length === 0) {
+        // Usuário ainda não tem workspace associado
+        setWorkspace(null);
+        setWorkspaceMember(null);
+        setWorkspaces([]);
+        return;
+      }
 
-      // Buscar informações do workspace
-      const { data: workspaceData, error: workspaceError } = await supabase
+      // Determinar workspace atual (preferido, salvo ou primeiro da lista)
+      let activeWorkspaceId = preferredWorkspaceId;
+
+      if (!activeWorkspaceId && typeof window !== "undefined") {
+        const stored = window.localStorage.getItem("currentWorkspaceId");
+        if (stored && memberData.some((m) => m.workspace_id === stored)) {
+          activeWorkspaceId = stored;
+        }
+      }
+
+      if (!activeWorkspaceId) {
+        activeWorkspaceId = memberData[0].workspace_id;
+      }
+
+      if (typeof window !== "undefined" && activeWorkspaceId) {
+        window.localStorage.setItem("currentWorkspaceId", activeWorkspaceId);
+      }
+
+      const activeMember =
+        memberData.find((m) => m.workspace_id === activeWorkspaceId) ||
+        memberData[0];
+
+      setWorkspaceMember(activeMember);
+
+      // Buscar informações de todos os workspaces aos quais o usuário pertence
+      const workspaceIds = memberData.map((m) => m.workspace_id);
+
+      const { data: workspacesData, error: workspacesError } = await supabase
         .from("workspaces")
         .select("*")
-        .eq("id", memberData.workspace_id)
-        .single();
+        .in("id", workspaceIds);
 
-      if (workspaceError) throw workspaceError;
-
-      setWorkspace(workspaceData);
-
-      // Buscar todos os workspaces (se for admin)
-      if (memberData.role === 'admin') {
-        const { data: allWorkspaces, error: workspacesError } = await supabase
-          .from("workspaces")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (workspacesError) throw workspacesError;
-        setWorkspaces(allWorkspaces || []);
+      if (workspacesError) {
+        console.error("Erro ao buscar workspaces:", workspacesError);
+        // Mesmo que não consiga carregar detalhes, mantemos o membership ativo
+        setWorkspace(null);
+        setWorkspaces([]);
+        return;
       }
+
+      setWorkspaces(workspacesData || []);
+
+      const activeWorkspace =
+        workspacesData?.find((w) => w.id === activeMember.workspace_id) ||
+        workspacesData?.[0] ||
+        null;
+
+      setWorkspace(activeWorkspace);
     } catch (error: any) {
       console.error("Erro ao carregar workspace:", error);
       toast.error("Erro ao carregar workspace");
@@ -96,6 +133,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchWorkspace();
   }, [user]);
+
+  const changeWorkspace = async (workspaceId: string) => {
+    await fetchWorkspace(workspaceId);
+  };
 
   const isAdmin = workspaceMember?.role === 'admin';
   const isGestor = workspaceMember?.role === 'gestor';
@@ -116,6 +157,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         canManageMembers,
         canCreateTasks,
         refetchWorkspace: fetchWorkspace,
+        changeWorkspace,
       }}
     >
       {children}
