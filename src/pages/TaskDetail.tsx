@@ -37,6 +37,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 
 export default function TaskDetail() {
@@ -46,6 +56,8 @@ export default function TaskDetail() {
   const [newSubtask, setNewSubtask] = useState("");
   const [isAddingProcess, setIsAddingProcess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [subtaskToDelete, setSubtaskToDelete] = useState<{ id: string; title: string } | null>(null);
   const [editedTask, setEditedTask] = useState({
     title: "",
     description: "",
@@ -132,6 +144,7 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task", id] });
+      setSubtaskToDelete(null);
       toast.success("Subtarefa removida!");
     },
   });
@@ -169,8 +182,29 @@ export default function TaskDetail() {
     }
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("tasks")
+        .delete()
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Tarefa excluída!");
+      navigate(`/projects/${task?.project_id}`);
+    },
+    onError: () => {
+      toast.error("Erro ao excluir tarefa");
+    }
+  });
+
   const handleSave = () => {
     updateTaskMutation.mutate(editedTask);
+  };
+
+  const handleDelete = () => {
+    deleteTaskMutation.mutate();
   };
 
   if (isLoading) {
@@ -209,6 +243,23 @@ export default function TaskDetail() {
 
   return (
     <AppLayout>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir a tarefa '{task?.title}' e todas as suas subtarefas? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -251,10 +302,15 @@ export default function TaskDetail() {
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>
-                <Edit2 size={16} className="mr-2" />
-                Editar
-              </Button>
+              <>
+                <Button onClick={() => setIsEditing(true)}>
+                  <Edit2 size={16} className="mr-2" />
+                  Editar
+                </Button>
+                <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)}>
+                  <Trash2 size={16} />
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -421,7 +477,7 @@ export default function TaskDetail() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => deleteSubtaskMutation.mutate(subtask.id)}
+                      onClick={() => setSubtaskToDelete({ id: subtask.id, title: subtask.title })}
                     >
                       <Trash2 size={14} />
                     </Button>
@@ -515,6 +571,26 @@ export default function TaskDetail() {
             </Card>
           </div>
         </div>
+
+        <AlertDialog open={!!subtaskToDelete} onOpenChange={(open) => !open && setSubtaskToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza de que deseja excluir a subtarefa '{subtaskToDelete?.title}'? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => subtaskToDelete && deleteSubtaskMutation.mutate(subtaskToDelete.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
