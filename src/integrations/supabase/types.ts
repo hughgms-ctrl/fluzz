@@ -1000,6 +1000,13 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      user_is_any_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_workspace_ids: {
+        Args: { _user_id: string }
+        Returns: {
+          workspace_id: string
+        }[]
+      }
     }
     Enums: {
       workspace_role: "admin" | "gestor" | "membro"
