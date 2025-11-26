@@ -417,6 +417,7 @@ export type Database = {
           position_id: string
           recurrence_config: Json | null
           recurrence_type: string
+          start_date: string
           updated_at: string
         }
         Insert: {
@@ -428,6 +429,7 @@ export type Database = {
           position_id: string
           recurrence_config?: Json | null
           recurrence_type: string
+          start_date?: string
           updated_at?: string
         }
         Update: {
@@ -439,6 +441,7 @@ export type Database = {
           position_id?: string
           recurrence_config?: Json | null
           recurrence_type?: string
+          start_date?: string
           updated_at?: string
         }
         Relationships: [
@@ -609,6 +612,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_next_due_date: {
+        Args: {
+          _current_date: string
+          _recurrence_config: Json
+          _recurrence_type: string
+        }
+        Returns: string
+      }
       is_project_owner: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
