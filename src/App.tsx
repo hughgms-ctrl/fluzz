@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
@@ -20,6 +21,8 @@ import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
 import BriefingRepository from "./pages/BriefingRepository";
 import BriefingDocument from "./pages/BriefingDocument";
+import WorkspaceAdmin from "./pages/WorkspaceAdmin";
+import WorkspaceSetup from "./pages/WorkspaceSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +34,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
+          <WorkspaceProvider>
+            <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Workspace />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -48,8 +52,11 @@ const App = () => (
             <Route path="/positions/:id" element={<PositionDetail />} />
           <Route path="/briefings" element={<BriefingRepository />} />
           <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
+          <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
+          <Route path="/workspace/setup" element={<WorkspaceSetup />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
+            </Routes>
+          </WorkspaceProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

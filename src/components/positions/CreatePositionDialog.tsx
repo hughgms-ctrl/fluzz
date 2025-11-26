@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface CreatePositionDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ export function CreatePositionDialog({ open, onOpenChange }: CreatePositionDialo
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +28,13 @@ export function CreatePositionDialog({ open, onOpenChange }: CreatePositionDialo
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspace) throw new Error("Workspace não encontrado");
 
       const { error } = await supabase.from("positions").insert({
         name,
         description,
         created_by: user.id,
+        workspace_id: workspace.id,
       });
 
       if (error) throw error;
