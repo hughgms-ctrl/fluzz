@@ -1,9 +1,9 @@
+import React, { useState } from "react";
 import { TaskCard } from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter, useDroppable, PointerSensor } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useState } from "react";
 import { GripVertical } from "lucide-react";
 
 interface DraggableTaskBoardProps {
@@ -18,6 +18,31 @@ const columns = [
   { id: "completed", title: "Concluído", color: "border-l-4 border-l-status-completed" },
 ];
 
+function DroppableColumn({ column, children, taskCount }: { column: any; children: React.ReactNode; taskCount: number }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+  });
+
+  return (
+    <Card 
+      ref={setNodeRef} 
+      className={`${column.color} transition-all duration-200 ${isOver ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+    >
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center justify-between">
+          {column.title}
+          <span className="text-sm font-normal text-muted-foreground">
+            {taskCount}
+          </span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 space-y-2 min-h-[200px]">
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
 function SortableTask({ task, onDelete, onStatusChange }: any) {
   const {
     attributes,
@@ -30,12 +55,17 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    transition: transition || 'transform 200ms ease',
+    opacity: isDragging ? 0.3 : 1,
+    cursor: isDragging ? 'grabbing' : 'default',
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={`relative group ${isDragging ? 'z-50 scale-105' : ''} transition-all`}
+    >
       <div
         {...attributes}
         {...listeners}
@@ -58,15 +88,15 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
   const [activeId, setActiveId] = useState<string | null>(null);
   
   const sensors = useSensors(
-    useSensor(MouseSensor, {
+    useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 3,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
-        tolerance: 5,
+        delay: 100,
+        tolerance: 3,
       },
     })
   );
@@ -126,39 +156,29 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
               items={columnTasks.map((t) => t.id)}
               strategy={verticalListSortingStrategy}
             >
-              <Card className={`${column.color}`}>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    {column.title}
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {columnTasks.length}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 space-y-2 min-h-[200px]">
-                  {columnTasks.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      Arraste tarefas aqui
-                    </p>
-                  ) : (
-                    columnTasks.map((task) => (
-                      <SortableTask
-                        key={task.id}
-                        task={task}
-                        onDelete={() => onDeleteTask(task.id)}
-                        onStatusChange={(newStatus: string) => onUpdateStatus(task.id, newStatus)}
-                      />
-                    ))
-                  )}
-                </CardContent>
-              </Card>
+              <DroppableColumn column={column} taskCount={columnTasks.length}>
+                {columnTasks.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    Arraste tarefas aqui
+                  </p>
+                ) : (
+                  columnTasks.map((task) => (
+                    <SortableTask
+                      key={task.id}
+                      task={task}
+                      onDelete={() => onDeleteTask(task.id)}
+                      onStatusChange={(newStatus: string) => onUpdateStatus(task.id, newStatus)}
+                    />
+                  ))
+                )}
+              </DroppableColumn>
             </SortableContext>
           );
         })}
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeTask ? (
-          <div className="opacity-80 rotate-2 shadow-xl">
+          <div className="opacity-70 rotate-1 shadow-2xl scale-105 cursor-grabbing">
             <TaskCard
               task={activeTask}
               onDelete={() => {}}
