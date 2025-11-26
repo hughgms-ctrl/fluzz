@@ -25,6 +25,9 @@ interface RoutineTaskCardProps {
     title: string;
     description: string | null;
     priority: string | null;
+    status: string | null;
+    setor: string | null;
+    documentation: string | null;
     project_id: string | null;
     process_id: string | null;
     routine_id: string;
@@ -43,6 +46,18 @@ const priorityLabels: Record<string, string> = {
   low: "Baixa",
   medium: "Média",
   high: "Alta",
+};
+
+const statusLabels: Record<string, string> = {
+  todo: "A Fazer",
+  in_progress: "Em Progresso",
+  completed: "Concluído",
+};
+
+const statusColors: Record<string, string> = {
+  todo: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  in_progress: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  completed: "bg-green-500/10 text-green-500 border-green-500/20",
 };
 
 export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
@@ -81,12 +96,33 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
                   {priorityLabels[task.priority]}
                 </Badge>
               )}
+              {task.status && (
+                <Badge
+                  variant="outline"
+                  className={statusColors[task.status]}
+                >
+                  {statusLabels[task.status]}
+                </Badge>
+              )}
             </div>
 
             {task.description && (
               <p className="text-sm text-muted-foreground">
                 {task.description}
               </p>
+            )}
+
+            {task.setor && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">Setor:</span> {task.setor}
+              </div>
+            )}
+
+            {task.documentation && (
+              <div className="text-sm text-muted-foreground">
+                <span className="font-medium">Documentação:</span>{" "}
+                {task.documentation}
+              </div>
             )}
 
             <div className="flex flex-wrap gap-2">

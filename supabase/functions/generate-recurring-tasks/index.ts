@@ -19,6 +19,9 @@ interface RoutineTask {
   title: string;
   description: string | null;
   priority: string | null;
+  status: string | null;
+  setor: string | null;
+  documentation: string | null;
   project_id: string | null;
   process_id: string | null;
 }
@@ -106,7 +109,9 @@ Deno.serve(async (req) => {
         title: rt.title,
         description: rt.description,
         priority: rt.priority,
-        status: 'todo',
+        status: rt.status || 'todo',
+        setor: rt.setor,
+        documentation: rt.documentation,
         project_id: rt.project_id,
         process_id: rt.process_id,
         assigned_to: userId,

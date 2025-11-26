@@ -350,11 +350,14 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          documentation: string | null
           id: string
           priority: string | null
           process_id: string | null
           project_id: string | null
           routine_id: string
+          setor: string | null
+          status: string | null
           task_order: number
           title: string
           updated_at: string
@@ -362,11 +365,14 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          documentation?: string | null
           id?: string
           priority?: string | null
           process_id?: string | null
           project_id?: string | null
           routine_id: string
+          setor?: string | null
+          status?: string | null
           task_order?: number
           title: string
           updated_at?: string
@@ -374,11 +380,14 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          documentation?: string | null
           id?: string
           priority?: string | null
           process_id?: string | null
           project_id?: string | null
           routine_id?: string
+          setor?: string | null
+          status?: string | null
           task_order?: number
           title?: string
           updated_at?: string

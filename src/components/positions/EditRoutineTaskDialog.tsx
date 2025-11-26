@@ -27,6 +27,9 @@ interface EditRoutineTaskDialogProps {
     title: string;
     description: string | null;
     priority: string | null;
+    status: string | null;
+    setor: string | null;
+    documentation: string | null;
     project_id: string | null;
     process_id: string | null;
   };
@@ -44,6 +47,9 @@ export function EditRoutineTaskDialog({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [priority, setPriority] = useState(task.priority || "medium");
+  const [status, setStatus] = useState(task.status || "todo");
+  const [setor, setSetor] = useState(task.setor || "");
+  const [documentation, setDocumentation] = useState(task.documentation || "");
   const [projectId, setProjectId] = useState<string>(task.project_id || "none");
   const [processId, setProcessId] = useState<string>(task.process_id || "none");
   const [loading, setLoading] = useState(false);
@@ -83,6 +89,9 @@ export function EditRoutineTaskDialog({
       setTitle(task.title);
       setDescription(task.description || "");
       setPriority(task.priority || "medium");
+      setStatus(task.status || "todo");
+      setSetor(task.setor || "");
+      setDocumentation(task.documentation || "");
       setProjectId(task.project_id || "none");
       setProcessId(task.process_id || "none");
     }
@@ -99,6 +108,9 @@ export function EditRoutineTaskDialog({
           title,
           description,
           priority,
+          status,
+          setor: setor || null,
+          documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
           process_id: processId === "none" ? null : processId,
         })
@@ -150,18 +162,44 @@ export function EditRoutineTaskDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="priority">Prioridade</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A Fazer</SelectItem>
+                  <SelectItem value="in_progress">Em Progresso</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="priority">Prioridade</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="setor">Setor</Label>
+            <Input
+              id="setor"
+              value={setor}
+              onChange={(e) => setSetor(e.target.value)}
+              placeholder="Ex: Marketing, Vendas, TI..."
+            />
           </div>
 
           <div>
@@ -196,6 +234,17 @@ export function EditRoutineTaskDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="documentation">Documentação</Label>
+            <Textarea
+              id="documentation"
+              value={documentation}
+              onChange={(e) => setDocumentation(e.target.value)}
+              placeholder="Adicione documentação, links ou anotações importantes..."
+              rows={3}
+            />
           </div>
 
           <div className="flex justify-end gap-2">

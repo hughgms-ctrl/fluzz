@@ -35,6 +35,9 @@ export function CreateRoutineTaskDialog({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
+  const [status, setStatus] = useState("todo");
+  const [setor, setSetor] = useState("");
+  const [documentation, setDocumentation] = useState("");
   const [projectId, setProjectId] = useState<string>("none");
   const [processId, setProcessId] = useState<string>("none");
   const [loading, setLoading] = useState(false);
@@ -79,6 +82,9 @@ export function CreateRoutineTaskDialog({
         title,
         description,
         priority,
+        status,
+        setor: setor || null,
+        documentation: documentation || null,
         project_id: projectId === "none" ? null : projectId,
         process_id: processId === "none" ? null : processId,
       });
@@ -101,6 +107,9 @@ export function CreateRoutineTaskDialog({
     setTitle("");
     setDescription("");
     setPriority("medium");
+    setStatus("todo");
+    setSetor("");
+    setDocumentation("");
     setProjectId("none");
     setProcessId("none");
   };
@@ -138,18 +147,44 @@ export function CreateRoutineTaskDialog({
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="priority">Prioridade</Label>
+              <Select value={priority} onValueChange={setPriority}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Baixa</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">A Fazer</SelectItem>
+                  <SelectItem value="in_progress">Em Progresso</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div>
-            <Label htmlFor="priority">Prioridade</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Baixa</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="setor">Setor</Label>
+            <Input
+              id="setor"
+              value={setor}
+              onChange={(e) => setSetor(e.target.value)}
+              placeholder="Ex: Marketing, Vendas, TI..."
+            />
           </div>
 
           <div>
@@ -184,6 +219,17 @@ export function CreateRoutineTaskDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="documentation">Documentação</Label>
+            <Textarea
+              id="documentation"
+              value={documentation}
+              onChange={(e) => setDocumentation(e.target.value)}
+              placeholder="Adicione documentação, links ou anotações importantes..."
+              rows={3}
+            />
           </div>
 
           <div className="flex justify-end gap-2">
