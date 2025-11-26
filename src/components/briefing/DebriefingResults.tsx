@@ -32,13 +32,14 @@ export default function DebriefingResults({
   const conversaoGeral = debriefing.leads > 0 
     ? (debriefing.vendas_ingressos / debriefing.leads) * 100 
     : 0;
-  const roasEvento = debriefing.investimento_trafego > 0
-    ? (debriefing.retorno_vendas_ingressos + debriefing.valor_vendas_mentorias) / debriefing.investimento_trafego
-    : 0;
   
   const investimentoDiff = briefing.investimento_trafego - debriefing.investimento_trafego;
   const roasOutrasEstrategias = investimentoDiff > 0
     ? debriefing.valor_outras_estrategias / investimentoDiff
+    : 0;
+  
+  const roasMentorias = debriefing.investimento_trafego > 0
+    ? debriefing.valor_vendas_mentorias / debriefing.investimento_trafego
     : 0;
 
   // Comparativos
@@ -59,74 +60,16 @@ export default function DebriefingResults({
 
   return (
     <div className="space-y-6">
-      {/* KPI Principal: ROAS Ingressos */}
-      <Card className="border-2 border-primary shadow-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-medium text-muted-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            ROAS Ingressos - Principal KPI
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <span className="text-5xl font-bold text-primary">{roasIngressos.toFixed(2)}x</span>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Retorno por Real Investido</p>
-              <p className="text-2xl font-semibold mt-1">{formatCurrency(debriefing.retorno_vendas_ingressos)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* KPIs Secundários */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-chart-1">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">ROAS Evento (com Mentorias)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold">{roasEvento.toFixed(2)}x</span>
-              <TrendingUp className="h-8 w-8 text-chart-1" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-chart-2">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Conversão Geral</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold">{formatPercentage(conversaoGeral)}</span>
-              <div className="text-right">
-                <Progress value={conversaoGeral} className="w-20 h-2" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-chart-3">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Custo por Lead (CPL)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <span className="text-3xl font-bold">{formatCurrency(cpl)}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Métricas Detalhadas */}
+      {/* 1. Resumo Financeiro */}
       <Card>
         <CardHeader>
           <CardTitle>Resumo Financeiro</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-muted-foreground">Vendas de Ingressos</p>
+            {/* Vendas de Ingressos (Tráfego) */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <p className="text-sm font-semibold text-muted-foreground">Vendas de Ingressos (Tráfego)</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Quantidade:</span>
@@ -136,106 +79,95 @@ export default function DebriefingResults({
                   <span className="text-sm text-muted-foreground">Retorno:</span>
                   <span className="font-semibold">{formatCurrency(debriefing.retorno_vendas_ingressos)}</span>
                 </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-sm font-semibold text-primary">ROAS:</span>
+                  <span className="font-bold text-primary text-lg">{roasIngressos.toFixed(2)}x</span>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-muted-foreground">Mentorias</p>
+            {/* Vendas de Ingressos (Outras Estratégias) */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <p className="text-sm font-semibold text-muted-foreground">Vendas de Ingressos (Outras Estratégias)</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Vendidas:</span>
+                  <span className="text-sm text-muted-foreground">Quantidade:</span>
+                  <span className="font-semibold">{debriefing.participantes_outras_estrategias}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Retorno:</span>
+                  <span className="font-semibold">{formatCurrency(debriefing.valor_outras_estrategias)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-sm font-semibold text-primary">ROAS:</span>
+                  <span className="font-bold text-primary text-lg">{roasOutrasEstrategias.toFixed(2)}x</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mentorias Vendidas */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <p className="text-sm font-semibold text-muted-foreground">Mentorias Vendidas no Evento</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Quantidade:</span>
                   <span className="font-semibold">{debriefing.mentorias_vendidas}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Valor:</span>
                   <span className="font-semibold">{formatCurrency(debriefing.valor_vendas_mentorias)}</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-sm font-semibold text-muted-foreground">Outras Estratégias</p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">ROAS:</span>
-                  <span className="font-semibold">{roasOutrasEstrategias.toFixed(2)}x</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Valor:</span>
-                  <span className="font-semibold">{formatCurrency(debriefing.valor_outras_estrategias)}</span>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-sm font-semibold text-primary">ROAS Mentorias:</span>
+                  <span className="font-bold text-primary text-lg">{roasMentorias.toFixed(2)}x</span>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-6">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Leads:</span>
-              <span className="font-semibold text-lg">{debriefing.leads}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Participantes:</span>
-              <span className="font-semibold text-lg">{debriefing.total_participantes}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Comparativo Briefing vs Debriefing */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Comparativo: Planejado vs Realizado</CardTitle>
+      {/* 2. KPIs Principais em Destaque */}
+      <Card className="border-2 border-primary shadow-lg bg-gradient-to-br from-background to-muted/20">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Principais Indicadores
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Investimento em Tráfego</p>
-                <div className="flex gap-4 mt-1">
-                  <span className="text-sm">Planejado: {formatCurrency(briefing.investimento_trafego)}</span>
-                  <span className="text-sm">Realizado: {formatCurrency(debriefing.investimento_trafego)}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {investimentoVariacao > 0 ? (
-                  <ArrowUp className="h-4 w-4 text-red-500" />
-                ) : (
-                  <ArrowDown className="h-4 w-4 text-green-500" />
-                )}
-                <span className={investimentoVariacao > 0 ? "text-red-500" : "text-green-500"}>
-                  {Math.abs(investimentoVariacao).toFixed(1)}%
-                </span>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* CPL */}
+            <div className="text-center p-4 rounded-lg border bg-background">
+              <p className="text-sm text-muted-foreground mb-2">CPL</p>
+              <p className="text-sm text-muted-foreground mb-1">Custo por Lead</p>
+              <p className="text-3xl font-bold text-foreground">{formatCurrency(cpl)}</p>
             </div>
 
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div>
-                <p className="text-sm text-muted-foreground">Participantes Pagantes</p>
-                <div className="flex gap-4 mt-1">
-                  <span className="text-sm">Planejado: {briefing.participantes_pagantes}</span>
-                  <span className="text-sm">Realizado: {debriefing.total_participantes}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                {participantesVariacao > 0 ? (
-                  <ArrowUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <ArrowDown className="h-4 w-4 text-red-500" />
-                )}
-                <span className={participantesVariacao > 0 ? "text-green-500" : "text-red-500"}>
-                  {Math.abs(participantesVariacao).toFixed(1)}%
-                </span>
-              </div>
+            {/* ROAS Ingresso - DESTAQUE */}
+            <div className="text-center p-6 rounded-lg border-2 border-primary bg-primary/5">
+              <p className="text-sm font-semibold text-primary mb-2">ROAS INGRESSO</p>
+              <p className="text-sm text-muted-foreground mb-1">Retorno por Real Investido</p>
+              <p className="text-5xl font-bold text-primary">{roasIngressos.toFixed(2)}x</p>
+              <p className="text-sm text-muted-foreground mt-2">{formatCurrency(debriefing.retorno_vendas_ingressos)}</p>
+            </div>
+
+            {/* Conversão Geral */}
+            <div className="text-center p-4 rounded-lg border bg-background">
+              <p className="text-sm text-muted-foreground mb-2">Conversão Geral</p>
+              <p className="text-sm text-muted-foreground mb-1">Leads → Vendas</p>
+              <p className="text-3xl font-bold text-foreground">{formatPercentage(conversaoGeral)}</p>
+              <Progress value={conversaoGeral} className="mt-3 mx-auto w-32" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Performance dos Vendedores */}
+      {/* 3. Conversão por Vendedor */}
       {vendedores.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Performance dos Vendedores</CardTitle>
+            <CardTitle>Conversão por Vendedor</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -245,19 +177,19 @@ export default function DebriefingResults({
                   : 0;
 
                 return (
-                  <div key={vendedor.id} className="p-4 border rounded-lg">
+                  <div key={vendedor.id} className="p-4 border rounded-lg hover:border-primary/50 transition-colors">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold">{vendedor.vendedor_nome}</h4>
-                      <span className="text-sm font-medium">{formatPercentage(conversao)}</span>
+                      <span className="text-lg font-bold text-primary">{formatPercentage(conversao)}</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-2 gap-4 text-sm mb-2">
                       <div>
-                        <span className="text-muted-foreground">Leads: </span>
-                        <span>{vendedor.leads_recebidos}</span>
+                        <span className="text-muted-foreground">Leads Recebidos: </span>
+                        <span className="font-medium">{vendedor.leads_recebidos}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Vendas: </span>
-                        <span>{vendedor.vendas_realizadas}</span>
+                        <span className="text-muted-foreground">Vendas Realizadas: </span>
+                        <span className="font-medium">{vendedor.vendas_realizadas}</span>
                       </div>
                     </div>
                     <Progress value={conversao} className="mt-2" />
@@ -268,6 +200,56 @@ export default function DebriefingResults({
           </CardContent>
         </Card>
       )}
+
+      {/* 4. Comparativo Briefing vs Debriefing */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Comparativo: Planejado vs Realizado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Investimento em Tráfego</p>
+                <div className="flex gap-4 mt-1">
+                  <span className="text-sm">Planejado: <span className="font-medium">{formatCurrency(briefing.investimento_trafego)}</span></span>
+                  <span className="text-sm">Realizado: <span className="font-medium">{formatCurrency(debriefing.investimento_trafego)}</span></span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {investimentoVariacao > 0 ? (
+                  <ArrowUp className="h-4 w-4 text-red-500" />
+                ) : (
+                  <ArrowDown className="h-4 w-4 text-green-500" />
+                )}
+                <span className={`font-semibold ${investimentoVariacao > 0 ? "text-red-500" : "text-green-500"}`}>
+                  {Math.abs(investimentoVariacao).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/50 transition-colors">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Participantes Pagantes</p>
+                <div className="flex gap-4 mt-1">
+                  <span className="text-sm">Planejado: <span className="font-medium">{briefing.participantes_pagantes}</span></span>
+                  <span className="text-sm">Realizado: <span className="font-medium">{debriefing.total_participantes}</span></span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {participantesVariacao > 0 ? (
+                  <ArrowUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <ArrowDown className="h-4 w-4 text-red-500" />
+                )}
+                <span className={`font-semibold ${participantesVariacao > 0 ? "text-green-500" : "text-red-500"}`}>
+                  {Math.abs(participantesVariacao).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
