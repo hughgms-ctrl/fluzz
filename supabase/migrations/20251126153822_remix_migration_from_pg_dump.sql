@@ -223,6 +223,7 @@ CREATE TABLE public.projects (
     status text DEFAULT 'active'::text,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
+    archived boolean DEFAULT false NOT NULL,
     CONSTRAINT projects_status_check CHECK ((status = ANY (ARRAY['active'::text, 'completed'::text, 'archived'::text])))
 );
 
@@ -359,6 +360,20 @@ ALTER TABLE ONLY public.subtasks
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_projects_archived; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_projects_archived ON public.projects USING btree (archived);
+
+
+--
+-- Name: idx_projects_user_archived; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_projects_user_archived ON public.projects USING btree (user_id, archived);
 
 
 --
