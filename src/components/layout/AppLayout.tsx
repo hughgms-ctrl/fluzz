@@ -1,7 +1,8 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Navigate, useNavigate } from "react-router-dom";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -9,8 +10,10 @@ interface AppLayoutProps {
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, loading } = useAuth();
+  const { workspace, loading: workspaceLoading } = useWorkspace();
+  const navigate = useNavigate();
 
-  if (loading) {
+  if (loading || workspaceLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
@@ -19,6 +22,11 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
       </div>
     );
+  }
+
+  if (user && !workspace && !workspaceLoading) {
+    navigate("/workspace/setup");
+    return null;
   }
 
   if (!user) {

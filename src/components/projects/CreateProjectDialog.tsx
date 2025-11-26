@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Dialog,
   DialogContent,
@@ -22,17 +23,24 @@ interface CreateProjectDialogProps {
 
 export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogProps) => {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!workspace) {
+        toast.error("Workspace não encontrado");
+        return;
+      }
+
       const { data, error } = await supabase
         .from("projects")
         .insert([
           {
             user_id: user!.id,
+            workspace_id: workspace.id,
             name,
             description,
             status: "active",
