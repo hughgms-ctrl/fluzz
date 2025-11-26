@@ -63,7 +63,7 @@ export default function BriefingRepository() {
               <Card
                 key={briefing.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(`/projects/${briefing.project_id}`)}
+                onClick={() => navigate(`/briefing/${briefing.id}`)}
               >
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -100,16 +100,28 @@ export default function BriefingRepository() {
                       </div>
                     </div>
                   )}
-                  <Button
-                    className="w-full mt-4"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/projects/${briefing.project_id}`);
-                    }}
-                  >
-                    Ver Detalhes
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/briefing/${briefing.id}`);
+                      }}
+                    >
+                      Ver Documento
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/projects/${briefing.project_id}`);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
