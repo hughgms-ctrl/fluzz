@@ -22,15 +22,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Copy, Trash2 } from "lucide-react";
+import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProjectCardProps {
   project: any;
   onDelete: () => void;
+  onArchive: () => void;
+  isArchived?: boolean;
 }
 
-export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }: ProjectCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -175,6 +177,24 @@ export const ProjectCard = ({ project, onDelete }: ProjectCardProps) => {
                 >
                   <Copy className="mr-2 h-4 w-4" />
                   {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onArchive();
+                  }}
+                >
+                  {isArchived ? (
+                    <>
+                      <ArchiveRestore className="mr-2 h-4 w-4" />
+                      Restaurar Projeto
+                    </>
+                  ) : (
+                    <>
+                      <Archive className="mr-2 h-4 w-4" />
+                      Arquivar Projeto
+                    </>
+                  )}
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={(e) => {
