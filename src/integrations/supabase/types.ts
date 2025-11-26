@@ -288,6 +288,7 @@ export type Database = {
           position_id: string
           priority: string | null
           process_id: string | null
+          project_id: string | null
           recurrence_config: Json | null
           recurrence_type: string
           title: string
@@ -301,6 +302,7 @@ export type Database = {
           position_id: string
           priority?: string | null
           process_id?: string | null
+          project_id?: string | null
           recurrence_config?: Json | null
           recurrence_type: string
           title: string
@@ -314,6 +316,7 @@ export type Database = {
           position_id?: string
           priority?: string | null
           process_id?: string | null
+          project_id?: string | null
           recurrence_config?: Json | null
           recurrence_type?: string
           title?: string
@@ -332,6 +335,13 @@ export type Database = {
             columns: ["process_id"]
             isOneToOne: false
             referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

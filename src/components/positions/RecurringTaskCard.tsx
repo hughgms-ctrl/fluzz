@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Repeat, Clock } from "lucide-react";
+import { Repeat, Clock, FolderKanban, FileText } from "lucide-react";
 
 interface RecurringTaskCardProps {
   task: {
@@ -13,6 +13,10 @@ interface RecurringTaskCardProps {
       id: string;
       title: string;
     } | null;
+    projects?: {
+      id: string;
+      name: string;
+    } | null;
   };
 }
 
@@ -21,7 +25,6 @@ const recurrenceLabels: Record<string, string> = {
   weekly: "Semanal",
   monthly: "Mensal",
   yearly: "Anual",
-  custom: "Personalizada",
 };
 
 const priorityColors: Record<string, string> = {
@@ -39,10 +42,10 @@ export function RecurringTaskCard({ task }: RecurringTaskCardProps) {
             <Repeat className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">{task.title}</CardTitle>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
             <Badge variant="outline" className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              {recurrenceLabels[task.recurrence_type]}
+              {recurrenceLabels[task.recurrence_type] || task.recurrence_type}
             </Badge>
             {task.priority && (
               <Badge className={priorityColors[task.priority]}>
@@ -52,11 +55,26 @@ export function RecurringTaskCard({ task }: RecurringTaskCardProps) {
           </div>
         </div>
       </CardHeader>
-      {task.description && (
-        <CardContent>
+      <CardContent className="space-y-3">
+        {task.description && (
           <p className="text-sm text-muted-foreground">{task.description}</p>
-        </CardContent>
-      )}
+        )}
+        
+        <div className="flex flex-wrap gap-2">
+          {task.projects && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <FolderKanban className="h-3 w-3" />
+              {task.projects.name}
+            </Badge>
+          )}
+          {task.process_documentation && (
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <FileText className="h-3 w-3" />
+              {task.process_documentation.title}
+            </Badge>
+          )}
+        </div>
+      </CardContent>
     </Card>
   );
 }

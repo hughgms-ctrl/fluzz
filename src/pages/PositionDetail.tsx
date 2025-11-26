@@ -39,7 +39,7 @@ export default function PositionDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recurring_tasks")
-        .select("*, process_documentation(id, title)")
+        .select("*, process_documentation(id, title), projects(id, name)")
         .eq("position_id", id)
         .order("created_at", { ascending: false });
       
