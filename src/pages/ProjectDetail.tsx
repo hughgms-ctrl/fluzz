@@ -103,6 +103,28 @@ export default function ProjectDetail() {
         .eq("id", taskId);
       if (error) throw error;
     },
+    onMutate: async ({ taskId, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["tasks", id] });
+      
+      // Snapshot previous value
+      const previousTasks = queryClient.getQueryData(["tasks", id]);
+      
+      // Optimistically update
+      queryClient.setQueryData(["tasks", id], (old: any) => {
+        return old?.map((task: any) => 
+          task.id === taskId ? { ...task, status } : task
+        );
+      });
+      
+      return { previousTasks };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["tasks", id], context.previousTasks);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["project", id] });
