@@ -258,6 +258,7 @@ CREATE TABLE public.recurring_tasks (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     created_by uuid,
+    project_id uuid,
     CONSTRAINT recurring_tasks_recurrence_type_check CHECK ((recurrence_type = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text, 'yearly'::text, 'custom'::text])))
 );
 
@@ -282,7 +283,7 @@ CREATE TABLE public.subtasks (
 
 CREATE TABLE public.tasks (
     id uuid DEFAULT extensions.uuid_generate_v4() NOT NULL,
-    project_id uuid NOT NULL,
+    project_id uuid,
     title text NOT NULL,
     description text,
     status text DEFAULT 'todo'::text,
@@ -454,6 +455,20 @@ CREATE INDEX idx_projects_archived ON public.projects USING btree (archived);
 --
 
 CREATE INDEX idx_projects_user_archived ON public.projects USING btree (user_id, archived);
+
+
+--
+-- Name: idx_recurring_tasks_process_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_tasks_process_id ON public.recurring_tasks USING btree (process_id);
+
+
+--
+-- Name: idx_recurring_tasks_project_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_recurring_tasks_project_id ON public.recurring_tasks USING btree (project_id);
 
 
 --
@@ -635,6 +650,14 @@ ALTER TABLE ONLY public.recurring_tasks
 
 ALTER TABLE ONLY public.recurring_tasks
     ADD CONSTRAINT recurring_tasks_process_id_fkey FOREIGN KEY (process_id) REFERENCES public.process_documentation(id) ON DELETE SET NULL;
+
+
+--
+-- Name: recurring_tasks recurring_tasks_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_tasks
+    ADD CONSTRAINT recurring_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE SET NULL;
 
 
 --
@@ -841,6 +864,13 @@ CREATE POLICY "Users can create own projects" ON public.projects FOR INSERT WITH
 
 
 --
+-- Name: tasks Users can create standalone tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can create standalone tasks" ON public.tasks FOR INSERT WITH CHECK (((project_id IS NULL) AND (assigned_to = auth.uid())));
+
+
+--
 -- Name: subtasks Users can create subtasks in member projects; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -963,6 +993,13 @@ CREATE POLICY "Users can delete their own recurring tasks" ON public.recurring_t
 
 
 --
+-- Name: tasks Users can delete their own standalone tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete their own standalone tasks" ON public.tasks FOR DELETE USING (((project_id IS NULL) AND (assigned_to = auth.uid())));
+
+
+--
 -- Name: profiles Users can insert own profile; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1059,6 +1096,13 @@ CREATE POLICY "Users can update their own recurring tasks" ON public.recurring_t
 
 
 --
+-- Name: tasks Users can update their own standalone tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update their own standalone tasks" ON public.tasks FOR UPDATE USING (((project_id IS NULL) AND (assigned_to = auth.uid())));
+
+
+--
 -- Name: project_invites Users can view invites for their projects; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1144,6 +1188,13 @@ CREATE POLICY "Users can view tasks in own projects" ON public.tasks FOR SELECT 
 --
 
 CREATE POLICY "Users can view their own position assignments" ON public.user_positions FOR SELECT TO authenticated USING ((auth.uid() = user_id));
+
+
+--
+-- Name: tasks Users can view their own standalone tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own standalone tasks" ON public.tasks FOR SELECT USING (((project_id IS NULL) AND (assigned_to = auth.uid())));
 
 
 --
