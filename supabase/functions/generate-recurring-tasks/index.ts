@@ -12,6 +12,7 @@ interface RecurringTask {
   priority: string | null;
   recurrence_type: string;
   process_id: string | null;
+  project_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -48,7 +49,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate tasks - routine tasks don't need a project
+    // Generate tasks - use project_id from recurring task if set
     const tasksToCreate = recurringTasks.map((rt: RecurringTask) => {
       const dueDate = calculateDueDate(rt.recurrence_type);
       
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
         description: rt.description,
         priority: rt.priority,
         status: 'todo',
-        project_id: null, // Routine tasks are standalone
+        project_id: rt.project_id, // Use linked project if any
         assigned_to: userId,
         due_date: dueDate,
         recurring_task_id: rt.id,
