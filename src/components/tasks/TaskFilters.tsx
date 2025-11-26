@@ -24,6 +24,8 @@ interface TaskFiltersProps {
   onProjectChange?: (value: string) => void;
   projects?: Array<{ id: string; name: string }>;
   setores?: string[];
+  typeFilter?: string;
+  onTypeChange?: (value: string) => void;
 }
 
 export const TaskFilters = ({
@@ -41,6 +43,8 @@ export const TaskFilters = ({
   onProjectChange,
   projects,
   setores,
+  typeFilter,
+  onTypeChange,
 }: TaskFiltersProps) => {
   return (
     <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
@@ -58,7 +62,23 @@ export const TaskFilters = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        {typeFilter !== undefined && onTypeChange && (
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo</Label>
+            <Select value={typeFilter} onValueChange={onTypeChange}>
+              <SelectTrigger id="type">
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="project">Projeto</SelectItem>
+                <SelectItem value="standalone">Avulsa</SelectItem>
+                <SelectItem value="routine">Rotina</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {projectFilter !== undefined && onProjectChange && (
           <div className="space-y-2">
             <Label htmlFor="project">Projeto</Label>

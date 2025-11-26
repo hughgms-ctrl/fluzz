@@ -5,10 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
+import { CreateStandaloneTaskDialog } from "@/components/tasks/CreateStandaloneTaskDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, PlayCircle } from "lucide-react";
+import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } from "lucide-react";
 
 export default function MyTasks() {
   const { user } = useAuth();
@@ -18,6 +21,8 @@ export default function MyTasks() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dueDateFilter, setDueDateFilter] = useState("all");
   const [projectFilter, setProjectFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["my-tasks", user?.id],
@@ -30,6 +35,7 @@ export default function MyTasks() {
       if (error) throw error;
       return data;
     },
+    enabled: !!user,
   });
 
   const { data: projects } = useQuery({
@@ -54,6 +60,7 @@ export default function MyTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Tarefa excluída com sucesso!");
     },
     onError: () => {
@@ -71,9 +78,18 @@ export default function MyTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["project"] });
       toast.success("Status atualizado!");
     },
   });
+
+  // Helper function to determine task type
+  const getTaskType = (task: any): "project" | "standalone" | "routine" => {
+    if (task.recurring_task_id) return "routine";
+    if (!task.project_id) return "standalone";
+    return "project";
+  };
 
   if (isLoading) {
     return (
@@ -95,6 +111,9 @@ export default function MyTasks() {
     const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
     const matchesStatus = statusFilter === "all" || task.status === statusFilter;
     const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
+    
+    const taskType = getTaskType(task);
+    const matchesType = typeFilter === "all" || taskType === typeFilter;
 
     let matchesDueDate = true;
     if (dueDateFilter !== "all" && task.due_date) {
@@ -117,21 +136,116 @@ export default function MyTasks() {
       }
     }
 
-    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject;
+    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject && matchesType;
   }) || [];
 
   const todoTasks = filteredTasks.filter((t) => t.status === "todo");
   const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
   const completedTasks = filteredTasks.filter((t) => t.status === "completed");
 
+  // Count by type
+  const projectTasks = filteredTasks.filter((t) => getTaskType(t) === "project");
+  const standaloneTasks = filteredTasks.filter((t) => getTaskType(t) === "standalone");
+  const routineTasks = filteredTasks.filter((t) => getTaskType(t) === "routine");
+
+  const TaskTypeIcon = ({ type }: { type: "project" | "standalone" | "routine" }) => {
+    const icons = {
+      project: <FolderOpen size={12} />,
+      standalone: <User size={12} />,
+      routine: <RefreshCw size={12} />,
+    };
+    return icons[type];
+  };
+
+  const TaskTypeBadge = ({ task }: { task: any }) => {
+    const type = getTaskType(task);
+    const labels = {
+      project: task.projects?.name || "Projeto",
+      standalone: "Avulsa",
+      routine: "Rotina",
+    };
+    const colors = {
+      project: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+      standalone: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+      routine: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    };
+
+    return (
+      <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 gap-1 ${colors[type]}`}>
+        <TaskTypeIcon type={type} />
+        {labels[type]}
+      </Badge>
+    );
+  };
+
+  const renderTaskList = (taskList: any[], emptyMessage: string) => (
+    taskList.length > 0 ? (
+      <div className="space-y-3">
+        {taskList.map((task) => (
+          <div key={task.id} className="space-y-1">
+            <TaskTypeBadge task={task} />
+            <TaskCard
+              task={task}
+              onDelete={() => deleteTaskMutation.mutate(task.id)}
+              onStatusChange={(status) =>
+                updateTaskStatusMutation.mutate({ taskId: task.id, status })
+              }
+            />
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="text-center text-muted-foreground py-8">
+        {emptyMessage}
+      </p>
+    )
+  );
+
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Minhas Tarefas</h1>
-          <p className="text-muted-foreground mt-1">
-            Visualize e gerencie todas as tarefas atribuídas a você
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Minhas Tarefas</h1>
+            <p className="text-muted-foreground mt-1">
+              Visualize e gerencie todas as tarefas atribuídas a você
+            </p>
+          </div>
+          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+            <Plus size={16} />
+            Nova Tarefa Avulsa
+          </Button>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-l-4 border-l-blue-500">
+            <CardContent className="p-4 flex items-center gap-3">
+              <FolderOpen className="h-8 w-8 text-blue-500" />
+              <div>
+                <p className="text-2xl font-bold">{projectTasks.length}</p>
+                <p className="text-sm text-muted-foreground">Tarefas de Projeto</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-purple-500">
+            <CardContent className="p-4 flex items-center gap-3">
+              <User className="h-8 w-8 text-purple-500" />
+              <div>
+                <p className="text-2xl font-bold">{standaloneTasks.length}</p>
+                <p className="text-sm text-muted-foreground">Tarefas Avulsas</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-4 flex items-center gap-3">
+              <RefreshCw className="h-8 w-8 text-green-500" />
+              <div>
+                <p className="text-2xl font-bold">{routineTasks.length}</p>
+                <p className="text-sm text-muted-foreground">Tarefas de Rotina</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <TaskFilters
@@ -146,10 +260,12 @@ export default function MyTasks() {
           projectFilter={projectFilter}
           onProjectChange={setProjectFilter}
           projects={projects}
+          typeFilter={typeFilter}
+          onTypeChange={setTypeFilter}
         />
 
         <Tabs defaultValue="all" className="w-full">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto gap-1">
             <TabsTrigger value="all">
               Todas ({filteredTasks.length})
             </TabsTrigger>
@@ -170,24 +286,7 @@ export default function MyTasks() {
           <TabsContent value="all" className="mt-6">
             <Card>
               <CardContent className="pt-6">
-                {filteredTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {filteredTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onDelete={() => deleteTaskMutation.mutate(task.id)}
-                        onStatusChange={(status) =>
-                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma tarefa atribuída a você ainda
-                  </p>
-                )}
+                {renderTaskList(filteredTasks, "Nenhuma tarefa atribuída a você ainda")}
               </CardContent>
             </Card>
           </TabsContent>
@@ -198,24 +297,7 @@ export default function MyTasks() {
                 <CardTitle>A Fazer</CardTitle>
               </CardHeader>
               <CardContent>
-                {todoTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {todoTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onDelete={() => deleteTaskMutation.mutate(task.id)}
-                        onStatusChange={(status) =>
-                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma tarefa para fazer
-                  </p>
-                )}
+                {renderTaskList(todoTasks, "Nenhuma tarefa para fazer")}
               </CardContent>
             </Card>
           </TabsContent>
@@ -226,24 +308,7 @@ export default function MyTasks() {
                 <CardTitle>Em Progresso</CardTitle>
               </CardHeader>
               <CardContent>
-                {inProgressTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {inProgressTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onDelete={() => deleteTaskMutation.mutate(task.id)}
-                        onStatusChange={(status) =>
-                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma tarefa em progresso
-                  </p>
-                )}
+                {renderTaskList(inProgressTasks, "Nenhuma tarefa em progresso")}
               </CardContent>
             </Card>
           </TabsContent>
@@ -254,29 +319,17 @@ export default function MyTasks() {
                 <CardTitle>Concluídas</CardTitle>
               </CardHeader>
               <CardContent>
-                {completedTasks.length > 0 ? (
-                  <div className="space-y-3">
-                    {completedTasks.map((task) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onDelete={() => deleteTaskMutation.mutate(task.id)}
-                        onStatusChange={(status) =>
-                          updateTaskStatusMutation.mutate({ taskId: task.id, status })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma tarefa concluída
-                  </p>
-                )}
+                {renderTaskList(completedTasks, "Nenhuma tarefa concluída")}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
       </div>
+
+      <CreateStandaloneTaskDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </AppLayout>
   );
 }
