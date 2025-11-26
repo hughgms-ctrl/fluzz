@@ -63,13 +63,14 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Criar novo projeto com status ativo e sem datas
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
           {
-            name: `${project.name} (Cópia)`,
+            name: `Cópia de ${project.name}`,
             description: project.description,
-            status: project.status,
+            status: 'active',
             user_id: user.id,
           },
         ])
@@ -78,28 +79,65 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
 
       if (projectError) throw projectError;
 
-      // Copiar tarefas
+      // Copiar tarefas com todos os dados exceto datas
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, subtasks(*)")
         .eq("project_id", project.id);
 
       if (tasksError) throw tasksError;
 
       if (tasks && tasks.length > 0) {
+        // Mapear tarefas removendo datas e IDs
         const newTasks = tasks.map((task) => ({
-          ...task,
-          id: undefined,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          assigned_to: task.assigned_to,
+          setor: task.setor,
+          documentation: task.documentation,
+          process_id: task.process_id,
+          completed_verified: task.completed_verified,
           project_id: newProject.id,
-          created_at: undefined,
-          updated_at: undefined,
+          // Não copiar: due_date, created_at, updated_at, id
         }));
 
-        const { error: insertError } = await supabase
+        const { data: insertedTasks, error: insertError } = await supabase
           .from("tasks")
-          .insert(newTasks);
+          .insert(newTasks)
+          .select();
 
         if (insertError) throw insertError;
+
+        // Copiar subtasks para cada tarefa
+        if (insertedTasks && insertedTasks.length > 0) {
+          const allSubtasks = [];
+          
+          for (let i = 0; i < tasks.length; i++) {
+            const originalTask = tasks[i];
+            const newTask = insertedTasks[i];
+            
+            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
+              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
+                title: subtask.title,
+                completed: subtask.completed,
+                task_id: newTask.id,
+                // Não copiar: id, created_at, updated_at
+              }));
+              
+              allSubtasks.push(...subtasksForTask);
+            }
+          }
+
+          if (allSubtasks.length > 0) {
+            const { error: subtasksError } = await supabase
+              .from("subtasks")
+              .insert(allSubtasks);
+            
+            if (subtasksError) throw subtasksError;
+          }
+        }
       }
 
       return newProject;
@@ -108,7 +146,8 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Projeto duplicado com sucesso!");
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Erro ao duplicar projeto:", error);
       toast.error("Erro ao duplicar projeto");
     },
   });
