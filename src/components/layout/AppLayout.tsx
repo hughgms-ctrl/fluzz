@@ -3,6 +3,7 @@ import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Navigate, useNavigate } from "react-router-dom";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface AppLayoutProps {
 
 export const AppLayout = ({ children }: AppLayoutProps) => {
   const { user, loading } = useAuth();
-  const { workspace, loading: workspaceLoading } = useWorkspace();
+  const { workspace, workspaceMember, workspaces, loading: workspaceLoading, changeWorkspace } = useWorkspace();
   const navigate = useNavigate();
 
   if (loading || workspaceLoading) {
@@ -24,7 +25,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     );
   }
 
-  if (user && !workspace && !workspaceLoading) {
+  if (user && !workspaceMember && !workspaceLoading) {
     navigate("/workspace/setup");
     return null;
   }
@@ -40,7 +41,28 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
         <div className="flex-1 flex flex-col">
           <header className="h-16 border-b border-border bg-card flex items-center px-6 sticky top-0 z-10">
             <SidebarTrigger className="mr-4" />
-            <h1 className="text-xl font-semibold text-foreground">ProjectFlow</h1>
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-foreground">ProjectFlow</h1>
+              {workspaceMember && workspaces.length > 0 && (
+                <Select
+                  value={workspace?.id}
+                  onValueChange={(value) => {
+                    void changeWorkspace(value);
+                  }}
+                >
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Selecionar workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workspaces.map((ws) => (
+                      <SelectItem key={ws.id} value={ws.id}>
+                        {ws.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </header>
           <main className="flex-1 p-6 animate-fade-in">
             {children}
