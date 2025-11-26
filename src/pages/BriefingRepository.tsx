@@ -1,13 +1,26 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { FileText, Calendar, MapPin, DollarSign } from "lucide-react";
+import { FileText, Calendar, MapPin, DollarSign, Trash2 } from "lucide-react";
 
 export default function BriefingRepository() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: briefings, isLoading } = useQuery({
     queryKey: ["all-briefings"],
@@ -31,6 +44,34 @@ export default function BriefingRepository() {
 
       if (error) throw error;
       return data;
+    },
+  });
+
+  const deleteBriefingMutation = useMutation({
+    mutationFn: async (briefingId: string) => {
+      // Primeiro deleta os debriefings associados
+      const { error: debriefingError } = await supabase
+        .from("debriefings")
+        .delete()
+        .eq("briefing_id", briefingId);
+
+      if (debriefingError) throw debriefingError;
+
+      // Depois deleta o briefing
+      const { error } = await supabase
+        .from("briefings")
+        .delete()
+        .eq("id", briefingId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-briefings"] });
+      toast.success("Briefing excluído com sucesso!");
+    },
+    onError: (error) => {
+      console.error("Erro ao excluir briefing:", error);
+      toast.error("Erro ao excluir briefing");
     },
   });
 
@@ -100,10 +141,11 @@ export default function BriefingRepository() {
                       </div>
                     </div>
                   )}
-                  <div className="grid grid-cols-2 gap-2 mt-4">
+                  <div className="flex gap-2 mt-4">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="flex-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/briefing/${briefing.id}`);
@@ -114,6 +156,7 @@ export default function BriefingRepository() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="flex-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/projects/${briefing.project_id}`);
@@ -121,6 +164,38 @@ export default function BriefingRepository() {
                     >
                       Editar
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir este briefing? Esta ação também excluirá todos os debriefings associados e não pode ser desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteBriefingMutation.mutate(briefing.id);
+                            }}
+                            className="bg-destructive hover:bg-destructive/90"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardContent>
               </Card>
