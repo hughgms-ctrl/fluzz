@@ -5,14 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface RecurringTask {
+interface Routine {
   id: string;
+  name: string;
+  recurrence_type: string;
+}
+
+interface RoutineTask {
+  id: string;
+  routine_id: string;
   title: string;
   description: string | null;
   priority: string | null;
-  recurrence_type: string;
-  process_id: string | null;
   project_id: string | null;
+  process_id: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -31,60 +37,78 @@ Deno.serve(async (req) => {
       throw new Error('userId and positionId are required');
     }
 
-    console.log('Generating recurring tasks for user:', userId, 'position:', positionId);
+    console.log('Generating tasks from routines for user:', userId, 'position:', positionId);
 
-    // Get all recurring tasks for this position
-    const { data: recurringTasks, error: tasksError } = await supabase
-      .from('recurring_tasks')
+    // Get all routines for this position
+    const { data: routines, error: routinesError } = await supabase
+      .from('routines')
       .select('*')
       .eq('position_id', positionId);
 
-    if (tasksError) throw tasksError;
+    if (routinesError) throw routinesError;
 
-    if (!recurringTasks || recurringTasks.length === 0) {
-      console.log('No recurring tasks found for position');
+    if (!routines || routines.length === 0) {
+      console.log('No routines found for position');
       return new Response(
-        JSON.stringify({ message: 'No recurring tasks to generate' }),
+        JSON.stringify({ message: 'No routines to generate tasks from' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Generate tasks - use project_id from recurring task if set
-    const tasksToCreate = recurringTasks.map((rt: RecurringTask) => {
-      const dueDate = calculateDueDate(rt.recurrence_type);
-      
-      return {
+    let totalTasksCreated = 0;
+
+    // For each routine, get its tasks and create actual tasks
+    for (const routine of routines as Routine[]) {
+      const { data: routineTasks, error: tasksError } = await supabase
+        .from('routine_tasks')
+        .select('*')
+        .eq('routine_id', routine.id)
+        .order('task_order');
+
+      if (tasksError) throw tasksError;
+
+      if (!routineTasks || routineTasks.length === 0) {
+        console.log('No tasks found for routine:', routine.id);
+        continue;
+      }
+
+      const dueDate = calculateDueDate(routine.recurrence_type);
+
+      // Create tasks for each routine task
+      const tasksToCreate = (routineTasks as RoutineTask[]).map((rt) => ({
         title: rt.title,
         description: rt.description,
         priority: rt.priority,
         status: 'todo',
-        project_id: rt.project_id, // Use linked project if any
+        project_id: rt.project_id,
+        process_id: rt.process_id,
         assigned_to: userId,
         due_date: dueDate,
-        recurring_task_id: rt.id,
-        process_id: rt.process_id,
-      };
-    });
+        routine_id: routine.id,
+      }));
 
-    // Insert tasks
-    const { error: insertError } = await supabase
-      .from('tasks')
-      .insert(tasksToCreate);
+      const { error: insertError } = await supabase
+        .from('tasks')
+        .insert(tasksToCreate);
 
-    if (insertError) throw insertError;
+      if (insertError) throw insertError;
 
-    console.log('Successfully generated', tasksToCreate.length, 'tasks');
+      totalTasksCreated += tasksToCreate.length;
+      console.log('Created', tasksToCreate.length, 'tasks for routine:', routine.name);
+    }
+
+    console.log('Successfully generated', totalTasksCreated, 'tasks total');
 
     return new Response(
       JSON.stringify({ 
-        message: 'Recurring tasks generated successfully',
-        count: tasksToCreate.length 
+        message: 'Tasks generated successfully from routines',
+        count: totalTasksCreated 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error generating recurring tasks:', error);
+    console.error('Error generating tasks from routines:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ error: errorMessage }),

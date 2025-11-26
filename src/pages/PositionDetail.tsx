@@ -8,8 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
-import { CreateRecurringTaskDialog } from "@/components/positions/CreateRecurringTaskDialog";
-import { RecurringTaskCard } from "@/components/positions/RecurringTaskCard";
+import { CreateRoutineDialog } from "@/components/positions/CreateRoutineDialog";
+import { RoutineCard } from "@/components/positions/RoutineCard";
 import { AssignUserDialog } from "@/components/positions/AssignUserDialog";
 import { AssignedUsersList } from "@/components/positions/AssignedUsersList";
 
@@ -34,12 +34,12 @@ export default function PositionDetail() {
     enabled: !!id,
   });
 
-  const { data: recurringTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["recurring-tasks", id],
+  const { data: routines, isLoading: routinesLoading } = useQuery({
+    queryKey: ["routines", id],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("recurring_tasks")
-        .select("*, process_documentation(id, title), projects(id, name)")
+        .from("routines")
+        .select("*")
         .eq("position_id", id)
         .order("created_at", { ascending: false });
       
@@ -108,7 +108,7 @@ export default function PositionDetail() {
               </Button>
             </div>
 
-            {tasksLoading ? (
+            {routinesLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
                   <Card key={i}>
@@ -119,10 +119,10 @@ export default function PositionDetail() {
                   </Card>
                 ))}
               </div>
-            ) : recurringTasks && recurringTasks.length > 0 ? (
+            ) : routines && routines.length > 0 ? (
               <div className="space-y-4">
-                {recurringTasks.map((task) => (
-                  <RecurringTaskCard key={task.id} task={task} />
+                {routines.map((routine) => (
+                  <RoutineCard key={routine.id} routine={routine} positionId={id!} />
                 ))}
               </div>
             ) : (
@@ -130,7 +130,7 @@ export default function PositionDetail() {
                 <CardHeader>
                   <CardTitle>Nenhuma rotina cadastrada</CardTitle>
                   <CardDescription>
-                    Crie rotinas para automatizar tarefas recorrentes
+                    Crie rotinas com tarefas recorrentes para este cargo
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -149,7 +149,7 @@ export default function PositionDetail() {
           </TabsContent>
         </Tabs>
 
-        <CreateRecurringTaskDialog
+        <CreateRoutineDialog
           positionId={id!}
           open={createTaskDialogOpen}
           onOpenChange={setCreateTaskDialogOpen}
