@@ -7,9 +7,11 @@ import { Plus } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
   const queryClient = useQueryClient();
 
   const { data: projects, isLoading } = useQuery({
@@ -23,6 +25,9 @@ export default function Projects() {
       return data;
     },
   });
+
+  const activeProjects = projects?.filter(p => !p.archived) || [];
+  const archivedProjects = projects?.filter(p => p.archived) || [];
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -38,6 +43,23 @@ export default function Projects() {
     },
     onError: () => {
       toast.error("Erro ao excluir projeto");
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ archived })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(variables.archived ? "Projeto arquivado com sucesso!" : "Projeto restaurado com sucesso!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar projeto");
     },
   });
 
@@ -65,27 +87,63 @@ export default function Projects() {
           </Button>
         </div>
 
-        {projects && projects.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground mb-4">
-              Você ainda não tem projetos. Comece criando um!
-            </p>
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-              <Plus size={20} />
-              Criar Primeiro Projeto
-            </Button>
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {projects?.map((project: any) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onDelete={() => deleteMutation.mutate(project.id)}
-              />
-            ))}
-          </div>
-        )}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived")}>
+          <TabsList>
+            <TabsTrigger value="active">
+              Ativos ({activeProjects.length})
+            </TabsTrigger>
+            <TabsTrigger value="archived">
+              Arquivados ({archivedProjects.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="active" className="mt-6">
+            {activeProjects.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground mb-4">
+                  Você ainda não tem projetos ativos. Comece criando um!
+                </p>
+                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                  <Plus size={20} />
+                  Criar Primeiro Projeto
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {activeProjects.map((project: any) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onDelete={() => deleteMutation.mutate(project.id)}
+                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="archived" className="mt-6">
+            {archivedProjects.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">
+                  Você não tem projetos arquivados.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {archivedProjects.map((project: any) => (
+                  <ProjectCard
+                    key={project.id}
+                    project={project}
+                    onDelete={() => deleteMutation.mutate(project.id)}
+                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: false })}
+                    isArchived={true}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <CreateProjectDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
