@@ -150,6 +150,20 @@ CREATE TABLE public.company_news (
 
 
 --
+-- Name: positions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.positions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid
+);
+
+
+--
 -- Name: process_documentation; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -229,6 +243,26 @@ CREATE TABLE public.projects (
 
 
 --
+-- Name: recurring_tasks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.recurring_tasks (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    position_id uuid NOT NULL,
+    title text NOT NULL,
+    description text,
+    process_id uuid,
+    priority text DEFAULT 'medium'::text,
+    recurrence_type text NOT NULL,
+    recurrence_config jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid,
+    CONSTRAINT recurring_tasks_recurrence_type_check CHECK ((recurrence_type = ANY (ARRAY['daily'::text, 'weekly'::text, 'monthly'::text, 'yearly'::text, 'custom'::text])))
+);
+
+
+--
 -- Name: subtasks; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -261,8 +295,22 @@ CREATE TABLE public.tasks (
     documentation text,
     process_id uuid,
     setor text,
+    recurring_task_id uuid,
     CONSTRAINT tasks_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text]))),
     CONSTRAINT tasks_status_check CHECK ((status = ANY (ARRAY['todo'::text, 'in_progress'::text, 'completed'::text])))
+);
+
+
+--
+-- Name: user_positions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_positions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    position_id uuid NOT NULL,
+    assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+    assigned_by uuid
 );
 
 
@@ -288,6 +336,14 @@ ALTER TABLE ONLY public.company_info
 
 ALTER TABLE ONLY public.company_news
     ADD CONSTRAINT company_news_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_pkey PRIMARY KEY (id);
 
 
 --
@@ -347,6 +403,14 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: recurring_tasks recurring_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_tasks
+    ADD CONSTRAINT recurring_tasks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: subtasks subtasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -360,6 +424,22 @@ ALTER TABLE ONLY public.subtasks
 
 ALTER TABLE ONLY public.tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_positions user_positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_positions
+    ADD CONSTRAINT user_positions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_positions user_positions_user_id_position_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_positions
+    ADD CONSTRAINT user_positions_user_id_position_id_key UNIQUE (user_id, position_id);
 
 
 --
@@ -426,10 +506,24 @@ CREATE TRIGGER update_company_news_updated_at BEFORE UPDATE ON public.company_ne
 
 
 --
+-- Name: positions update_positions_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_positions_updated_at BEFORE UPDATE ON public.positions FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+
+--
 -- Name: process_documentation update_process_documentation_updated_at; Type: TRIGGER; Schema: public; Owner: -
 --
 
 CREATE TRIGGER update_process_documentation_updated_at BEFORE UPDATE ON public.process_documentation FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+
+
+--
+-- Name: recurring_tasks update_recurring_tasks_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_recurring_tasks_updated_at BEFORE UPDATE ON public.recurring_tasks FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 
 --
@@ -445,6 +539,14 @@ CREATE TRIGGER update_subtasks_updated_at BEFORE UPDATE ON public.subtasks FOR E
 
 ALTER TABLE ONLY public.company_news
     ADD CONSTRAINT company_news_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id);
+
+
+--
+-- Name: positions positions_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 
 --
@@ -512,6 +614,30 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: recurring_tasks recurring_tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_tasks
+    ADD CONSTRAINT recurring_tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: recurring_tasks recurring_tasks_position_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_tasks
+    ADD CONSTRAINT recurring_tasks_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: recurring_tasks recurring_tasks_process_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.recurring_tasks
+    ADD CONSTRAINT recurring_tasks_process_id_fkey FOREIGN KEY (process_id) REFERENCES public.process_documentation(id) ON DELETE SET NULL;
+
+
+--
 -- Name: subtasks subtasks_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -544,6 +670,38 @@ ALTER TABLE ONLY public.tasks
 
 
 --
+-- Name: tasks tasks_recurring_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tasks
+    ADD CONSTRAINT tasks_recurring_task_id_fkey FOREIGN KEY (recurring_task_id) REFERENCES public.recurring_tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: user_positions user_positions_assigned_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_positions
+    ADD CONSTRAINT user_positions_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: user_positions user_positions_position_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_positions
+    ADD CONSTRAINT user_positions_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_positions user_positions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.user_positions
+    ADD CONSTRAINT user_positions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: company_info Anyone can view company info; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -572,6 +730,27 @@ CREATE POLICY "Authenticated users can create news" ON public.company_news FOR I
 
 
 --
+-- Name: user_positions Authenticated users can create position assignments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can create position assignments" ON public.user_positions FOR INSERT TO authenticated WITH CHECK ((auth.uid() = assigned_by));
+
+
+--
+-- Name: positions Authenticated users can create positions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can create positions" ON public.positions FOR INSERT TO authenticated WITH CHECK ((auth.uid() = created_by));
+
+
+--
+-- Name: recurring_tasks Authenticated users can create recurring tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can create recurring tasks" ON public.recurring_tasks FOR INSERT TO authenticated WITH CHECK ((auth.uid() = created_by));
+
+
+--
 -- Name: company_info Authenticated users can insert company info; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -583,6 +762,20 @@ CREATE POLICY "Authenticated users can insert company info" ON public.company_in
 --
 
 CREATE POLICY "Authenticated users can update company info" ON public.company_info FOR UPDATE TO authenticated USING (true);
+
+
+--
+-- Name: positions Authenticated users can view positions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can view positions" ON public.positions FOR SELECT TO authenticated USING (true);
+
+
+--
+-- Name: recurring_tasks Authenticated users can view recurring tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Authenticated users can view recurring tasks" ON public.recurring_tasks FOR SELECT TO authenticated USING (true);
 
 
 --
@@ -702,6 +895,13 @@ CREATE POLICY "Users can delete own projects" ON public.projects FOR DELETE USIN
 
 
 --
+-- Name: user_positions Users can delete position assignments they created; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete position assignments they created" ON public.user_positions FOR DELETE TO authenticated USING ((auth.uid() = assigned_by));
+
+
+--
 -- Name: subtasks Users can delete subtasks in member projects; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -746,6 +946,20 @@ CREATE POLICY "Users can delete tasks in own projects" ON public.tasks FOR DELET
 --
 
 CREATE POLICY "Users can delete their own news" ON public.company_news FOR DELETE USING ((auth.uid() = created_by));
+
+
+--
+-- Name: positions Users can delete their own positions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete their own positions" ON public.positions FOR DELETE TO authenticated USING ((auth.uid() = created_by));
+
+
+--
+-- Name: recurring_tasks Users can delete their own recurring tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can delete their own recurring tasks" ON public.recurring_tasks FOR DELETE TO authenticated USING ((auth.uid() = created_by));
 
 
 --
@@ -831,6 +1045,20 @@ CREATE POLICY "Users can update their own news" ON public.company_news FOR UPDAT
 
 
 --
+-- Name: positions Users can update their own positions; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update their own positions" ON public.positions FOR UPDATE TO authenticated USING ((auth.uid() = created_by));
+
+
+--
+-- Name: recurring_tasks Users can update their own recurring tasks; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can update their own recurring tasks" ON public.recurring_tasks FOR UPDATE TO authenticated USING ((auth.uid() = created_by));
+
+
+--
 -- Name: project_invites Users can view invites for their projects; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -853,6 +1081,13 @@ CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (
 --
 
 CREATE POLICY "Users can view own projects" ON public.projects FOR SELECT USING ((auth.uid() = user_id));
+
+
+--
+-- Name: user_positions Users can view position assignments they created; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view position assignments they created" ON public.user_positions FOR SELECT TO authenticated USING ((auth.uid() = assigned_by));
 
 
 --
@@ -905,6 +1140,13 @@ CREATE POLICY "Users can view tasks in own projects" ON public.tasks FOR SELECT 
 
 
 --
+-- Name: user_positions Users can view their own position assignments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Users can view their own position assignments" ON public.user_positions FOR SELECT TO authenticated USING ((auth.uid() = user_id));
+
+
+--
 -- Name: company_info; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -915,6 +1157,12 @@ ALTER TABLE public.company_info ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.company_news ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: positions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.positions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: process_documentation; Type: ROW SECURITY; Schema: public; Owner: -
@@ -947,6 +1195,12 @@ ALTER TABLE public.project_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: recurring_tasks; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.recurring_tasks ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: subtasks; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -957,6 +1211,12 @@ ALTER TABLE public.subtasks ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: user_positions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.user_positions ENABLE ROW LEVEL SECURITY;
 
 --
 -- PostgreSQL database dump complete
