@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      briefings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          currency: string
+          data: string
+          id: string
+          investimento_trafego: number
+          local: string
+          participantes_pagantes: number
+          precos: Json
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          data: string
+          id?: string
+          investimento_trafego: number
+          local: string
+          participantes_pagantes: number
+          precos: Json
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          data?: string
+          id?: string
+          investimento_trafego?: number
+          local?: string
+          participantes_pagantes?: number
+          precos?: Json
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_info: {
         Row: {
           content: string
@@ -76,6 +126,116 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      debriefing_vendedores: {
+        Row: {
+          created_at: string
+          debriefing_id: string
+          id: string
+          leads_recebidos: number
+          vendas_realizadas: number
+          vendedor_nome: string
+        }
+        Insert: {
+          created_at?: string
+          debriefing_id: string
+          id?: string
+          leads_recebidos: number
+          vendas_realizadas: number
+          vendedor_nome: string
+        }
+        Update: {
+          created_at?: string
+          debriefing_id?: string
+          id?: string
+          leads_recebidos?: number
+          vendas_realizadas?: number
+          vendedor_nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_vendedores_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debriefings: {
+        Row: {
+          briefing_id: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          investimento_trafego: number
+          leads: number
+          mentorias_vendidas: number
+          observacoes: string | null
+          participantes_outras_estrategias: number
+          project_id: string
+          retorno_vendas_ingressos: number
+          total_participantes: number
+          updated_at: string
+          valor_outras_estrategias: number
+          valor_vendas_mentorias: number
+          vendas_ingressos: number
+        }
+        Insert: {
+          briefing_id: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          investimento_trafego: number
+          leads: number
+          mentorias_vendidas: number
+          observacoes?: string | null
+          participantes_outras_estrategias: number
+          project_id: string
+          retorno_vendas_ingressos: number
+          total_participantes: number
+          updated_at?: string
+          valor_outras_estrategias: number
+          valor_vendas_mentorias: number
+          vendas_ingressos: number
+        }
+        Update: {
+          briefing_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          investimento_trafego?: number
+          leads?: number
+          mentorias_vendidas?: number
+          observacoes?: string | null
+          participantes_outras_estrategias?: number
+          project_id?: string
+          retorno_vendas_ingressos?: number
+          total_participantes?: number
+          updated_at?: string
+          valor_outras_estrategias?: number
+          valor_vendas_mentorias?: number
+          vendas_ingressos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefings_briefing_id_fkey"
+            columns: ["briefing_id"]
+            isOneToOne: false
+            referencedRelation: "briefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debriefings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       positions: {
         Row: {
