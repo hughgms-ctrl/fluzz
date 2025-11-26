@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,14 +6,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ArrowLeft, LayoutGrid, List, Users } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3 } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
+import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
 import { toast } from "sonner";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks">("dashboard");
   const [view, setView] = useState<"board" | "list">("board");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +79,31 @@ export default function ProjectDetail() {
       return data;
     },
   });
+
+  // Real-time updates for tasks
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel('project-tasks-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `project_id=eq.${id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
 
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -179,6 +206,15 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleDashboardFilterClick = (filterType: string, filterValue: string) => {
+    setActiveTab("tasks");
+    if (filterType === "status") {
+      setStatusFilter(filterValue);
+    } else if (filterType === "dueDate") {
+      setDueDateFilter(filterValue);
+    }
+  };
+
   if (projectLoading || tasksLoading) {
     return (
       <AppLayout>
@@ -248,18 +284,6 @@ export default function ProjectDetail() {
               <Users size={16} />
               Membros
             </Button>
-            <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
-              <TabsList>
-                <TabsTrigger value="board" className="gap-2">
-                  <LayoutGrid size={16} />
-                  Kanban
-                </TabsTrigger>
-                <TabsTrigger value="list" className="gap-2">
-                  <List size={16} />
-                  Lista
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
             <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
               <Plus size={20} />
               Nova Tarefa
@@ -271,48 +295,89 @@ export default function ProjectDetail() {
           <ProjectMembers projectId={id!} isOwner={isOwner} />
         )}
 
-        <TaskFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          priorityFilter={priorityFilter}
-          onPriorityChange={setPriorityFilter}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-          dueDateFilter={dueDateFilter}
-          onDueDateChange={setDueDateFilter}
-          setorFilter={setorFilter}
-          onSetorChange={setSetorFilter}
-          setores={uniqueSetores}
-        />
+        {/* Main Content Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks")}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 size={16} />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="gap-2">
+              <LayoutGrid size={16} />
+              Tarefas
+            </TabsTrigger>
+          </TabsList>
 
-        {filteredTasks && filteredTasks.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-muted-foreground mb-4">
-              Nenhuma tarefa neste projeto. Comece criando uma!
-            </p>
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-              <Plus size={20} />
-              Criar Primeira Tarefa
-            </Button>
-          </div>
-        ) : (
-          <>
-            {view === "board" ? (
-              <DraggableTaskBoard
-                tasks={filteredTasks || []}
-                onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-                onUpdateStatus={(taskId, status) =>
-                  updateTaskStatusMutation.mutate({ taskId, status })
-                }
+          <TabsContent value="dashboard" className="mt-6">
+            <ProjectDashboard 
+              tasks={tasks || []} 
+              onFilterClick={handleDashboardFilterClick}
+            />
+          </TabsContent>
+
+          <TabsContent value="tasks" className="mt-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <TaskFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                dueDateFilter={dueDateFilter}
+                onDueDateChange={setDueDateFilter}
+                setorFilter={setorFilter}
+                onSetorChange={setSetorFilter}
+                setores={uniqueSetores}
               />
+              <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
+                <TabsList>
+                  <TabsTrigger value="board" className="gap-2">
+                    <LayoutGrid size={16} />
+                    Kanban
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List size={16} />
+                    Lista
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+
+            {filteredTasks && filteredTasks.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground mb-4">
+                  {tasks && tasks.length > 0
+                    ? "Nenhuma tarefa corresponde aos filtros aplicados."
+                    : "Nenhuma tarefa neste projeto. Comece criando uma!"}
+                </p>
+                {(!tasks || tasks.length === 0) && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                    <Plus size={20} />
+                    Criar Primeira Tarefa
+                  </Button>
+                )}
+              </div>
             ) : (
-              <TaskList
-                tasks={filteredTasks || []}
-                onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-              />
+              <>
+                {view === "board" ? (
+                  <DraggableTaskBoard
+                    tasks={filteredTasks || []}
+                    onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                    onUpdateStatus={(taskId, status) =>
+                      updateTaskStatusMutation.mutate({ taskId, status })
+                    }
+                  />
+                ) : (
+                  <TaskList
+                    tasks={filteredTasks || []}
+                    onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       <CreateTaskDialog
