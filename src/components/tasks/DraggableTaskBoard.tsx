@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter, useDroppable, PointerSensor } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
 
 interface DraggableTaskBoardProps {
   tasks: any[];
@@ -57,23 +56,17 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
     transform: CSS.Transform.toString(transform),
     transition: transition || 'transform 200ms ease',
     opacity: isDragging ? 0.3 : 1,
-    cursor: isDragging ? 'grabbing' : 'default',
+    cursor: isDragging ? 'grabbing' : 'grab',
   };
 
   return (
     <div 
       ref={setNodeRef} 
-      style={style} 
-      className={`relative group ${isDragging ? 'z-50 scale-105' : ''} transition-all`}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`relative ${isDragging ? 'z-50 scale-105' : ''} transition-all`}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1 bg-background rounded hover:bg-accent"
-        aria-label="Arrastar tarefa"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
       <TaskCard
         task={task}
         onDelete={onDelete}
