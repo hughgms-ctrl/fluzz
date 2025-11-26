@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Repeat, Trash2 } from "lucide-react";
+import { Plus, Repeat, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { CreateRoutineTaskDialog } from "./CreateRoutineTaskDialog";
+import { EditRoutineDialog } from "./EditRoutineDialog";
 import { RoutineTasksList } from "./RoutineTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ const recurrenceLabels: Record<string, string> = {
 
 export function RoutineCard({ routine, positionId }: RoutineCardProps) {
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
+  const [editRoutineDialogOpen, setEditRoutineDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -80,6 +82,13 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => setEditRoutineDialogOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2 className="h-4 w-4 text-destructive" />
@@ -106,6 +115,13 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
           routineId={routine.id}
           open={createTaskDialogOpen}
           onOpenChange={setCreateTaskDialogOpen}
+        />
+
+        <EditRoutineDialog
+          routine={routine}
+          positionId={positionId}
+          open={editRoutineDialogOpen}
+          onOpenChange={setEditRoutineDialogOpen}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

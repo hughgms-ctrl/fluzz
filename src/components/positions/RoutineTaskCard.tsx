@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, FileText, Trash2 } from "lucide-react";
+import { FolderKanban, FileText, Trash2, Pencil } from "lucide-react";
+import { useState } from "react";
+import { EditRoutineTaskDialog } from "./EditRoutineTaskDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,6 +25,8 @@ interface RoutineTaskCardProps {
     title: string;
     description: string | null;
     priority: string | null;
+    project_id: string | null;
+    process_id: string | null;
     routine_id: string;
     projects?: { id: string; name: string } | null;
     process_documentation?: { id: string; title: string } | null;
@@ -42,6 +46,7 @@ const priorityLabels: Record<string, string> = {
 };
 
 export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleDelete = async () => {
@@ -100,7 +105,15 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
             </div>
           </div>
 
-          <AlertDialog>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setEditDialogOpen(true)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -121,7 +134,15 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </div>
         </div>
+
+        <EditRoutineTaskDialog
+          task={task}
+          routineId={task.routine_id}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+        />
       </CardContent>
     </Card>
   );
