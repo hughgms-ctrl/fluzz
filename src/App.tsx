@@ -16,6 +16,8 @@ import Workspace from "./pages/Workspace";
 import Culture from "./pages/workspace/Culture";
 import Vision from "./pages/workspace/Vision";
 import Processes from "./pages/workspace/Processes";
+import Positions from "./pages/Positions";
+import PositionDetail from "./pages/PositionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +42,8 @@ const App = () => (
             <Route path="/workspace/culture" element={<Culture />} />
             <Route path="/workspace/vision" element={<Vision />} />
             <Route path="/workspace/processes" element={<Processes />} />
+            <Route path="/positions" element={<Positions />} />
+            <Route path="/positions/:id" element={<PositionDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

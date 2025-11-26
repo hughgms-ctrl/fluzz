@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Heart, FileText, TrendingUp } from "lucide-react";
+import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Workspace() {
@@ -70,6 +70,18 @@ export default function Workspace() {
                 <CardTitle className="text-lg">Projetos</CardTitle>
                 <CardDescription className="text-sm">
                   Gerencie todos os projetos da empresa
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
+          <Link to="/positions">
+            <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+              <CardHeader className="p-4">
+                <Briefcase className="h-8 w-8 text-primary mb-2" />
+                <CardTitle className="text-lg">Cargos e Rotinas</CardTitle>
+                <CardDescription className="text-sm">
+                  Gerencie cargos, setores e tarefas recorrentes
                 </CardDescription>
               </CardHeader>
             </Card>
