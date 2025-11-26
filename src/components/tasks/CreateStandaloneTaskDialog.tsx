@@ -21,6 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery } from "@tanstack/react-query";
 
 interface CreateStandaloneTaskDialogProps {
   open: boolean;
@@ -34,10 +36,23 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
+  const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+
+  const { data: processes } = useQuery({
+    queryKey: ["processes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("process_documentation")
+        .select("id, title, area")
+        .order("title");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
           {
@@ -49,8 +64,23 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
             assigned_to: user!.id,
             project_id: null,
           },
-        ]);
-      if (error) throw error;
+        ])
+        .select()
+        .single();
+      if (taskError) throw taskError;
+
+      // Link selected processes
+      if (selectedProcesses.length > 0) {
+        const { error: processError } = await supabase
+          .from("task_processes")
+          .insert(
+            selectedProcesses.map((processId) => ({
+              task_id: newTask.id,
+              process_id: processId,
+            }))
+          );
+        if (processError) throw processError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
@@ -69,6 +99,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     setDescription("");
     setPriority("medium");
     setDueDate("");
+    setSelectedProcesses([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -132,6 +163,29 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Processos Vinculados</Label>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {processes?.map((process) => (
+                <div key={process.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`process-${process.id}`}
+                    checked={selectedProcesses.includes(process.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedProcesses([...selectedProcesses, process.id]);
+                      } else {
+                        setSelectedProcesses(selectedProcesses.filter((id) => id !== process.id));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`process-${process.id}`} className="text-sm font-normal cursor-pointer flex-1">
+                    {process.title} <span className="text-muted-foreground">({process.area})</span>
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
           <div className="flex justify-end gap-2">

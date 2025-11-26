@@ -498,6 +498,42 @@ export type Database = {
           },
         ]
       }
+      task_processes: {
+        Row: {
+          created_at: string | null
+          id: string
+          process_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          process_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          process_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_processes_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null

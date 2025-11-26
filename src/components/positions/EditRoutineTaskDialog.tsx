@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface EditRoutineTaskDialogProps {
   task: {
@@ -51,7 +52,9 @@ export function EditRoutineTaskDialog({
   const [setor, setSetor] = useState(task.setor || "");
   const [documentation, setDocumentation] = useState(task.documentation || "");
   const [projectId, setProjectId] = useState<string>(task.project_id || "none");
-  const [processId, setProcessId] = useState<string>(task.process_id || "none");
+  const [selectedProcesses, setSelectedProcesses] = useState<string[]>(
+    task.process_id ? [task.process_id] : []
+  );
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -75,7 +78,7 @@ export function EditRoutineTaskDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("process_documentation")
-        .select("id, title")
+        .select("id, title, area")
         .order("title");
       
       if (error) throw error;
@@ -93,7 +96,7 @@ export function EditRoutineTaskDialog({
       setSetor(task.setor || "");
       setDocumentation(task.documentation || "");
       setProjectId(task.project_id || "none");
-      setProcessId(task.process_id || "none");
+      setSelectedProcesses(task.process_id ? [task.process_id] : []);
     }
   }, [open, task]);
 
@@ -112,7 +115,7 @@ export function EditRoutineTaskDialog({
           setor: setor || null,
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
-          process_id: processId === "none" ? null : processId,
+          process_id: selectedProcesses.length > 0 ? selectedProcesses[0] : null,
         })
         .eq("id", task.id);
 
@@ -220,20 +223,31 @@ export function EditRoutineTaskDialog({
           </div>
 
           <div>
-            <Label htmlFor="process">Vincular a Processo (Opcional)</Label>
-            <Select value={processId} onValueChange={setProcessId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um processo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum</SelectItem>
-                {processes?.map((process) => (
-                  <SelectItem key={process.id} value={process.id}>
-                    {process.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Processos Vinculados (Opcional)</Label>
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
+              {processes && processes.length > 0 ? (
+                processes.map((process) => (
+                  <div key={process.id} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`process-${process.id}`}
+                      checked={selectedProcesses.includes(process.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedProcesses([...selectedProcesses, process.id]);
+                        } else {
+                          setSelectedProcesses(selectedProcesses.filter((id) => id !== process.id));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={`process-${process.id}`} className="text-sm font-normal cursor-pointer flex-1">
+                      {process.title} <span className="text-muted-foreground">({process.area})</span>
+                    </Label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">Nenhum processo disponível</p>
+              )}
+            </div>
           </div>
 
           <div>

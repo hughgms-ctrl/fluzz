@@ -113,17 +113,41 @@ Deno.serve(async (req) => {
         setor: rt.setor,
         documentation: rt.documentation,
         project_id: rt.project_id,
-        process_id: rt.process_id,
         assigned_to: userId,
         due_date: dueDate,
         routine_id: routine.id,
       }));
 
-      const { error: insertError } = await supabase
+      const { data: newTasks, error: insertError } = await supabase
         .from('tasks')
-        .insert(tasksToCreate);
+        .insert(tasksToCreate)
+        .select();
 
       if (insertError) throw insertError;
+
+      // Link processes to newly created tasks
+      if (newTasks && newTasks.length > 0) {
+        const taskProcessLinks = [];
+        for (let i = 0; i < newTasks.length; i++) {
+          const routineTask = routineTasks[i] as RoutineTask;
+          if (routineTask.process_id) {
+            taskProcessLinks.push({
+              task_id: newTasks[i].id,
+              process_id: routineTask.process_id,
+            });
+          }
+        }
+
+        if (taskProcessLinks.length > 0) {
+          const { error: processLinkError } = await supabase
+            .from('task_processes')
+            .insert(taskProcessLinks);
+
+          if (processLinkError) {
+            console.error('Error linking processes:', processLinkError);
+          }
+        }
+      }
 
       totalTasksCreated += tasksToCreate.length;
       console.log('Created', tasksToCreate.length, 'tasks for routine:', routine.name);
