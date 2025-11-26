@@ -17,9 +17,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 interface EditRoutineDialogProps {
   routine: {
@@ -27,6 +32,7 @@ interface EditRoutineDialogProps {
     name: string;
     description: string | null;
     recurrence_type: string;
+    start_date: string;
   };
   positionId: string;
   open: boolean;
@@ -42,6 +48,7 @@ export function EditRoutineDialog({
   const [name, setName] = useState(routine.name);
   const [description, setDescription] = useState(routine.description || "");
   const [recurrenceType, setRecurrenceType] = useState(routine.recurrence_type);
+  const [startDate, setStartDate] = useState<Date>(parseISO(routine.start_date));
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -50,6 +57,7 @@ export function EditRoutineDialog({
       setName(routine.name);
       setDescription(routine.description || "");
       setRecurrenceType(routine.recurrence_type);
+      setStartDate(parseISO(routine.start_date));
     }
   }, [open, routine]);
 
@@ -64,6 +72,7 @@ export function EditRoutineDialog({
           name,
           description,
           recurrence_type: recurrenceType,
+          start_date: format(startDate, "yyyy-MM-dd"),
         })
         .eq("id", routine.id);
 
@@ -126,6 +135,33 @@ export function EditRoutineDialog({
                 <SelectItem value="yearly">Anual</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="start-date">Data de Início *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Selecione uma data</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date) => date && setStartDate(date)}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="flex justify-end gap-2">
