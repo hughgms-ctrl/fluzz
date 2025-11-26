@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,15 +17,19 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, FileText, Trash2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 export default function Processes() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const processRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [area, setArea] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
+  const [highlightedProcess, setHighlightedProcess] = useState<string | null>(null);
 
   const { data: processes, isLoading } = useQuery({
     queryKey: ["process-documentation"],
@@ -99,6 +103,29 @@ export default function Processes() {
     ? processes?.filter((p) => p.area === selectedArea)
     : processes;
 
+  // Handle processId from URL
+  useEffect(() => {
+    const processId = searchParams.get("processId");
+    if (processId && processes && processRefs.current[processId]) {
+      // Scroll to the process
+      processRefs.current[processId]?.scrollIntoView({ 
+        behavior: "smooth", 
+        block: "center" 
+      });
+      
+      // Highlight the process
+      setHighlightedProcess(processId);
+      
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedProcess(null);
+        setSearchParams({});
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [processes, searchParams, setSearchParams]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -146,7 +173,15 @@ export default function Processes() {
         {filteredProcesses && filteredProcesses.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
             {filteredProcesses.map((process) => (
-              <Card key={process.id}>
+              <Card 
+                key={process.id}
+                ref={(el) => (processRefs.current[process.id] = el)}
+                className={`transition-all duration-300 ${
+                  highlightedProcess === process.id 
+                    ? "ring-2 ring-primary shadow-lg scale-[1.02]" 
+                    : ""
+                }`}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
