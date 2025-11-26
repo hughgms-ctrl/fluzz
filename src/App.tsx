@@ -18,6 +18,7 @@ import Vision from "./pages/workspace/Vision";
 import Processes from "./pages/workspace/Processes";
 import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
+import BriefingRepository from "./pages/BriefingRepository";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/workspace/processes" element={<Processes />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
+            <Route path="/briefings" element={<BriefingRepository />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

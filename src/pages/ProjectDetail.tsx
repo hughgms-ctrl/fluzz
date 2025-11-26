@@ -13,6 +13,7 @@ import { TaskList } from "@/components/tasks/TaskList";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
 import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
+import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -22,7 +23,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "briefing">("dashboard");
   const [view, setView] = useState<"board" | "list">("board");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -296,8 +297,8 @@ export default function ProjectDetail() {
         )}
 
         {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks")}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "briefing")}>
+          <TabsList className="grid w-full max-w-2xl grid-cols-3">
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 size={16} />
               Dashboard
@@ -305,6 +306,10 @@ export default function ProjectDetail() {
             <TabsTrigger value="tasks" className="gap-2">
               <LayoutGrid size={16} />
               Tarefas
+            </TabsTrigger>
+            <TabsTrigger value="briefing" className="gap-2">
+              <LayoutGrid size={16} />
+              Briefing & Debriefing
             </TabsTrigger>
           </TabsList>
 
@@ -376,6 +381,10 @@ export default function ProjectDetail() {
                 )}
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="briefing" className="mt-6">
+            <BriefingDebriefingTab projectId={id!} />
           </TabsContent>
         </Tabs>
       </div>
