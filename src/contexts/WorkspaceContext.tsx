@@ -177,6 +177,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchWorkspace();
+    
+    // Subscribe to workspace_members changes for real-time updates
+    if (!user) return;
+
+    const channel = supabase
+      .channel('workspace-members-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'workspace_members',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          console.log('Workspace membership changed, refetching...');
+          fetchWorkspace();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const changeWorkspace = async (workspaceId: string) => {
