@@ -29,15 +29,13 @@ const menuItems: MenuItem[] = [
   { title: "Workspace", url: "/workspace", icon: Briefcase },
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
-  { title: "Cargos", url: "/positions", icon: Users, permission: "can_view_positions" },
   { title: "Analytics", url: "/analytics", icon: BarChart3, permission: "can_view_analytics" },
-  { title: "Perfil", url: "/profile", icon: User },
 ];
 
 const workspaceItems: MenuItem[] = [
-  { title: "Cultura", url: "/workspace/culture", icon: Heart, permission: "can_view_culture" },
-  { title: "Visão & Valores", url: "/workspace/vision", icon: Target, permission: "can_view_vision" },
   { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
+  { title: "Equipe", url: "/team", icon: Users, permission: "can_view_analytics" },
+  { title: "Cargos", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
 ];
 
 export function AppSidebar() {
