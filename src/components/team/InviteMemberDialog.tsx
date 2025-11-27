@@ -105,6 +105,18 @@ export const InviteMemberDialog = ({
 
       // For direct invites (existing users)
       if (sendMethod === "direct" && existingUser) {
+        // Check if user is already a member
+        const { data: existingMember } = await supabase
+          .from("workspace_members")
+          .select("id")
+          .eq("workspace_id", workspace.id)
+          .eq("user_id", existingUser.user_id)
+          .maybeSingle();
+
+        if (existingMember) {
+          throw new Error("Este usuário já é membro deste workspace");
+        }
+
         // Add user directly to workspace
         const { error: memberError } = await supabase
           .from("workspace_members")
