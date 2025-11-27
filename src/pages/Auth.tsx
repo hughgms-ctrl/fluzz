@@ -160,7 +160,12 @@ export default function Auth() {
         await processInvite();
 
         toast.success("Senha definida com sucesso! Bem-vindo!");
+        
+        // Small delay to ensure workspace context updates
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         setIsInvitedUser(false);
+        window.location.href = "/";
       } catch (error: any) {
         toast.error(error.message || "Erro ao definir senha");
       } finally {
