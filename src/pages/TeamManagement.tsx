@@ -5,8 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, UserPlus } from "lucide-react";
+import { useState } from "react";
+import { InviteMemberDialog } from "@/components/team/InviteMemberDialog";
 
 interface WorkspaceMemberWithProfile {
   id: string;
@@ -20,6 +23,7 @@ interface WorkspaceMemberWithProfile {
 export default function TeamManagement() {
   const { workspace, isAdmin } = useWorkspace();
   const navigate = useNavigate();
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", workspace?.id],
@@ -72,11 +76,17 @@ export default function TeamManagement() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestão de Equipe</h1>
-          <p className="text-muted-foreground mt-2">
-            Clique em um membro para gerenciar suas permissões
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Gestão de Equipe</h1>
+            <p className="text-muted-foreground mt-2">
+              Clique em um membro para gerenciar suas permissões
+            </p>
+          </div>
+          <Button onClick={() => setIsInviteDialogOpen(true)} size="lg">
+            <UserPlus className="mr-2 h-5 w-5" />
+            Adicionar Membro
+          </Button>
         </div>
 
         <div className="grid gap-3">
@@ -118,6 +128,11 @@ export default function TeamManagement() {
           })}
         </div>
       </div>
+
+      <InviteMemberDialog
+        open={isInviteDialogOpen}
+        onOpenChange={setIsInviteDialogOpen}
+      />
     </AppLayout>
   );
 }
