@@ -875,6 +875,62 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_view_analytics: boolean
+          can_view_briefings: boolean
+          can_view_culture: boolean
+          can_view_positions: boolean
+          can_view_processes: boolean
+          can_view_projects: boolean
+          can_view_tasks: boolean
+          can_view_vision: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          can_view_analytics?: boolean
+          can_view_briefings?: boolean
+          can_view_culture?: boolean
+          can_view_positions?: boolean
+          can_view_processes?: boolean
+          can_view_projects?: boolean
+          can_view_tasks?: boolean
+          can_view_vision?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          can_view_analytics?: boolean
+          can_view_briefings?: boolean
+          can_view_culture?: boolean
+          can_view_positions?: boolean
+          can_view_processes?: boolean
+          can_view_projects?: boolean
+          can_view_tasks?: boolean
+          can_view_vision?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_positions: {
         Row: {
           assigned_at: string
@@ -978,6 +1034,19 @@ export type Database = {
           _recurrence_type: string
         }
         Returns: string
+      }
+      get_user_permissions: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: {
+          can_view_analytics: boolean
+          can_view_briefings: boolean
+          can_view_culture: boolean
+          can_view_positions: boolean
+          can_view_processes: boolean
+          can_view_projects: boolean
+          can_view_tasks: boolean
+          can_view_vision: boolean
+        }[]
       }
       get_user_workspace_id: { Args: { _user_id: string }; Returns: string }
       is_project_owner: {
