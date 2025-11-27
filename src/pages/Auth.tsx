@@ -141,6 +141,17 @@ export default function Auth() {
         .update({ accepted: true })
         .eq("token", inviteToken);
 
+      // Create welcome notification
+      await supabase.from("notifications").insert({
+        user_id: currentUser.id,
+        workspace_id: inviteData.workspace_id,
+        type: "workspace_invite",
+        title: `Bem-vindo ao ${(inviteData.workspaces as any)?.name || 'workspace'}!`,
+        message: `Você agora faz parte do workspace como ${inviteData.role === "admin" ? "Administrador" : inviteData.role === "gestor" ? "Gestor" : "Membro"}.`,
+        link: "/",
+        data: inviteData,
+      });
+
       toast.success("Bem-vindo ao workspace!");
     } catch (error) {
       console.error("Erro ao processar convite:", error);
