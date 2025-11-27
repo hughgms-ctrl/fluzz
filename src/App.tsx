@@ -24,6 +24,7 @@ import BriefingDocument from "./pages/BriefingDocument";
 import WorkspaceAdmin from "./pages/WorkspaceAdmin";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import TeamManagement from "./pages/TeamManagement";
+import TeamMemberPermissions from "./pages/TeamMemberPermissions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
           <Route path="/workspace/setup" element={<WorkspaceSetup />} />
           <Route path="/team" element={<TeamManagement />} />
+          <Route path="/team/:userId" element={<TeamMemberPermissions />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </WorkspaceProvider>
