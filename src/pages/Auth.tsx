@@ -146,6 +146,7 @@ export default function Auth() {
     );
   }
 
+
   if (user) {
     return <Navigate to="/" replace />;
   }
