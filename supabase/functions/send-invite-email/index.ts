@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +11,8 @@ interface InviteEmailRequest {
   workspaceName: string;
   inviteLink: string;
   role: string;
+  workspaceId: string;
+  permissions: any;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,14 +22,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, workspaceName, inviteLink, role }: InviteEmailRequest = await req.json();
+    const { email, workspaceName, inviteLink, role, workspaceId, permissions }: InviteEmailRequest = await req.json();
 
     console.log("Sending invite email to:", email);
 
-    if (!RESEND_API_KEY) {
-      console.error("RESEND_API_KEY não configurada");
-      throw new Error("Serviço de email não configurado");
-    }
+    // Create Supabase admin client
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
     const roleText = role === "admin" 
       ? "Administrador" 
@@ -36,57 +44,24 @@ const handler = async (req: Request): Promise<Response> => {
       ? "Gestor" 
       : "Membro";
 
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h1 style="color: #333; margin-bottom: 20px;">Você foi convidado!</h1>
-        <p style="color: #666; font-size: 16px; line-height: 1.5;">
-          Você foi convidado para participar do workspace <strong>${workspaceName}</strong> 
-          com o cargo de <strong>${roleText}</strong>.
-        </p>
-        <p style="color: #666; font-size: 16px; line-height: 1.5;">
-          Clique no botão abaixo para criar sua conta e começar a colaborar:
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${inviteLink}" 
-             style="background-color: #0066ff; color: white; padding: 14px 28px; 
-                    text-decoration: none; border-radius: 6px; display: inline-block;
-                    font-weight: bold; font-size: 16px;">
-            Aceitar Convite
-          </a>
-        </div>
-        <p style="color: #999; font-size: 14px; margin-top: 30px;">
-          Este convite expira em 7 dias. Se você não solicitou este convite, pode ignorar este email.
-        </p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
-        <p style="color: #999; font-size: 12px; text-align: center;">
-          Se o botão não funcionar, copie e cole este link no seu navegador:<br/>
-          <span style="color: #0066ff;">${inviteLink}</span>
-        </p>
-      </div>
-    `;
-
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
+    // Use Supabase Auth to invite user by email
+    const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        workspace_id: workspaceId,
+        workspace_name: workspaceName,
+        role: role,
+        permissions: permissions,
+        invite_link: inviteLink,
       },
-      body: JSON.stringify({
-        from: "Equipe <onboarding@resend.dev>",
-        to: [email],
-        subject: `Convite para o workspace ${workspaceName}`,
-        html: emailHtml,
-      }),
+      redirectTo: inviteLink,
     });
 
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("Erro ao enviar email:", error);
-      throw new Error(`Erro ao enviar email: ${error}`);
+    if (error) {
+      console.error("Erro ao enviar convite via Supabase:", error);
+      throw new Error(`Erro ao enviar convite: ${error.message}`);
     }
 
-    const data = await res.json();
-    console.log("Email sent successfully:", data);
+    console.log("Convite enviado com sucesso via Supabase Auth:", data);
 
     return new Response(JSON.stringify({ success: true, data }), {
       status: 200,
