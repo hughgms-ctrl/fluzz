@@ -105,45 +105,49 @@ export default function Home() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Home</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Home</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1 sm:mt-2">
               Visão geral dos seus projetos e tarefas
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={() => checkDeadlinesMutation.mutate()}
               disabled={checkDeadlinesMutation.isPending}
               title="Verificar prazos de tarefas manualmente"
+              className="flex-1 sm:flex-none text-xs sm:text-sm"
+              size="sm"
             >
-              <Bell className="mr-2 h-4 w-4" />
-              {checkDeadlinesMutation.isPending ? "Verificando..." : "Verificar Prazos"}
+              <Bell className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">{checkDeadlinesMutation.isPending ? "Verificando..." : "Verificar Prazos"}</span>
+              <span className="sm:hidden">Verificar</span>
             </Button>
             {canCreateTasks && (
-              <Button onClick={() => setShowCreateTask(true)} size="lg">
-                <Plus className="mr-2 h-5 w-5" />
-                Criar Tarefa
+              <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
+                <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Criar Tarefa</span>
+                <span className="sm:hidden">Criar</span>
               </Button>
             )}
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card 
             className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
             onClick={() => navigate("/projects")}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Projetos Ativos
               </CardTitle>
-              <FolderKanban className="h-5 w-5 text-primary" />
+              <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{activeProjects}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-foreground">{activeProjects}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Clique para ver todos
               </p>
@@ -152,13 +156,13 @@ export default function Home() {
 
           <Card className="hover:shadow-lg transition-all border-l-4 border-l-primary">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Tarefas Concluídas
               </CardTitle>
-              <ListTodo className="h-5 w-5 text-primary" />
+              <ListTodo className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{completedTasks}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-foreground">{completedTasks}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Total de tarefas finalizadas
               </p>
@@ -170,13 +174,13 @@ export default function Home() {
             onClick={() => navigate("/my-tasks")}
           >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Tarefas Pendentes
               </CardTitle>
-              <FileText className="h-5 w-5 text-primary" />
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{pendingTasks}</div>
+              <div className="text-2xl sm:text-3xl font-bold text-foreground">{pendingTasks}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Clique para ver suas tarefas
               </p>
@@ -187,17 +191,17 @@ export default function Home() {
             overdueTasks > 0 ? "border-l-destructive" : "border-l-primary"
           }`}>
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className={`text-sm font-medium ${
+              <CardTitle className={`text-xs sm:text-sm font-medium ${
                 overdueTasks > 0 ? "text-destructive" : "text-muted-foreground"
               }`}>
                 Tarefas Atrasadas
               </CardTitle>
-              <UserPlus className={`h-5 w-5 ${
+              <UserPlus className={`h-4 w-4 sm:h-5 sm:w-5 ${
                 overdueTasks > 0 ? "text-destructive" : "text-primary"
               }`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-3xl font-bold ${
+              <div className={`text-2xl sm:text-3xl font-bold ${
                 overdueTasks > 0 ? "text-destructive" : "text-foreground"
               }`}>
                 {overdueTasks}
@@ -209,14 +213,14 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FolderKanban className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FolderKanban className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Projetos Recentes
               </CardTitle>
-              <CardDescription>Seus projetos mais recentes</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Seus projetos mais recentes</CardDescription>
             </CardHeader>
             <CardContent>
               {!projects || projects.length === 0 ? (
@@ -277,11 +281,11 @@ export default function Home() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ListTodo className="h-5 w-5 text-primary" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <ListTodo className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 Acesso Rápido
               </CardTitle>
-              <CardDescription>Links úteis para seu trabalho</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Links úteis para seu trabalho</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">

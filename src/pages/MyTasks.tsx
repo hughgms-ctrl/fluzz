@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } from "lucide-react";
+import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 
 export default function MyTasks() {
   const { user } = useAuth();
@@ -23,6 +24,26 @@ export default function MyTasks() {
   const [projectFilter, setProjectFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+
+  const clearAllFilters = () => {
+    setSearchTerm("");
+    setPriorityFilter("all");
+    setStatusFilter("all");
+    setDueDateFilter("all");
+    setProjectFilter("all");
+    setTypeFilter("all");
+    setFilterDrawerOpen(false);
+  };
+
+  const activeFiltersCount = [
+    searchTerm !== "",
+    priorityFilter !== "all",
+    statusFilter !== "all",
+    dueDateFilter !== "all",
+    projectFilter !== "all",
+    typeFilter !== "all",
+  ].filter(Boolean).length;
 
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["my-tasks", user?.id],
@@ -203,52 +224,81 @@ export default function MyTasks() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Minhas Tarefas</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Minhas Tarefas</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Visualize e gerencie todas as tarefas atribuídas a você
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 w-full sm:w-auto">
             <Plus size={16} />
-            Nova Tarefa Avulsa
+            <span className="hidden sm:inline">Nova Tarefa Avulsa</span>
+            <span className="sm:hidden">Nova Tarefa</span>
           </Button>
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
           <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-4 flex items-center gap-3">
-              <FolderOpen className="h-8 w-8 text-blue-500" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+              <FolderOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               <div>
-                <p className="text-2xl font-bold">{projectTasks.length}</p>
-                <p className="text-sm text-muted-foreground">Tarefas de Projeto</p>
+                <p className="text-xl sm:text-2xl font-bold">{projectTasks.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Projeto</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-4 flex items-center gap-3">
-              <User className="h-8 w-8 text-purple-500" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+              <User className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               <div>
-                <p className="text-2xl font-bold">{standaloneTasks.length}</p>
-                <p className="text-sm text-muted-foreground">Tarefas Avulsas</p>
+                <p className="text-xl sm:text-2xl font-bold">{standaloneTasks.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Avulsas</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-4 flex items-center gap-3">
-              <RefreshCw className="h-8 w-8 text-green-500" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               <div>
-                <p className="text-2xl font-bold">{routineTasks.length}</p>
-                <p className="text-sm text-muted-foreground">Tarefas de Rotina</p>
+                <p className="text-xl sm:text-2xl font-bold">{routineTasks.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Rotina</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <TaskFilters
+        {/* Mobile Filter Drawer */}
+        <MobileFilterDrawer
+          title="Filtrar Tarefas"
+          description="Aplique filtros para encontrar tarefas específicas"
+          activeFiltersCount={activeFiltersCount}
+          open={filterDrawerOpen}
+          onOpenChange={setFilterDrawerOpen}
+        >
+          <TaskFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            priorityFilter={priorityFilter}
+            onPriorityChange={setPriorityFilter}
+            statusFilter={statusFilter}
+            onStatusChange={setStatusFilter}
+            dueDateFilter={dueDateFilter}
+            onDueDateChange={setDueDateFilter}
+            projectFilter={projectFilter}
+            onProjectChange={setProjectFilter}
+            projects={projects}
+            typeFilter={typeFilter}
+            onTypeChange={setTypeFilter}
+            onClearAll={clearAllFilters}
+          />
+        </MobileFilterDrawer>
+
+        {/* Desktop Filters */}
+        <div className="hidden md:block">
+          <TaskFilters
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           priorityFilter={priorityFilter}
@@ -262,24 +312,32 @@ export default function MyTasks() {
           projects={projects}
           typeFilter={typeFilter}
           onTypeChange={setTypeFilter}
+          onClearAll={clearAllFilters}
         />
+        </div>
 
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="flex-wrap h-auto gap-1">
-            <TabsTrigger value="all">
-              Todas ({filteredTasks.length})
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">
+              Todas <span className="hidden sm:inline">({filteredTasks.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="todo" className="gap-2">
-              <Clock size={16} />
-              A Fazer ({todoTasks.length})
+            <TabsTrigger value="todo" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">A Fazer</span>
+              <span className="sm:hidden">Fazer</span>
+              <span className="hidden sm:inline">({todoTasks.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="in_progress" className="gap-2">
-              <PlayCircle size={16} />
-              Em Progresso ({inProgressTasks.length})
+            <TabsTrigger value="in_progress" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Em Progresso</span>
+              <span className="sm:hidden">Progresso</span>
+              <span className="hidden sm:inline">({inProgressTasks.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="completed" className="gap-2">
-              <CheckCircle2 size={16} />
-              Concluídas ({completedTasks.length})
+            <TabsTrigger value="completed" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Concluídas</span>
+              <span className="sm:hidden">Feitas</span>
+              <span className="hidden sm:inline">({completedTasks.length})</span>
             </TabsTrigger>
           </TabsList>
 
