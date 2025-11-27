@@ -1,91 +1,80 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 interface InviteEmailRequest {
   email: string;
-  inviteLink: string;
   workspaceName: string;
+  inviteLink: string;
   role: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { email, inviteLink, workspaceName, role }: InviteEmailRequest =
-      await req.json();
+    const { email, workspaceName, inviteLink, role }: InviteEmailRequest = await req.json();
+
+    console.log("Sending invite email to:", email);
 
     if (!RESEND_API_KEY) {
       console.error("RESEND_API_KEY não configurada");
       throw new Error("Serviço de email não configurado");
     }
 
-    const roleText =
-      role === "admin"
-        ? "Administrador"
-        : role === "gestor"
-        ? "Gestor"
-        : "Membro";
+    const roleText = role === "admin" 
+      ? "Administrador" 
+      : role === "gestor" 
+      ? "Gestor" 
+      : "Membro";
 
     const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Você foi convidado!</h1>
-            </div>
-            <div class="content">
-              <p>Olá!</p>
-              <p>Você foi convidado para colaborar no workspace <strong>${workspaceName}</strong> como <strong>${roleText}</strong>.</p>
-              <p>Clique no botão abaixo para aceitar o convite e começar a colaborar:</p>
-              <div style="text-align: center;">
-                <a href="${inviteLink}" class="button">Aceitar Convite</a>
-              </div>
-              <p style="margin-top: 30px; font-size: 14px; color: #666;">
-                Se você não solicitou este convite, pode ignorar este email.
-                <br>
-                Este link expira em 7 dias.
-              </p>
-            </div>
-            <div class="footer">
-              <p>ProjectFlow - Gerenciamento de Projetos</p>
-            </div>
-          </div>
-        </body>
-      </html>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #333; margin-bottom: 20px;">Você foi convidado!</h1>
+        <p style="color: #666; font-size: 16px; line-height: 1.5;">
+          Você foi convidado para participar do workspace <strong>${workspaceName}</strong> 
+          com o cargo de <strong>${roleText}</strong>.
+        </p>
+        <p style="color: #666; font-size: 16px; line-height: 1.5;">
+          Clique no botão abaixo para criar sua conta e começar a colaborar:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${inviteLink}" 
+             style="background-color: #0066ff; color: white; padding: 14px 28px; 
+                    text-decoration: none; border-radius: 6px; display: inline-block;
+                    font-weight: bold; font-size: 16px;">
+            Aceitar Convite
+          </a>
+        </div>
+        <p style="color: #999; font-size: 14px; margin-top: 30px;">
+          Este convite expira em 7 dias. Se você não solicitou este convite, pode ignorar este email.
+        </p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+        <p style="color: #999; font-size: 12px; text-align: center;">
+          Se o botão não funcionar, copie e cole este link no seu navegador:<br/>
+          <span style="color: #0066ff;">${inviteLink}</span>
+        </p>
+      </div>
     `;
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "ProjectFlow <onboarding@resend.dev>",
+        from: "Equipe <onboarding@resend.dev>",
         to: [email],
-        subject: `Convite para ${workspaceName}`,
+        subject: `Convite para o workspace ${workspaceName}`,
         html: emailHtml,
       }),
     });
@@ -97,19 +86,28 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const data = await res.json();
+    console.log("Email sent successfully:", data);
 
-    return new Response(JSON.stringify(data), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ success: true, data }), {
       status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders,
+      },
     });
-  } catch (error) {
-    console.error("Erro:", error);
-    const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+  } catch (error: any) {
+    console.error("Error sending invite email:", error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || "Erro ao enviar email" 
+      }),
       {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
+        headers: { 
+          "Content-Type": "application/json", 
+          ...corsHeaders 
+        },
       }
     );
   }
