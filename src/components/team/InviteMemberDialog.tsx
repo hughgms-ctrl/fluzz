@@ -264,7 +264,27 @@ export const InviteMemberDialog = ({
       
       const link = `${baseUrl}/auth?invite=${token}`;
       
-      // Always just generate the link - user can share it however they want
+      // Send email with invite link
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
+          body: {
+            email: email,
+            workspaceName: workspace.name,
+            inviteLink: link,
+            role: role,
+          }
+        });
+
+        if (emailError) {
+          console.error("Erro ao enviar email:", emailError);
+          // Don't throw - we still want to show the link even if email fails
+        }
+      } catch (emailError) {
+        console.error("Erro ao enviar email:", emailError);
+        // Don't throw - we still want to show the link even if email fails
+      }
+      
+      // Always generate the link as fallback
       setInviteLink(link);
       return link;
     },
@@ -285,7 +305,7 @@ export const InviteMemberDialog = ({
           onOpenChange(false);
         }, 1500);
       } else {
-        toast.success("Link de convite gerado! Copie e compartilhe o link abaixo.");
+        toast.success("Email de convite enviado! O link também está disponível abaixo caso precise.");
       }
     },
     onError: (error: any) => {
@@ -398,7 +418,7 @@ export const InviteMemberDialog = ({
           {!existingUser && email && email.includes('@') && (
             <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
               <p className="text-sm text-blue-600 dark:text-blue-400">
-                <strong>Usuário novo detectado.</strong> Será gerado um link de convite que você pode compartilhar com este usuário.
+                <strong>Usuário novo detectado.</strong> Será enviado um email de convite automaticamente. O link também ficará disponível para compartilhamento manual.
               </p>
             </div>
           )}
@@ -539,7 +559,7 @@ export const InviteMemberDialog = ({
                 Link de Convite Gerado
               </Label>
               <p className="text-xs text-muted-foreground">
-                Copie este link e envie para o novo membro. O link é válido por 7 dias.
+                Email enviado! Você também pode copiar este link para compartilhar manualmente. O link é válido por 7 dias.
               </p>
                 <div className="flex gap-2">
                   <Input value={inviteLink} readOnly className="font-mono text-xs" />
