@@ -40,6 +40,10 @@ export const InviteMemberDialog = ({
   const [role, setRole] = useState<"admin" | "gestor" | "membro">("membro");
   const [sendMethod, setSendMethod] = useState<"direct" | "link" | "email">("direct");
   const [existingUser, setExistingUser] = useState<{ user_id: string; email: string } | null>(null);
+  const [existingMember, setExistingMember] = useState<{
+    role: string;
+    permissions: any;
+  } | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [permissions, setPermissions] = useState({
     can_view_projects: true,
@@ -59,6 +63,7 @@ export const InviteMemberDialog = ({
     const checkUserExists = async () => {
       if (!email || email.length < 5 || !email.includes('@')) {
         setExistingUser(null);
+        setExistingMember(null);
         return;
       }
 
@@ -71,16 +76,63 @@ export const InviteMemberDialog = ({
         if (error) {
           console.error("Erro ao verificar usuário:", error);
           setExistingUser(null);
+          setExistingMember(null);
         } else if (data && data.length > 0) {
-          setExistingUser(data[0]);
-          setSendMethod("direct");
+          const user = data[0];
+          setExistingUser(user);
+          
+          // Check if user is already a member
+          if (workspace?.id) {
+            const { data: memberData } = await supabase
+              .from("workspace_members")
+              .select("role")
+              .eq("workspace_id", workspace.id)
+              .eq("user_id", user.user_id)
+              .maybeSingle();
+
+            if (memberData) {
+              // User is already a member - fetch their permissions
+              const { data: permData } = await supabase
+                .from("user_permissions")
+                .select("*")
+                .eq("workspace_id", workspace.id)
+                .eq("user_id", user.user_id)
+                .maybeSingle();
+
+              setExistingMember({
+                role: memberData.role,
+                permissions: permData || null
+              });
+              
+              // Set form to current values
+              setRole(memberData.role as "admin" | "gestor" | "membro");
+              if (permData) {
+                setPermissions({
+                  can_view_projects: permData.can_view_projects,
+                  can_view_tasks: permData.can_view_tasks,
+                  can_view_positions: permData.can_view_positions,
+                  can_view_analytics: permData.can_view_analytics,
+                  can_view_culture: permData.can_view_culture,
+                  can_view_vision: permData.can_view_vision,
+                  can_view_processes: permData.can_view_processes,
+                  can_view_briefings: permData.can_view_briefings,
+                });
+              }
+              setSendMethod("direct");
+            } else {
+              setExistingMember(null);
+              setSendMethod("direct");
+            }
+          }
         } else {
           setExistingUser(null);
+          setExistingMember(null);
           setSendMethod("link");
         }
       } catch (error) {
         console.error("Erro ao verificar usuário:", error);
         setExistingUser(null);
+        setExistingMember(null);
       } finally {
         setCheckingEmail(false);
       }
@@ -88,7 +140,7 @@ export const InviteMemberDialog = ({
 
     const debounceTimer = setTimeout(checkUserExists, 500);
     return () => clearTimeout(debounceTimer);
-  }, [email]);
+  }, [email, workspace?.id]);
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
@@ -103,20 +155,37 @@ export const InviteMemberDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // For direct invites (existing users)
-      if (sendMethod === "direct" && existingUser) {
-        // Check if user is already a member
-        const { data: existingMember } = await supabase
+      // For updating existing members
+      if (sendMethod === "direct" && existingUser && existingMember) {
+        // Update role
+        const { error: roleError } = await supabase
           .from("workspace_members")
-          .select("id")
+          .update({ role: role })
           .eq("workspace_id", workspace.id)
-          .eq("user_id", existingUser.user_id)
-          .maybeSingle();
+          .eq("user_id", existingUser.user_id);
 
-        if (existingMember) {
-          throw new Error("Este usuário já é membro deste workspace");
+        if (roleError) throw roleError;
+
+        // Update or create permissions if not admin
+        if (role !== "admin") {
+          const { error: permError } = await supabase
+            .from("user_permissions")
+            .upsert({
+              user_id: existingUser.user_id,
+              workspace_id: workspace.id,
+              ...permissions,
+            }, {
+              onConflict: "user_id,workspace_id"
+            });
+
+          if (permError) throw permError;
         }
 
+        return null; // No link needed for updates
+      }
+
+      // For direct invites (existing users, not yet members)
+      if (sendMethod === "direct" && existingUser && !existingMember) {
         // Add user directly to workspace
         const { error: memberError } = await supabase
           .from("workspace_members")
@@ -223,7 +292,13 @@ export const InviteMemberDialog = ({
     onSuccess: (link) => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       
-      if (sendMethod === "direct") {
+      if (sendMethod === "direct" && existingMember) {
+        toast.success("Permissões do membro atualizadas com sucesso!");
+        setTimeout(() => {
+          resetForm();
+          onOpenChange(false);
+        }, 1500);
+      } else if (sendMethod === "direct") {
         toast.success("Membro adicionado com sucesso!");
         setTimeout(() => {
           resetForm();
@@ -247,6 +322,7 @@ export const InviteMemberDialog = ({
     setSendMethod("direct");
     setInviteLink(null);
     setExistingUser(null);
+    setExistingMember(null);
     setPermissions({
       can_view_projects: true,
       can_view_tasks: true,
@@ -317,10 +393,20 @@ export const InviteMemberDialog = ({
               )}
             </div>
             
-            {existingUser && (
+            {existingUser && !existingMember && (
               <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 p-2 rounded">
                 <UserCheck className="h-4 w-4" />
                 <span>Usuário encontrado! Será adicionado diretamente ao workspace.</span>
+              </div>
+            )}
+            
+            {existingMember && (
+              <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 p-3 rounded">
+                <UserCheck className="h-4 w-4 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium">Usuário já é membro deste workspace</p>
+                  <p className="text-xs mt-1">Cargo atual: {existingMember.role}. Você pode atualizar o cargo e permissões abaixo.</p>
+                </div>
               </div>
             )}
             
@@ -535,6 +621,8 @@ export const InviteMemberDialog = ({
               <Button type="submit" disabled={inviteMutation.isPending}>
                 {inviteMutation.isPending
                   ? "Processando..."
+                  : existingMember
+                  ? "Atualizar Permissões"
                   : existingUser
                   ? "Adicionar à Equipe"
                   : sendMethod === "email"
