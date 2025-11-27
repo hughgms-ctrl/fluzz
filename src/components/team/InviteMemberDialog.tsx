@@ -38,7 +38,7 @@ export const InviteMemberDialog = ({
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "gestor" | "membro">("membro");
-  const [sendMethod, setSendMethod] = useState<"direct" | "link" | "email">("direct");
+  const [sendMethod, setSendMethod] = useState<"direct" | "link">("direct");
   const [existingUser, setExistingUser] = useState<{ user_id: string; email: string } | null>(null);
   const [existingMember, setExistingMember] = useState<{
     role: string;
@@ -264,28 +264,7 @@ export const InviteMemberDialog = ({
       
       const link = `${baseUrl}/auth?invite=${token}`;
       
-      if (sendMethod === "email") {
-        // Send email via edge function
-        const { error: emailError } = await supabase.functions.invoke(
-          "send-invite-email",
-          {
-            body: {
-              email,
-              inviteLink: link,
-              workspaceName: workspace.name,
-              role,
-            },
-          }
-        );
-
-        if (emailError) {
-          console.error("Erro ao enviar email:", emailError);
-          toast.warning(
-            "Convite criado, mas não foi possível enviar o email. Use o link abaixo."
-          );
-        }
-      }
-
+      // Always just generate the link - user can share it however they want
       setInviteLink(link);
       return link;
     },
@@ -304,10 +283,8 @@ export const InviteMemberDialog = ({
           resetForm();
           onOpenChange(false);
         }, 1500);
-      } else if (sendMethod === "email") {
-        toast.success("Convite enviado por email!");
       } else {
-        toast.success("Link de convite gerado! Copie o link abaixo.");
+        toast.success("Link de convite gerado! Copie e compartilhe o link abaixo.");
       }
     },
     onError: (error: any) => {
@@ -341,7 +318,7 @@ export const InviteMemberDialog = ({
       toast.error("O email é obrigatório");
       return;
     }
-    if (sendMethod === "email" && !email.includes('@')) {
+    if (!email.includes('@')) {
       toast.error("Digite um email válido");
       return;
     }
@@ -417,33 +394,10 @@ export const InviteMemberDialog = ({
             )}
           </div>
 
-          {!existingUser && email && (
-            <div className="space-y-2">
-              <Label>Método de Envio</Label>
-              <RadioGroup
-                value={sendMethod}
-                onValueChange={(value: "link" | "email") => setSendMethod(value)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="link" id="link" />
-                  <Label htmlFor="link" className="font-normal cursor-pointer flex items-center gap-2">
-                    <LinkIcon className="h-4 w-4" />
-                    Gerar Link
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="email" id="email-method" />
-                  <Label htmlFor="email-method" className="font-normal cursor-pointer flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Enviar por Email
-                  </Label>
-                </div>
-              </RadioGroup>
-              <p className="text-xs text-muted-foreground">
-                {sendMethod === "link" 
-                  ? "Gere um link e envie manualmente para o convidado"
-                  : "Envie automaticamente um email com o convite"}
+          {!existingUser && email && email.includes('@') && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                <strong>Usuário novo detectado.</strong> Será gerado um link de convite que você pode compartilhar com este usuário.
               </p>
             </div>
           )}
@@ -581,14 +535,11 @@ export const InviteMemberDialog = ({
           {inviteLink && (
             <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
               <Label className="text-sm font-semibold">
-                {sendMethod === "email" ? "Email Enviado!" : "Link de Convite Gerado"}
+                Link de Convite Gerado
               </Label>
               <p className="text-xs text-muted-foreground">
-                {sendMethod === "email"
-                  ? "Um email foi enviado para o convidado com as instruções de acesso."
-                  : "Copie este link e envie para o novo membro. O link é válido por 7 dias."}
+                Copie este link e envie para o novo membro. O link é válido por 7 dias.
               </p>
-              {sendMethod === "link" && (
                 <div className="flex gap-2">
                   <Input value={inviteLink} readOnly className="font-mono text-xs" />
                   <Button
@@ -602,7 +553,6 @@ export const InviteMemberDialog = ({
                     Copiar
                   </Button>
                 </div>
-              )}
             </div>
           )}
 
@@ -625,8 +575,6 @@ export const InviteMemberDialog = ({
                   ? "Atualizar Permissões"
                   : existingUser
                   ? "Adicionar à Equipe"
-                  : sendMethod === "email"
-                  ? "Enviar Convite"
                   : "Gerar Link"}
               </Button>
             )}
