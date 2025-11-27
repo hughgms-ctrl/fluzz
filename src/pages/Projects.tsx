@@ -8,11 +8,15 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects"],
@@ -20,6 +24,26 @@ export default function Projects() {
       const { data, error } = await supabase
         .from("projects")
         .select("*, tasks(id, status)")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: standaloneTasks, isLoading: isLoadingStandalone } = useQuery({
+    queryKey: ["standalone-tasks"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(`
+          *,
+          profiles:assigned_to (
+            id,
+            full_name
+          )
+        `)
+        .is("project_id", null)
+        .is("routine_id", null)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -63,7 +87,7 @@ export default function Projects() {
     },
   });
 
-  if (isLoading) {
+  if (isLoading || isLoadingStandalone) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
@@ -72,6 +96,23 @@ export default function Projects() {
       </AppLayout>
     );
   }
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "todo": return "A Fazer";
+      case "in_progress": return "Em Progresso";
+      case "completed": return "Concluído";
+      default: return status;
+    }
+  };
+
+  const getPriorityVariant = (priority: string): "default" | "secondary" | "destructive" => {
+    switch (priority) {
+      case "high": return "destructive";
+      case "medium": return "secondary";
+      default: return "default";
+    }
+  };
 
   return (
     <AppLayout>
@@ -87,13 +128,16 @@ export default function Projects() {
           </Button>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived")}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived" | "standalone")}>
           <TabsList>
             <TabsTrigger value="active">
               Ativos ({activeProjects.length})
             </TabsTrigger>
             <TabsTrigger value="archived">
               Arquivados ({archivedProjects.length})
+            </TabsTrigger>
+            <TabsTrigger value="standalone">
+              Tarefas Avulsas ({standaloneTasks?.length || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -139,6 +183,57 @@ export default function Projects() {
                     onArchive={() => archiveMutation.mutate({ id: project.id, archived: false })}
                     isArchived={true}
                   />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="standalone" className="mt-6">
+            {!standaloneTasks || standaloneTasks.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">
+                  Não há tarefas avulsas criadas.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {standaloneTasks.map((task: any) => (
+                  <Card
+                    key={task.id}
+                    className="hover:shadow-lg transition-all cursor-pointer"
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-2">
+                        <CardTitle className="text-lg line-clamp-2">{task.title}</CardTitle>
+                        <Badge variant={getPriorityVariant(task.priority)}>
+                          {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      {task.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {task.description}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between text-sm">
+                        <Badge variant="outline">
+                          {getStatusLabel(task.status)}
+                        </Badge>
+                        {task.profiles?.full_name && (
+                          <span className="text-muted-foreground">
+                            {task.profiles.full_name}
+                          </span>
+                        )}
+                      </div>
+                      {task.due_date && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Vencimento: {new Date(task.due_date).toLocaleDateString("pt-BR")}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}

@@ -9,7 +9,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { FileText, ListTodo, FolderKanban, UserPlus, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
-import { CreateStandaloneTaskForMember } from "@/components/tasks/CreateStandaloneTaskForMember";
+import { CreateUnifiedTaskDialog } from "@/components/tasks/CreateUnifiedTaskDialog";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -288,7 +288,7 @@ export default function Home() {
         </div>
       </div>
 
-      <CreateStandaloneTaskForMember
+      <CreateUnifiedTaskDialog
         open={showCreateTask}
         onOpenChange={setShowCreateTask}
       />
