@@ -270,6 +270,7 @@ export const InviteMemberDialog = ({
     },
     onSuccess: (link) => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
       
       if (sendMethod === "direct" && existingMember) {
         toast.success("Permissões do membro atualizadas com sucesso!");
