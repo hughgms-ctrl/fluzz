@@ -44,7 +44,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      // Get published app URL - ALWAYS use production URL
+      const hostname = window.location.hostname;
+      let redirectUrl;
+
+      if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
+        // Lovable hosted environment - always construct production URL
+        const parts = hostname.split('.');
+        const projectId = parts[0].replace(/^(edit-|preview-)/, '');
+        redirectUrl = `https://${projectId}.lovableproject.com/`;
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // For localhost, we cannot determine production URL automatically
+        throw new Error("Cadastro deve ser feito a partir do app publicado, não de localhost. Por favor, acesse seu app publicado.");
+      } else {
+        // Custom domain
+        redirectUrl = `${window.location.origin}/`;
+      }
       
       const { error } = await supabase.auth.signUp({
         email,
@@ -98,7 +113,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      // Get published app URL - ALWAYS use production URL
+      const hostname = window.location.hostname;
+      let redirectUrl;
+
+      if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
+        // Lovable hosted environment - always construct production URL
+        const parts = hostname.split('.');
+        const projectId = parts[0].replace(/^(edit-|preview-)/, '');
+        redirectUrl = `https://${projectId}.lovableproject.com/reset-password`;
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // For localhost, we cannot determine production URL automatically
+        throw new Error("Recuperação de senha deve ser feita a partir do app publicado, não de localhost. Por favor, acesse seu app publicado.");
+      } else {
+        // Custom domain
+        redirectUrl = `${window.location.origin}/reset-password`;
+      }
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
