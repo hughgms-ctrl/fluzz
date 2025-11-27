@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TaskFiltersProps {
   searchTerm: string;
@@ -26,6 +27,7 @@ interface TaskFiltersProps {
   setores?: string[];
   typeFilter?: string;
   onTypeChange?: (value: string) => void;
+  onClearAll?: () => void;
 }
 
 export const TaskFilters = ({
@@ -45,9 +47,33 @@ export const TaskFilters = ({
   setores,
   typeFilter,
   onTypeChange,
+  onClearAll,
 }: TaskFiltersProps) => {
+  const hasActiveFilters = 
+    searchTerm !== "" ||
+    priorityFilter !== "all" ||
+    statusFilter !== "all" ||
+    dueDateFilter !== "all" ||
+    (projectFilter && projectFilter !== "all") ||
+    (typeFilter && typeFilter !== "all") ||
+    (setorFilter && setorFilter !== "all");
+
   return (
     <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="font-semibold text-sm text-muted-foreground">Filtros</h3>
+        {hasActiveFilters && onClearAll && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClearAll}
+            className="h-7 text-xs gap-1"
+          >
+            <X className="h-3 w-3" />
+            Limpar Filtros
+          </Button>
+        )}
+      </div>
       <div className="space-y-2">
         <Label htmlFor="search">Buscar</Label>
         <div className="relative">

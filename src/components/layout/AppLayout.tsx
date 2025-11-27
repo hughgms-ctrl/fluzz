@@ -43,11 +43,11 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-16 border-b border-border bg-card flex items-center justify-between px-6 sticky top-0 z-10">
-            <div className="flex items-center gap-4">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <SidebarTrigger />
-              <h1 className="text-xl font-semibold text-foreground">ProjectFlow</h1>
+              <h1 className="text-base sm:text-xl font-semibold text-foreground truncate">ProjectFlow</h1>
               {workspaceMember && workspaces.length > 0 && (
                 <Select
                   value={workspace?.id}
@@ -55,7 +55,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                     void changeWorkspace(value);
                   }}
                 >
-                  <SelectTrigger className="w-[220px]">
+                  <SelectTrigger className="w-[160px] sm:w-[220px] text-xs sm:text-sm">
                     <SelectValue placeholder="Selecionar workspace" />
                   </SelectTrigger>
                   <SelectContent>
@@ -68,21 +68,21 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                 </Select>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <ThemeToggle />
               <NotificationBell />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate("/profile")}
-                className="h-9 w-9"
+                className="h-8 w-8 sm:h-9 sm:w-9"
               >
-                <User className="h-4 w-4" />
+                <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="sr-only">Perfil</span>
               </Button>
             </div>
           </header>
-          <main className="flex-1 p-6 animate-fade-in">
+          <main className="flex-1 p-3 sm:p-6 animate-fade-in min-w-0">
             {children}
           </main>
         </div>

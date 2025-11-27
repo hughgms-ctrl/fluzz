@@ -116,28 +116,35 @@ export default function Projects() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Projetos</h1>
-            <p className="text-muted-foreground">Gerencie todos os seus projetos</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus size={20} />
-            Novo Projeto
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="hidden sm:inline">Novo Projeto</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived" | "standalone")}>
-          <TabsList>
-            <TabsTrigger value="active">
-              Ativos ({activeProjects.length})
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="active" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Ativos</span>
+              <span className="sm:hidden">Ativo</span>
+              ({activeProjects.length})
             </TabsTrigger>
-            <TabsTrigger value="archived">
-              Arquivados ({archivedProjects.length})
+            <TabsTrigger value="archived" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Arquivados</span>
+              <span className="sm:hidden">Arq.</span>
+              ({archivedProjects.length})
             </TabsTrigger>
-            <TabsTrigger value="standalone">
-              Tarefas Avulsas ({standaloneTasks?.length || 0})
+            <TabsTrigger value="standalone" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Tarefas Avulsas</span>
+              <span className="sm:hidden">Avulsas</span>
+              ({standaloneTasks?.length || 0})
             </TabsTrigger>
           </TabsList>
 
@@ -153,7 +160,7 @@ export default function Projects() {
                 </Button>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {activeProjects.map((project: any) => (
                   <ProjectCard
                     key={project.id}
@@ -174,7 +181,7 @@ export default function Projects() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {archivedProjects.map((project: any) => (
                   <ProjectCard
                     key={project.id}
@@ -196,7 +203,7 @@ export default function Projects() {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {standaloneTasks.map((task: any) => (
                   <Card
                     key={task.id}
