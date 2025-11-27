@@ -264,7 +264,7 @@ export const InviteMemberDialog = ({
       
       const link = `${baseUrl}/auth?invite=${token}`;
       
-      // Send email with invite link
+      // Send email with invite link via Supabase Auth
       try {
         const { error: emailError } = await supabase.functions.invoke('send-invite-email', {
           body: {
@@ -272,6 +272,8 @@ export const InviteMemberDialog = ({
             workspaceName: workspace.name,
             inviteLink: link,
             role: role,
+            workspaceId: workspace.id,
+            permissions: role !== "admin" ? permissions : null,
           }
         });
 
