@@ -72,8 +72,20 @@ export const InviteMemberDialog = ({
 
       if (inviteError) throw inviteError;
 
-      // Generate invite link
-      const link = `${window.location.origin}/auth?invite=${token}`;
+      // Generate invite link - use production URL
+      // Remove editor/preview domains and use the published app domain
+      let baseUrl = window.location.origin;
+      
+      // If we're in the Lovable editor/preview, construct the production URL
+      if (baseUrl.includes('lovable.app') && !baseUrl.includes('//gptengineer-')) {
+        // Extract project name from editor URL and create production URL
+        const projectMatch = window.location.hostname.match(/^([^.]+)\.lovable\.app$/);
+        if (projectMatch) {
+          baseUrl = `https://${projectMatch[1]}.lovable.app`;
+        }
+      }
+      
+      const link = `${baseUrl}/auth?invite=${token}`;
       setInviteLink(link);
 
       return link;
@@ -303,7 +315,7 @@ export const InviteMemberDialog = ({
             <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
               <Label className="text-sm font-semibold">Link de Convite Gerado</Label>
               <p className="text-xs text-muted-foreground">
-                Copie este link e envie para o novo membro. O link expira em 7 dias.
+                Envie este link para o novo membro se cadastrar e entrar automaticamente no workspace. O link expira em 7 dias.
               </p>
               <div className="flex gap-2">
                 <Input value={inviteLink} readOnly className="font-mono text-xs" />
@@ -317,6 +329,11 @@ export const InviteMemberDialog = ({
                 >
                   Copiar
                 </Button>
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-500 space-y-1">
+                <p className="font-semibold">⚠️ Importante:</p>
+                <p>Este link deve ser usado no seu app <strong>publicado</strong>, não no editor Lovable.</p>
+                <p>Se você ainda não publicou, publique o app primeiro clicando no botão "Publish" no topo.</p>
               </div>
             </div>
           )}
