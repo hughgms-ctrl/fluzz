@@ -21,9 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CreateUnifiedTaskDialogProps {
   open: boolean;
@@ -220,26 +220,13 @@ export const CreateUnifiedTaskDialog = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-3">
             <Label>Tipo de Tarefa *</Label>
-            <RadioGroup value={taskType} onValueChange={(v) => setTaskType(v as any)}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="standalone" id="standalone" />
-                <Label htmlFor="standalone" className="font-normal cursor-pointer">
-                  Tarefa Avulsa (sem vínculo)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="project" id="project" />
-                <Label htmlFor="project" className="font-normal cursor-pointer">
-                  Tarefa de Projeto
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="routine" id="routine" />
-                <Label htmlFor="routine" className="font-normal cursor-pointer">
-                  Tarefa de Rotina
-                </Label>
-              </div>
-            </RadioGroup>
+            <Tabs value={taskType} onValueChange={(v) => setTaskType(v as any)} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="standalone">Avulsa</TabsTrigger>
+                <TabsTrigger value="project">Projeto</TabsTrigger>
+                <TabsTrigger value="routine">Rotina</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           {taskType === "project" && (
