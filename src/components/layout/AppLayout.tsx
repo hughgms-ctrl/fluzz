@@ -31,8 +31,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
   }
 
   if (user && !workspaceMember && !workspaceLoading) {
-    navigate("/workspace/setup");
-    return null;
+    return <Navigate to="/workspace/setup" replace />;
   }
 
   if (!user) {
