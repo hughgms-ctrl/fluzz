@@ -25,6 +25,7 @@ import WorkspaceAdmin from "./pages/WorkspaceAdmin";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMemberPermissions from "./pages/TeamMemberPermissions";
+import WorkspaceManagement from "./pages/WorkspaceManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/workspace/setup" element={<WorkspaceSetup />} />
           <Route path="/team" element={<TeamManagement />} />
           <Route path="/team/:userId" element={<TeamMemberPermissions />} />
+          <Route path="/workspaces" element={<WorkspaceManagement />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </WorkspaceProvider>

@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Camera, Save, Mail, User as UserIcon } from "lucide-react";
+import { Camera, Save, Mail, User as UserIcon, Building2, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Profile() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [fullName, setFullName] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -213,6 +215,31 @@ export default function Profile() {
                 </Button>
               </div>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Workspaces</CardTitle>
+            <CardDescription>
+              Gerencie seus workspaces e permissões
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => navigate("/workspaces")}
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                <span>Gerenciar Meus Workspaces</span>
+              </div>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Veja todos os workspaces, saia ou exclua workspaces dos quais você é proprietário
+            </p>
           </CardContent>
         </Card>
       </div>
