@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Auth() {
   const { user, loading, signUp, signIn } = useAuth();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [inviteData, setInviteData] = useState<any>(null);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -19,6 +24,40 @@ export default function Auth() {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
+
+  // Load invite data if token present
+  useEffect(() => {
+    const token = searchParams.get("invite");
+    if (token) {
+      setInviteToken(token);
+      loadInviteData(token);
+    }
+  }, [searchParams]);
+
+  const loadInviteData = async (token: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("workspace_invites")
+        .select("*, workspaces(name)")
+        .eq("token", token)
+        .eq("accepted", false)
+        .gt("expires_at", new Date().toISOString())
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setInviteData(data);
+        setSignupEmail(data.email);
+        toast.info(`Convite para ${(data.workspaces as any).name}`);
+      } else {
+        toast.error("Convite inválido ou expirado");
+      }
+    } catch (error) {
+      console.error("Erro ao carregar convite:", error);
+      toast.error("Erro ao carregar convite");
+    }
+  };
 
   if (loading) {
     return (
@@ -52,10 +91,60 @@ export default function Auth() {
     setIsLoading(true);
     try {
       await signUp(signupEmail, signupPassword, signupFullName);
+      
+      // If there's an invite, process it after signup
+      if (inviteToken && inviteData) {
+        setTimeout(async () => {
+          await processInvite();
+        }, 2000); // Wait for auth to settle
+      }
     } catch (error) {
       console.error(error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const processInvite = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Add user to workspace
+      const { error: memberError } = await supabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: inviteData.workspace_id,
+          user_id: currentUser.id,
+          role: inviteData.role,
+          invited_by: inviteData.invited_by,
+        });
+
+      if (memberError) throw memberError;
+
+      // Set permissions if not admin
+      if (inviteData.role !== "admin" && inviteData.permissions) {
+        const { error: permError } = await supabase
+          .from("user_permissions")
+          .insert({
+            workspace_id: inviteData.workspace_id,
+            user_id: currentUser.id,
+            ...inviteData.permissions,
+          });
+
+        if (permError) throw permError;
+      }
+
+      // Mark invite as accepted
+      await supabase
+        .from("workspace_invites")
+        .update({ accepted: true })
+        .eq("token", inviteToken);
+
+      toast.success("Bem-vindo ao workspace!");
+    } catch (error) {
+      console.error("Erro ao processar convite:", error);
+      toast.error("Erro ao processar convite");
     }
   };
 
@@ -64,10 +153,14 @@ export default function Auth() {
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-3xl font-bold text-primary">ProjectFlow</CardTitle>
-          <CardDescription>Gerenciamento de projetos simplificado</CardDescription>
+          <CardDescription>
+            {inviteData 
+              ? `Você foi convidado para ${(inviteData.workspaces as any).name}` 
+              : "Gerenciamento de projetos simplificado"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs defaultValue={inviteToken ? "signup" : "login"} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
@@ -124,8 +217,14 @@ export default function Auth() {
                     placeholder="seu@email.com"
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
+                    disabled={!!inviteToken}
                     required
                   />
+                  {inviteToken && (
+                    <p className="text-xs text-muted-foreground">
+                      Email pré-preenchido pelo convite
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>

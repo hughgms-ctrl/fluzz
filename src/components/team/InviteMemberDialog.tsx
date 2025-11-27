@@ -47,66 +47,40 @@ export const InviteMemberDialog = ({
     can_view_briefings: true,
   });
 
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+
   const inviteMutation = useMutation({
     mutationFn: async () => {
       if (!workspace?.id || !email) {
         throw new Error("Workspace ou email não definido");
       }
 
-      // Check if user exists
-      const { data: existingUser } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", email)
-        .single();
+      // Generate unique token
+      const token = crypto.randomUUID();
 
-      if (!existingUser) {
-        // If user doesn't exist, we'll need to send an invite
-        // For now, show error message
-        throw new Error("Usuário não encontrado. O convite por email ainda não está implementado.");
-      }
-
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from("workspace_members")
-        .select("id")
-        .eq("workspace_id", workspace.id)
-        .eq("user_id", existingUser.id)
-        .single();
-
-      if (existingMember) {
-        throw new Error("Este usuário já é membro do workspace");
-      }
-
-      // Add to workspace
-      const { error: memberError } = await supabase
-        .from("workspace_members")
+      // Create invite
+      const { error: inviteError } = await supabase
+        .from("workspace_invites")
         .insert({
           workspace_id: workspace.id,
-          user_id: existingUser.id,
+          email: email,
           role: role,
+          permissions: role !== "admin" ? permissions : null,
+          invited_by: (await supabase.auth.getUser()).data.user?.id,
+          token: token,
         });
 
-      if (memberError) throw memberError;
+      if (inviteError) throw inviteError;
 
-      // Set permissions (only if not admin)
-      if (role !== "admin") {
-        const { error: permissionsError } = await supabase
-          .from("user_permissions")
-          .insert({
-            workspace_id: workspace.id,
-            user_id: existingUser.id,
-            ...permissions,
-          });
+      // Generate invite link
+      const link = `${window.location.origin}/auth?invite=${token}`;
+      setInviteLink(link);
 
-        if (permissionsError) throw permissionsError;
-      }
+      return link;
     },
-    onSuccess: () => {
+    onSuccess: (link) => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
-      toast.success("Membro adicionado com sucesso!");
-      resetForm();
-      onOpenChange(false);
+      toast.success("Convite criado! Copie o link abaixo.");
     },
     onError: (error: any) => {
       console.error("Erro ao adicionar membro:", error);
@@ -117,6 +91,7 @@ export const InviteMemberDialog = ({
   const resetForm = () => {
     setEmail("");
     setRole("membro");
+    setInviteLink(null);
     setPermissions({
       can_view_projects: true,
       can_view_tasks: true,
@@ -324,6 +299,28 @@ export const InviteMemberDialog = ({
             </div>
           )}
 
+          {inviteLink && (
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <Label className="text-sm font-semibold">Link de Convite Gerado</Label>
+              <p className="text-xs text-muted-foreground">
+                Copie este link e envie para o novo membro. O link expira em 7 dias.
+              </p>
+              <div className="flex gap-2">
+                <Input value={inviteLink} readOnly className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(inviteLink);
+                    toast.success("Link copiado!");
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"
@@ -333,11 +330,13 @@ export const InviteMemberDialog = ({
                 onOpenChange(false);
               }}
             >
-              Cancelar
+              {inviteLink ? "Fechar" : "Cancelar"}
             </Button>
-            <Button type="submit" disabled={inviteMutation.isPending}>
-              {inviteMutation.isPending ? "Adicionando..." : "Adicionar Membro"}
-            </Button>
+            {!inviteLink && (
+              <Button type="submit" disabled={inviteMutation.isPending}>
+                {inviteMutation.isPending ? "Gerando convite..." : "Gerar Convite"}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
