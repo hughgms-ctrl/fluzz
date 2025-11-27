@@ -91,7 +91,7 @@ export default function Home() {
           {canCreateTasks && (
             <Button onClick={() => setShowCreateTask(true)} size="lg">
               <Plus className="mr-2 h-5 w-5" />
-              Criar Tarefa Avulsa
+              Criar Tarefa
             </Button>
           )}
         </div>
