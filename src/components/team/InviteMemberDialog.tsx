@@ -245,18 +245,19 @@ export const InviteMemberDialog = ({
 
       if (inviteError) throw inviteError;
 
-      // Get published app URL
+      // Get published app URL - ALWAYS use production URL
       const hostname = window.location.hostname;
       let baseUrl;
 
-      if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        // Local development
-        baseUrl = window.location.origin;
-      } else if (hostname.includes('lovable.app')) {
-        // Extract project name and construct production URL
+      if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
+        // Lovable hosted environment - always construct production URL
         const parts = hostname.split('.');
-        const projectName = parts[0].replace(/^(edit-|preview-)/, '');
-        baseUrl = `https://${projectName}.lovable.app`;
+        const projectId = parts[0].replace(/^(edit-|preview-)/, '');
+        baseUrl = `https://${projectId}.lovableproject.com`;
+      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // For localhost, we cannot determine production URL automatically
+        // User should test invites from the published/preview app, not localhost
+        throw new Error("Convites devem ser enviados a partir do app publicado, não de localhost. Por favor, acesse seu app publicado para enviar convites.");
       } else {
         // Custom domain
         baseUrl = window.location.origin;
