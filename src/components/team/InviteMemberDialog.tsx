@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -22,7 +22,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Mail, Link as LinkIcon } from "lucide-react";
+import { Mail, Link as LinkIcon, UserCheck } from "lucide-react";
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -38,7 +38,9 @@ export const InviteMemberDialog = ({
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "gestor" | "membro">("membro");
-  const [sendMethod, setSendMethod] = useState<"link" | "email">("link");
+  const [sendMethod, setSendMethod] = useState<"direct" | "link" | "email">("direct");
+  const [existingUser, setExistingUser] = useState<{ user_id: string; email: string } | null>(null);
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const [permissions, setPermissions] = useState({
     can_view_projects: true,
     can_view_tasks: true,
@@ -52,20 +54,100 @@ export const InviteMemberDialog = ({
 
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
+  // Check if user exists when email changes
+  useEffect(() => {
+    const checkUserExists = async () => {
+      if (!email || email.length < 5 || !email.includes('@')) {
+        setExistingUser(null);
+        return;
+      }
+
+      setCheckingEmail(true);
+      try {
+        const { data, error } = await supabase.rpc('get_user_by_email', {
+          _email: email
+        });
+
+        if (error) {
+          console.error("Erro ao verificar usuário:", error);
+          setExistingUser(null);
+        } else if (data && data.length > 0) {
+          setExistingUser(data[0]);
+          setSendMethod("direct");
+        } else {
+          setExistingUser(null);
+          setSendMethod("link");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar usuário:", error);
+        setExistingUser(null);
+      } finally {
+        setCheckingEmail(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(checkUserExists, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [email]);
+
   const inviteMutation = useMutation({
     mutationFn: async () => {
       if (!workspace?.id) {
         throw new Error("Workspace não definido");
       }
       
-      if (sendMethod === "email" && !email) {
-        throw new Error("Email é obrigatório para envio por email");
+      if (!email) {
+        throw new Error("Email é obrigatório");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Generate unique token
+      // For direct invites (existing users)
+      if (sendMethod === "direct" && existingUser) {
+        // Add user directly to workspace
+        const { error: memberError } = await supabase
+          .from("workspace_members")
+          .insert({
+            workspace_id: workspace.id,
+            user_id: existingUser.user_id,
+            role: role,
+            invited_by: user.id,
+          });
+
+        if (memberError) throw memberError;
+
+        // Set permissions if not admin
+        if (role !== "admin") {
+          const { error: permError } = await supabase
+            .from("user_permissions")
+            .insert({
+              user_id: existingUser.user_id,
+              workspace_id: workspace.id,
+              ...permissions,
+            });
+
+          if (permError) throw permError;
+        }
+
+        // Create notification for the invited user
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert({
+            user_id: existingUser.user_id,
+            workspace_id: workspace.id,
+            type: "workspace_invite",
+            title: "Novo convite de workspace",
+            message: `Você foi adicionado ao workspace "${workspace.name}" como ${role === "admin" ? "Administrador" : role === "gestor" ? "Gestor" : "Membro"}`,
+            link: "/",
+          });
+
+        if (notifError) console.error("Erro ao criar notificação:", notifError);
+
+        return null; // No link needed for direct invites
+      }
+
+      // For new users - generate invite token
       const token = crypto.randomUUID();
 
       // Create invite
@@ -82,15 +164,21 @@ export const InviteMemberDialog = ({
 
       if (inviteError) throw inviteError;
 
-      // Generate invite link - always use production URL
+      // Get published app URL
       const hostname = window.location.hostname;
-      let baseUrl = window.location.origin;
-      
-      // If in Lovable editor (edit- or preview-), construct production URL
-      if (hostname.includes('lovable.app') && (hostname.startsWith('edit-') || hostname.startsWith('preview-'))) {
-        // Extract project name from edit-xxx.lovable.app or preview-xxx.lovable.app
-        const projectName = hostname.split('.')[0].replace(/^(edit-|preview-)/, '');
+      let baseUrl;
+
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        // Local development
+        baseUrl = window.location.origin;
+      } else if (hostname.includes('lovable.app')) {
+        // Extract project name and construct production URL
+        const parts = hostname.split('.');
+        const projectName = parts[0].replace(/^(edit-|preview-)/, '');
         baseUrl = `https://${projectName}.lovable.app`;
+      } else {
+        // Custom domain
+        baseUrl = window.location.origin;
       }
       
       const link = `${baseUrl}/auth?invite=${token}`;
@@ -117,16 +205,19 @@ export const InviteMemberDialog = ({
         }
       }
 
-      // Create notification for existing users (check by email in auth.users)
-      // Note: We can only create notifications after they sign up, so this is for future reference
-      // The notification will be created when they accept the invite through the auth flow
-
       setInviteLink(link);
       return link;
     },
-    onSuccess: () => {
+    onSuccess: (link) => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
-      if (sendMethod === "email") {
+      
+      if (sendMethod === "direct") {
+        toast.success("Membro adicionado com sucesso!");
+        setTimeout(() => {
+          resetForm();
+          onOpenChange(false);
+        }, 1500);
+      } else if (sendMethod === "email") {
         toast.success("Convite enviado por email!");
       } else {
         toast.success("Link de convite gerado! Copie o link abaixo.");
@@ -141,8 +232,9 @@ export const InviteMemberDialog = ({
   const resetForm = () => {
     setEmail("");
     setRole("membro");
-    setSendMethod("link");
+    setSendMethod("direct");
     setInviteLink(null);
+    setExistingUser(null);
     setPermissions({
       can_view_projects: true,
       can_view_tasks: true,
@@ -157,8 +249,12 @@ export const InviteMemberDialog = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (sendMethod === "email" && !email.trim()) {
-      toast.error("O email é obrigatório para envio por email");
+    if (!email.trim()) {
+      toast.error("O email é obrigatório");
+      return;
+    }
+    if (sendMethod === "email" && !email.includes('@')) {
+      toast.error("Digite um email válido");
       return;
     }
     inviteMutation.mutate();
@@ -191,52 +287,68 @@ export const InviteMemberDialog = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">
-              Email {sendMethod === "email" && "*"}
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={sendMethod === "link" ? "opcional@exemplo.com" : "usuario@exemplo.com"}
-              required={sendMethod === "email"}
-            />
-            {sendMethod === "link" && (
-              <p className="text-xs text-muted-foreground">
-                Email opcional ao gerar link. Recomendado para registro do convite.
+            <Label htmlFor="email">Email *</Label>
+            <div className="relative">
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@exemplo.com"
+                required
+                disabled={inviteMutation.isPending}
+              />
+              {checkingEmail && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                </div>
+              )}
+            </div>
+            
+            {existingUser && (
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 p-2 rounded">
+                <UserCheck className="h-4 w-4" />
+                <span>Usuário encontrado! Será adicionado diretamente ao workspace.</span>
+              </div>
+            )}
+            
+            {email && !existingUser && !checkingEmail && email.includes('@') && (
+              <p className="text-sm text-muted-foreground">
+                Usuário novo. Escolha como enviar o convite abaixo.
               </p>
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Método de Envio</Label>
-            <RadioGroup
-              value={sendMethod}
-              onValueChange={(value: "link" | "email") => setSendMethod(value)}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="link" id="link" />
-                <Label htmlFor="link" className="font-normal cursor-pointer flex items-center gap-2">
-                  <LinkIcon className="h-4 w-4" />
-                  Gerar Link
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="email" id="email-method" />
-                <Label htmlFor="email-method" className="font-normal cursor-pointer flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Enviar por Email
-                </Label>
-              </div>
-            </RadioGroup>
-            <p className="text-xs text-muted-foreground">
-              {sendMethod === "link" 
-                ? "Gere um link e envie manualmente para o convidado"
-                : "Envie automaticamente um email com o convite"}
-            </p>
-          </div>
+          {!existingUser && email && (
+            <div className="space-y-2">
+              <Label>Método de Envio</Label>
+              <RadioGroup
+                value={sendMethod}
+                onValueChange={(value: "link" | "email") => setSendMethod(value)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="link" id="link" />
+                  <Label htmlFor="link" className="font-normal cursor-pointer flex items-center gap-2">
+                    <LinkIcon className="h-4 w-4" />
+                    Gerar Link
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="email" id="email-method" />
+                  <Label htmlFor="email-method" className="font-normal cursor-pointer flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Enviar por Email
+                  </Label>
+                </div>
+              </RadioGroup>
+              <p className="text-xs text-muted-foreground">
+                {sendMethod === "link" 
+                  ? "Gere um link e envie manualmente para o convidado"
+                  : "Envie automaticamente um email com o convite"}
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="role">Cargo *</Label>
@@ -410,7 +522,9 @@ export const InviteMemberDialog = ({
             {!inviteLink && (
               <Button type="submit" disabled={inviteMutation.isPending}>
                 {inviteMutation.isPending
-                  ? "Criando..."
+                  ? "Processando..."
+                  : existingUser
+                  ? "Adicionar à Equipe"
                   : sendMethod === "email"
                   ? "Enviar Convite"
                   : "Gerar Link"}
