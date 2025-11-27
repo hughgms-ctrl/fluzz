@@ -44,16 +44,21 @@ const handler = async (req: Request): Promise<Response> => {
       ? "Gestor" 
       : "Membro";
 
+    // Construct production URL for password setup
+    const projectId = 'ccc63afb-4fd5-430e-800f-715011011050';
+    const productionUrl = `https://${projectId}.lovableproject.com`;
+    const redirectUrl = `${productionUrl}/auth?invite=${inviteLink.split('invite=')[1]}`;
+
     // Use Supabase Auth to invite user by email
+    // This sends an email with a magic link that allows the user to set their password
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: {
         workspace_id: workspaceId,
         workspace_name: workspaceName,
         role: role,
         permissions: permissions,
-        invite_link: inviteLink,
       },
-      redirectTo: inviteLink,
+      redirectTo: redirectUrl,
     });
 
     if (error) {

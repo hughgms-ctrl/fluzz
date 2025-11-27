@@ -15,6 +15,8 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteData, setInviteData] = useState<any>(null);
+  const [isInvitedUser, setIsInvitedUser] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -25,13 +27,25 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
 
-  // Load invite data if token present
+  // Check if user is coming from invite email (already authenticated)
   useEffect(() => {
-    const token = searchParams.get("invite");
-    if (token) {
-      setInviteToken(token);
-      loadInviteData(token);
-    }
+    const checkInvitedUser = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const token = searchParams.get("invite");
+      
+      if (currentUser && token) {
+        // User clicked invite link and is authenticated, needs to set password
+        setIsInvitedUser(true);
+        setInviteToken(token);
+        loadInviteData(token);
+      } else if (token) {
+        // User has invite token but not authenticated yet
+        setInviteToken(token);
+        loadInviteData(token);
+      }
+    };
+    
+    checkInvitedUser();
   }, [searchParams]);
 
   const loadInviteData = async (token: string) => {
@@ -66,6 +80,68 @@ export default function Auth() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando...</p>
         </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated but needs to set password from invite
+  if (user && isInvitedUser) {
+    const handleSetPassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setIsLoading(true);
+      try {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (error) throw error;
+
+        // Process invite after password is set
+        await processInvite();
+        
+        toast.success("Senha definida com sucesso! Bem-vindo!");
+        setIsInvitedUser(false);
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao definir senha");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+        <Card className="w-full max-w-md shadow-lg animate-fade-in">
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-3xl font-bold text-primary">Defina sua Senha</CardTitle>
+            <CardDescription>
+              {inviteData 
+                ? `Convite para ${(inviteData.workspaces as any)?.name}` 
+                : "Crie uma senha para acessar sua conta"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSetPassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nova Senha</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Mínimo de 6 caracteres
+                </p>
+              </div>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Definindo senha..." : "Definir Senha e Entrar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
