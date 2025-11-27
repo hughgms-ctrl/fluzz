@@ -27,24 +27,80 @@ export default function Auth() {
   const [signupPassword, setSignupPassword] = useState("");
   const [signupFullName, setSignupFullName] = useState("");
 
-  // Check if user is coming from invite email (already authenticated)
+  // ============================================================
+  // 🔥 PROCESS INVITE - MOVIDO PARA CIMA (CORRIGE O ERRO)
+  // ============================================================
+  const processInvite = async () => {
+    try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Add user to workspace
+      const { error: memberError } = await supabase.from("workspace_members").insert({
+        workspace_id: inviteData.workspace_id,
+        user_id: currentUser.id,
+        role: inviteData.role,
+        invited_by: inviteData.invited_by,
+      });
+
+      if (memberError) throw memberError;
+
+      // Set permissions if not admin
+      if (inviteData.role !== "admin" && inviteData.permissions) {
+        const { error: permError } = await supabase.from("user_permissions").insert({
+          workspace_id: inviteData.workspace_id,
+          user_id: currentUser.id,
+          ...inviteData.permissions,
+        });
+
+        if (permError) throw permError;
+      }
+
+      // Mark invite as accepted
+      await supabase.from("workspace_invites").update({ accepted: true }).eq("token", inviteToken);
+
+      // Create welcome notification
+      await supabase.from("notifications").insert({
+        user_id: currentUser.id,
+        workspace_id: inviteData.workspace_id,
+        type: "workspace_invite",
+        title: `Bem-vindo ao ${(inviteData.workspaces as any)?.name || "workspace"}!`,
+        message: `Você agora faz parte do workspace como ${
+          inviteData.role === "admin" ? "Administrador" : inviteData.role === "gestor" ? "Gestor" : "Membro"
+        }.`,
+        link: "/",
+        data: inviteData,
+      });
+
+      toast.success("Bem-vindo ao workspace!");
+    } catch (error) {
+      console.error("Erro ao processar convite:", error);
+      toast.error("Erro ao processar convite");
+    }
+  };
+
+  // ============================================================
+  // CHECK INVITE
+  // ============================================================
   useEffect(() => {
     const checkInvitedUser = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
       const token = searchParams.get("invite");
-      
+
       if (currentUser && token) {
-        // User clicked invite link and is authenticated, needs to set password
         setIsInvitedUser(true);
         setInviteToken(token);
         loadInviteData(token);
       } else if (token) {
-        // User has invite token but not authenticated yet
         setInviteToken(token);
         loadInviteData(token);
       }
     };
-    
+
     checkInvitedUser();
   }, [searchParams]);
 
@@ -73,6 +129,9 @@ export default function Auth() {
     }
   };
 
+  // ============================================================
+  // LOADING SCREEN
+  // ============================================================
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -84,7 +143,9 @@ export default function Auth() {
     );
   }
 
-  // If user is authenticated but needs to set password from invite
+  // ============================================================
+  // INVITED USER SET PASSWORD SCREEN
+  // ============================================================
   if (user && isInvitedUser) {
     const handleSetPassword = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -96,9 +157,8 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Process invite after password is set
         await processInvite();
-        
+
         toast.success("Senha definida com sucesso! Bem-vindo!");
         setIsInvitedUser(false);
       } catch (error: any) {
@@ -114,8 +174,8 @@ export default function Auth() {
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-3xl font-bold text-primary">Defina sua Senha</CardTitle>
             <CardDescription>
-              {inviteData 
-                ? `Convite para ${(inviteData.workspaces as any)?.name}` 
+              {inviteData
+                ? `Convite para ${(inviteData.workspaces as any)?.name}`
                 : "Crie uma senha para acessar sua conta"}
             </CardDescription>
           </CardHeader>
@@ -132,9 +192,7 @@ export default function Auth() {
                   required
                   minLength={6}
                 />
-                <p className="text-xs text-muted-foreground">
-                  Mínimo de 6 caracteres
-                </p>
+                <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Definindo senha..." : "Definir Senha e Entrar"}
@@ -146,11 +204,16 @@ export default function Auth() {
     );
   }
 
-
+  // ============================================================
+  // AUTHENTICATED → REDIRECT
+  // ============================================================
   if (user) {
     return <Navigate to="/" replace />;
   }
 
+  // ============================================================
+  // LOGIN
+  // ============================================================
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -163,17 +226,19 @@ export default function Auth() {
     }
   };
 
+  // ============================================================
+  // SIGNUP
+  // ============================================================
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
       await signUp(signupEmail, signupPassword, signupFullName);
-      
-      // If there's an invite, process it after signup
+
       if (inviteToken && inviteData) {
         setTimeout(async () => {
           await processInvite();
-        }, 2000); // Wait for auth to settle
+        }, 2000);
       }
     } catch (error) {
       console.error(error);
@@ -182,68 +247,17 @@ export default function Auth() {
     }
   };
 
-  const processInvite = async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) return;
-
-      // Add user to workspace
-      const { error: memberError } = await supabase
-        .from("workspace_members")
-        .insert({
-          workspace_id: inviteData.workspace_id,
-          user_id: currentUser.id,
-          role: inviteData.role,
-          invited_by: inviteData.invited_by,
-        });
-
-      if (memberError) throw memberError;
-
-      // Set permissions if not admin
-      if (inviteData.role !== "admin" && inviteData.permissions) {
-        const { error: permError } = await supabase
-          .from("user_permissions")
-          .insert({
-            workspace_id: inviteData.workspace_id,
-            user_id: currentUser.id,
-            ...inviteData.permissions,
-          });
-
-        if (permError) throw permError;
-      }
-
-      // Mark invite as accepted
-      await supabase
-        .from("workspace_invites")
-        .update({ accepted: true })
-        .eq("token", inviteToken);
-
-      // Create welcome notification
-      await supabase.from("notifications").insert({
-        user_id: currentUser.id,
-        workspace_id: inviteData.workspace_id,
-        type: "workspace_invite",
-        title: `Bem-vindo ao ${(inviteData.workspaces as any)?.name || 'workspace'}!`,
-        message: `Você agora faz parte do workspace como ${inviteData.role === "admin" ? "Administrador" : inviteData.role === "gestor" ? "Gestor" : "Membro"}.`,
-        link: "/",
-        data: inviteData,
-      });
-
-      toast.success("Bem-vindo ao workspace!");
-    } catch (error) {
-      console.error("Erro ao processar convite:", error);
-      toast.error("Erro ao processar convite");
-    }
-  };
-
+  // ============================================================
+  // AUTH PAGE UI
+  // ============================================================
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-3xl font-bold text-primary">ProjectFlow</CardTitle>
           <CardDescription>
-            {inviteData 
-              ? `Você foi convidado para ${(inviteData.workspaces as any).name}` 
+            {inviteData
+              ? `Você foi convidado para ${(inviteData.workspaces as any).name}`
               : "Gerenciamento de projetos simplificado"}
           </CardDescription>
         </CardHeader>
@@ -254,6 +268,7 @@ export default function Auth() {
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
             </TabsList>
 
+            {/* LOGIN */}
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
@@ -291,6 +306,7 @@ export default function Auth() {
               </form>
             </TabsContent>
 
+            {/* SIGNUP */}
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
@@ -304,6 +320,7 @@ export default function Auth() {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
@@ -315,12 +332,9 @@ export default function Auth() {
                     disabled={!!inviteToken}
                     required
                   />
-                  {inviteToken && (
-                    <p className="text-xs text-muted-foreground">
-                      Email pré-preenchido pelo convite
-                    </p>
-                  )}
+                  {inviteToken && <p className="text-xs text-muted-foreground">Email pré-preenchido pelo convite</p>}
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
                   <Input
@@ -333,6 +347,7 @@ export default function Auth() {
                     minLength={6}
                   />
                 </div>
+
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Criando conta..." : "Criar conta"}
                 </Button>
