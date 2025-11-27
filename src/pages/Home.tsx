@@ -1,0 +1,297 @@
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { FileText, ListTodo, FolderKanban, UserPlus, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { CreateStandaloneTaskForMember } from "@/components/tasks/CreateStandaloneTaskForMember";
+
+export default function Home() {
+  const navigate = useNavigate();
+  const { workspace, canCreateTasks } = useWorkspace();
+  const { user } = useAuth();
+  const [showCreateTask, setShowCreateTask] = useState(false);
+
+  const { data: projects, isLoading: projectsLoading } = useQuery({
+    queryKey: ["projects", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: tasks, isLoading: tasksLoading } = useQuery({
+    queryKey: ["home-tasks", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+
+      const { data: projectsData } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", workspace.id);
+      
+      if (!projectsData || projectsData.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*, projects(name)")
+        .in("project_id", projectsData.map(p => p.id))
+        .order("created_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const activeProjects = projects?.filter(p => p.status === "active" && !p.archived).length || 0;
+  const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
+  const pendingTasks = tasks?.filter(t => t.status !== "completed").length || 0;
+  const overdueTasks = tasks?.filter(t => 
+    t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed"
+  ).length || 0;
+
+  if (projectsLoading || tasksLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+            <p className="text-muted-foreground">Carregando...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Home</h1>
+            <p className="text-muted-foreground mt-2">
+              Visão geral dos seus projetos e tarefas
+            </p>
+          </div>
+          {canCreateTasks && (
+            <Button onClick={() => setShowCreateTask(true)} size="lg">
+              <Plus className="mr-2 h-5 w-5" />
+              Criar Tarefa Avulsa
+            </Button>
+          )}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card 
+            className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+            onClick={() => navigate("/projects")}
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Projetos Ativos
+              </CardTitle>
+              <FolderKanban className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{activeProjects}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Clique para ver todos
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-all border-l-4 border-l-primary">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tarefas Concluídas
+              </CardTitle>
+              <ListTodo className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{completedTasks}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Total de tarefas finalizadas
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+            onClick={() => navigate("/my-tasks")}
+          >
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tarefas Pendentes
+              </CardTitle>
+              <FileText className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-foreground">{pendingTasks}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Clique para ver suas tarefas
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={`hover:shadow-lg transition-all border-l-4 ${
+            overdueTasks > 0 ? "border-l-destructive" : "border-l-primary"
+          }`}>
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className={`text-sm font-medium ${
+                overdueTasks > 0 ? "text-destructive" : "text-muted-foreground"
+              }`}>
+                Tarefas Atrasadas
+              </CardTitle>
+              <UserPlus className={`h-5 w-5 ${
+                overdueTasks > 0 ? "text-destructive" : "text-primary"
+              }`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-3xl font-bold ${
+                overdueTasks > 0 ? "text-destructive" : "text-foreground"
+              }`}>
+                {overdueTasks}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {overdueTasks > 0 ? "Requer atenção imediata" : "Tudo em dia!"}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderKanban className="h-5 w-5 text-primary" />
+                Projetos Recentes
+              </CardTitle>
+              <CardDescription>Seus projetos mais recentes</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {!projects || projects.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Nenhum projeto ainda</p>
+                  <Button onClick={() => navigate("/projects")}>
+                    Criar Primeiro Projeto
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projects.slice(0, 5).map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/projects/${project.id}`)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {project.name}
+                        </p>
+                        {project.description && (
+                          <p className="text-sm text-muted-foreground truncate">
+                            {project.description}
+                          </p>
+                        )}
+                      </div>
+                      <Badge
+                        variant={
+                          project.status === "completed"
+                            ? "default"
+                            : project.status === "active"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {project.status === "completed"
+                          ? "Concluído"
+                          : project.status === "active"
+                          ? "Ativo"
+                          : "Pausado"}
+                      </Badge>
+                    </div>
+                  ))}
+                  {projects.length > 5 && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2"
+                      onClick={() => navigate("/projects")}
+                    >
+                      Ver Todos os Projetos ({projects.length})
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ListTodo className="h-5 w-5 text-primary" />
+                Acesso Rápido
+              </CardTitle>
+              <CardDescription>Links úteis para seu trabalho</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/my-tasks")}
+                >
+                  <ListTodo className="mr-2 h-4 w-4" />
+                  Minhas Tarefas
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/projects")}
+                >
+                  <FolderKanban className="mr-2 h-4 w-4" />
+                  Ver Todos os Projetos
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/positions")}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Cargos e Rotinas
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate("/workspace")}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Workspace
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <CreateStandaloneTaskForMember
+        open={showCreateTask}
+        onOpenChange={setShowCreateTask}
+      />
+    </AppLayout>
+  );
+}

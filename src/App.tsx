@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import MyTasks from "./pages/MyTasks";
@@ -39,8 +39,8 @@ const App = () => (
           <WorkspaceProvider>
             <Routes>
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<Workspace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/workspace" element={<Workspace />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/my-tasks" element={<MyTasks />} />

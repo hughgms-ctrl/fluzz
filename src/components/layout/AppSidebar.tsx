@@ -25,8 +25,8 @@ interface MenuItem {
 }
 
 const menuItems: MenuItem[] = [
-  { title: "Workspace", url: "/", icon: Briefcase },
-  { title: "Dashboard", url: "/dashboard", icon: Home },
+  { title: "Home", url: "/", icon: Home },
+  { title: "Workspace", url: "/workspace", icon: Briefcase },
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
   { title: "Cargos", url: "/positions", icon: Users, permission: "can_view_positions" },
@@ -50,6 +50,7 @@ export function AppSidebar() {
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
+    if (path === "/workspace") return location.pathname === "/workspace";
     return location.pathname.startsWith(path);
   };
 
@@ -73,7 +74,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      end={item.url === "/"}
+                      end={item.url === "/" || item.url === "/workspace"}
                       className="hover:bg-accent transition-colors"
                       activeClassName="bg-accent text-accent-foreground font-medium"
                     >
