@@ -2,20 +2,44 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { FileText, ListTodo, FolderKanban, UserPlus, Plus } from "lucide-react";
+import { FileText, ListTodo, FolderKanban, UserPlus, Plus, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { CreateUnifiedTaskDialog } from "@/components/tasks/CreateUnifiedTaskDialog";
+import { toast } from "sonner";
 
 export default function Home() {
   const navigate = useNavigate();
   const { workspace, canCreateTasks } = useWorkspace();
   const { user } = useAuth();
   const [showCreateTask, setShowCreateTask] = useState(false);
+
+  const checkDeadlinesMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        "check-task-deadlines",
+        {
+          body: { manual: true },
+        }
+      );
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(
+        `Verificação concluída! ${data.notifications_created} notificações criadas.`
+      );
+    },
+    onError: (error: any) => {
+      console.error("Erro ao verificar prazos:", error);
+      toast.error(error.message || "Erro ao verificar prazos das tarefas");
+    },
+  });
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["projects", workspace?.id],
@@ -88,12 +112,23 @@ export default function Home() {
               Visão geral dos seus projetos e tarefas
             </p>
           </div>
-          {canCreateTasks && (
-            <Button onClick={() => setShowCreateTask(true)} size="lg">
-              <Plus className="mr-2 h-5 w-5" />
-              Criar Tarefa
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => checkDeadlinesMutation.mutate()}
+              disabled={checkDeadlinesMutation.isPending}
+              title="Verificar prazos de tarefas manualmente"
+            >
+              <Bell className="mr-2 h-4 w-4" />
+              {checkDeadlinesMutation.isPending ? "Verificando..." : "Verificar Prazos"}
             </Button>
-          )}
+            {canCreateTasks && (
+              <Button onClick={() => setShowCreateTask(true)} size="lg">
+                <Plus className="mr-2 h-5 w-5" />
+                Criar Tarefa
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
