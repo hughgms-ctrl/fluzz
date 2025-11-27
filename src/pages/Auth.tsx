@@ -28,7 +28,8 @@ export default function Auth() {
   const [signupFullName, setSignupFullName] = useState("");
 
   // ============================================================
-  // 🔥 PROCESS INVITE - MOVIDO PARA CIMA (CORRIGE O ERRO)
+  // 🔥 PROCESS INVITE - Backend trigger já processa automaticamente
+  // Esta função serve como fallback caso o trigger não funcione
   // ============================================================
   const processInvite = async () => {
     try {
@@ -36,6 +37,22 @@ export default function Auth() {
         data: { user: currentUser },
       } = await supabase.auth.getUser();
       if (!currentUser) return;
+
+      // Verificar se já foi processado pelo trigger do backend
+      const { data: existingMember } = await supabase
+        .from("workspace_members")
+        .select("id")
+        .eq("workspace_id", inviteData.workspace_id)
+        .eq("user_id", currentUser.id)
+        .maybeSingle();
+
+      if (existingMember) {
+        console.log("Convite já foi processado pelo backend trigger");
+        return; // Já foi processado
+      }
+
+      // Fallback: processar manualmente se o trigger não funcionou
+      console.log("Processando convite manualmente (fallback)");
 
       // Add user to workspace
       const { error: memberError } = await supabase.from("workspace_members").insert({
@@ -45,7 +62,9 @@ export default function Auth() {
         invited_by: inviteData.invited_by,
       });
 
-      if (memberError) throw memberError;
+      if (memberError && !memberError.message.includes("duplicate")) {
+        throw memberError;
+      }
 
       // Set permissions if not admin
       if (inviteData.role !== "admin" && inviteData.permissions) {
@@ -55,7 +74,9 @@ export default function Auth() {
           ...inviteData.permissions,
         });
 
-        if (permError) throw permError;
+        if (permError && !permError.message.includes("duplicate")) {
+          throw permError;
+        }
       }
 
       // Mark invite as accepted
@@ -77,7 +98,10 @@ export default function Auth() {
       toast.success("Bem-vindo ao workspace!");
     } catch (error) {
       console.error("Erro ao processar convite:", error);
-      toast.error("Erro ao processar convite");
+      // Não mostra erro se já foi processado
+      if (error && !String(error).includes("duplicate")) {
+        toast.error("Erro ao processar convite");
+      }
     }
   };
 
@@ -157,13 +181,18 @@ export default function Auth() {
 
         if (error) throw error;
 
+        // Aguardar um momento para o trigger do backend processar o convite
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Chamar processInvite como fallback (vai verificar se já foi processado)
         await processInvite();
 
-        toast.success("Senha definida com sucesso! Bem-vindo!");
+        toast.success("Senha definida com sucesso! Redirecionando...");
         
-        // Small delay to ensure workspace context updates
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Delay maior para garantir que workspace_members foi criado
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
+        // Forçar reload completo para garantir que WorkspaceContext carregue o novo workspace
         setIsInvitedUser(false);
         window.location.href = "/";
       } catch (error: any) {
