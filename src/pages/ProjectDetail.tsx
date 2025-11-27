@@ -11,6 +11,7 @@ import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
+import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
 import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
 import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
@@ -33,6 +34,7 @@ export default function ProjectDetail() {
   const [setorFilter, setSetorFilter] = useState("all");
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", id],
@@ -198,6 +200,22 @@ export default function ProjectDetail() {
 
   const isOwner = project?.user_id === user?.id;
 
+  const activeFiltersCount = [
+    searchTerm !== "",
+    priorityFilter !== "all",
+    statusFilter !== "all",
+    dueDateFilter !== "all",
+    setorFilter !== "all",
+  ].filter(Boolean).length;
+
+  const handleClearAllFilters = () => {
+    setSearchTerm("");
+    setPriorityFilter("all");
+    setStatusFilter("all");
+    setDueDateFilter("all");
+    setSetorFilter("all");
+  };
+
   const handleNameBlur = () => {
     if (projectName.trim() && projectName !== project?.name) {
       updateProjectNameMutation.mutate(projectName.trim());
@@ -320,8 +338,15 @@ export default function ProjectDetail() {
             />
           </TabsContent>
 
-          <TabsContent value="tasks" className="mt-6 space-y-6">
-            <div className="flex items-center justify-between">
+          <TabsContent value="tasks" className="mt-6 space-y-4">
+            {/* Mobile Filter Drawer */}
+            <MobileFilterDrawer
+              title="Filtrar Tarefas"
+              description="Filtre as tarefas por diferentes critérios"
+              activeFiltersCount={activeFiltersCount}
+              open={isFilterDrawerOpen}
+              onOpenChange={setIsFilterDrawerOpen}
+            >
               <TaskFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -334,16 +359,39 @@ export default function ProjectDetail() {
                 setorFilter={setorFilter}
                 onSetorChange={setSetorFilter}
                 setores={uniqueSetores}
+                onClearAll={handleClearAllFilters}
               />
+            </MobileFilterDrawer>
+
+            {/* Desktop Filters */}
+            <div className="hidden md:block">
+              <TaskFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                dueDateFilter={dueDateFilter}
+                onDueDateChange={setDueDateFilter}
+                setorFilter={setorFilter}
+                onSetorChange={setSetorFilter}
+                setores={uniqueSetores}
+                onClearAll={handleClearAllFilters}
+              />
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex justify-end">
               <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
                 <TabsList>
                   <TabsTrigger value="board" className="gap-2">
                     <LayoutGrid size={16} />
-                    Kanban
+                    <span className="hidden sm:inline">Kanban</span>
                   </TabsTrigger>
                   <TabsTrigger value="list" className="gap-2">
                     <List size={16} />
-                    Lista
+                    <span className="hidden sm:inline">Lista</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
