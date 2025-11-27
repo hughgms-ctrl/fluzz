@@ -70,12 +70,43 @@ export default function TeamManagement() {
     enabled: !!workspace?.id,
   });
 
+  const { data: pendingInvites, isLoading: invitesLoading } = useQuery({
+    queryKey: ["pending-invites", workspace?.id],
+    queryFn: async () => {
+      if (!workspace?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("workspace_invites")
+        .select("id, email, role, created_at, invited_by, expires_at, accepted")
+        .eq("workspace_id", workspace.id)
+        .eq("accepted", false)
+        .gt("expires_at", new Date().toISOString());
+
+      if (error) throw error;
+
+      // Fetch inviter profiles
+      const inviterIds = data?.map(i => i.invited_by).filter(Boolean) || [];
+      const { data: inviterProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", inviterIds);
+
+      return data?.map(invite => ({
+        ...invite,
+        inviter_profile: invite.invited_by 
+          ? inviterProfiles?.find(p => p.id === invite.invited_by) || null
+          : null
+      })) || [];
+    },
+    enabled: !!workspace?.id,
+  });
+
 
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  if (membersLoading) {
+  if (membersLoading || invitesLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -104,57 +135,114 @@ export default function TeamManagement() {
           </Button>
         </div>
 
-        <div className="grid gap-3">
-          {members?.map((member) => {
-            const initials = member.profiles?.full_name
-              ?.split(" ")
-              .map((n) => n[0])
-              .join("")
-              .toUpperCase() || "?";
+        {pendingInvites && pendingInvites.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xl font-semibold text-foreground">Convites Pendentes</h2>
+            <div className="grid gap-3">
+              {pendingInvites.map((invite) => {
+                const initials = invite.email.substring(0, 2).toUpperCase();
+                const invitedAt = new Date(invite.created_at).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                });
+                const expiresAt = new Date(invite.expires_at).toLocaleDateString('pt-BR', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                });
 
-            const memberSince = new Date(member.created_at).toLocaleDateString('pt-BR', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric'
-            });
-
-            return (
-              <Card 
-                key={member.id} 
-                className="cursor-pointer hover:bg-accent/50 transition-colors"
-                onClick={() => navigate(`/team/${member.user_id}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <Avatar>
-                        <AvatarFallback>{initials}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground">
-                          {member.profiles?.full_name || "Usuário"}
-                        </h3>
-                        <div className="flex flex-wrap items-center gap-2 mt-1">
-                          <Badge variant={member.role === "admin" ? "default" : "secondary"}>
-                            {member.role}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Membro desde {memberSince}
-                          </span>
+                return (
+                  <Card key={invite.id} className="border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          <Avatar>
+                            <AvatarFallback className="bg-muted">{initials}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-foreground">{invite.email}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <Badge variant="outline">{invite.role}</Badge>
+                              <span className="text-xs text-muted-foreground">
+                                Aguardando aceitação
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span>Convidado em {invitedAt}</span>
+                              <span>•</span>
+                              <span>Expira em {expiresAt}</span>
+                            </div>
+                            {invite.inviter_profile && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Convidado por {invite.inviter_profile.full_name}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        {member.invited_by && member.inviter_profile && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Convidado por {member.inviter_profile.full_name}
-                          </p>
-                        )}
                       </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <h2 className="text-xl font-semibold text-foreground">Membros Ativos</h2>
+          <div className="grid gap-3">
+            {members?.map((member) => {
+              const initials = member.profiles?.full_name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase() || "?";
+
+              const memberSince = new Date(member.created_at).toLocaleDateString('pt-BR', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+              });
+
+              return (
+                <Card 
+                  key={member.id} 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => navigate(`/team/${member.user_id}`)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <Avatar>
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-foreground">
+                            {member.profiles?.full_name || "Usuário"}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <Badge variant={member.role === "admin" ? "default" : "secondary"}>
+                              {member.role}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              Membro desde {memberSince}
+                            </span>
+                          </div>
+                          {member.invited_by && member.inviter_profile && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Convidado por {member.inviter_profile.full_name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
 
