@@ -78,9 +78,9 @@ export default function TeamMemberPermissions() {
         .select("*")
         .eq("workspace_id", workspace.id)
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as UserPermissions | null;
     },
     enabled: !!workspace?.id && !!userId,
@@ -190,36 +190,36 @@ export default function TeamMemberPermissions() {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium text-foreground mb-4">Permissões de Acesso</h3>
-                {member.role === "admin" ? (
-                  <p className="text-sm text-muted-foreground">
+                {member.role === "admin" && (
+                  <p className="text-sm text-muted-foreground mb-4">
                     Administradores têm acesso total a todas as áreas da plataforma.
                   </p>
-                ) : (
-                  <div className="space-y-4">
-                    {Object.entries(permissionLabels).map(([key, label]) => (
-                      <div key={key} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id={key}
-                            checked={Boolean(permissions?.[key as keyof UserPermissions] ?? true)}
-                            onCheckedChange={(checked) => {
-                              updatePermissionMutation.mutate({
-                                permission: key as keyof Omit<UserPermissions, "id" | "user_id" | "workspace_id" | "created_at" | "updated_at">,
-                                value: checked === true,
-                              });
-                            }}
-                          />
-                          <Label
-                            htmlFor={key}
-                            className="text-base font-normal cursor-pointer"
-                          >
-                            {label}
-                          </Label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 )}
+                <div className="space-y-4">
+                  {Object.entries(permissionLabels).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                      <div className="flex items-center space-x-3">
+                        <Checkbox
+                          id={key}
+                          checked={member.role === "admin" ? true : Boolean(permissions?.[key as keyof UserPermissions] ?? true)}
+                          onCheckedChange={(checked) => {
+                            updatePermissionMutation.mutate({
+                              permission: key as keyof Omit<UserPermissions, "id" | "user_id" | "workspace_id" | "created_at" | "updated_at">,
+                              value: checked === true,
+                            });
+                          }}
+                          disabled={member.role === "admin"}
+                        />
+                        <Label
+                          htmlFor={key}
+                          className="text-base font-normal cursor-pointer"
+                        >
+                          {label}
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
