@@ -68,11 +68,11 @@ export default function Workspace() {
             </Link>
           )}
 
-          <Link to="/dashboard">
+          <Link to="/">
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
               <CardHeader className="p-4">
                 <TrendingUp className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Dashboard</CardTitle>
+                <CardTitle className="text-lg">Home</CardTitle>
                 <CardDescription className="text-sm">
                   Visão geral dos seus projetos e tarefas
                 </CardDescription>
