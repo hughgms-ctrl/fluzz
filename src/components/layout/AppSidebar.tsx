@@ -38,7 +38,6 @@ const workspaceItems: MenuItem[] = [
   { title: "Cultura", url: "/workspace/culture", icon: Heart, permission: "can_view_culture" },
   { title: "Visão & Valores", url: "/workspace/vision", icon: Target, permission: "can_view_vision" },
   { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
-  { title: "Equipe", url: "/team", icon: Users, adminOnly: true },
 ];
 
 export function AppSidebar() {

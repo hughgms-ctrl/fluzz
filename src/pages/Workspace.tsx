@@ -1,9 +1,12 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase, Clipboard } from "lucide-react";
+import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase, Clipboard, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Workspace() {
+  const { isAdmin } = useWorkspace();
+  
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -50,6 +53,20 @@ export default function Workspace() {
               </CardHeader>
             </Card>
           </Link>
+
+          {isAdmin && (
+            <Link to="/team">
+              <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+                <CardHeader className="p-4">
+                  <Users className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">Equipe</CardTitle>
+                  <CardDescription className="text-sm">
+                    Gerencie membros e suas permissões
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
 
           <Link to="/dashboard">
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
