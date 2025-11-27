@@ -21,13 +21,35 @@ export default function Profile() {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", user!.id)
-        .single();
+        .eq("id", user.id)
+        .maybeSingle();
+
       if (error) throw error;
-      
+
+      // Se não existir perfil, cria um registro básico para este usuário
+      if (!data) {
+        const { data: inserted, error: insertError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            full_name: (user.user_metadata as any)?.full_name || "",
+          })
+          .select("*")
+          .single();
+
+        if (insertError) throw insertError;
+
+        setFullName(inserted.full_name || "");
+        return inserted;
+      }
+
       setFullName(data.full_name || "");
       return data;
     },
