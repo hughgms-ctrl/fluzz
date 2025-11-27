@@ -5,6 +5,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { User } from "lucide-react";
@@ -69,6 +70,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
+              <NotificationBell />
               <Button
                 variant="ghost"
                 size="icon"
