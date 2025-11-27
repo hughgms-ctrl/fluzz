@@ -23,6 +23,7 @@ import BriefingRepository from "./pages/BriefingRepository";
 import BriefingDocument from "./pages/BriefingDocument";
 import WorkspaceAdmin from "./pages/WorkspaceAdmin";
 import WorkspaceSetup from "./pages/WorkspaceSetup";
+import TeamManagement from "./pages/TeamManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
           <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
           <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
           <Route path="/workspace/setup" element={<WorkspaceSetup />} />
+          <Route path="/team" element={<TeamManagement />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </WorkspaceProvider>
