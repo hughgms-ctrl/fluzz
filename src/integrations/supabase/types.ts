@@ -1132,6 +1132,13 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_by_email: {
+        Args: { _email: string }
+        Returns: {
+          email: string
+          user_id: string
+        }[]
+      }
       get_user_permissions: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: {
