@@ -54,8 +54,12 @@ export const InviteMemberDialog = ({
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
-      if (!workspace?.id || !email) {
-        throw new Error("Workspace ou email não definido");
+      if (!workspace?.id) {
+        throw new Error("Workspace não definido");
+      }
+      
+      if (sendMethod === "email" && !email) {
+        throw new Error("Email é obrigatório para envio por email");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -78,18 +82,15 @@ export const InviteMemberDialog = ({
 
       if (inviteError) throw inviteError;
 
-      // Generate invite link for production app
+      // Generate invite link - always use production URL
       const hostname = window.location.hostname;
       let baseUrl = window.location.origin;
       
-      // If in Lovable editor, construct production URL
-      if (hostname.includes('lovable.app')) {
-        const parts = hostname.split('.');
-        if (parts.length >= 3) {
-          // Remove 'lovable' editor prefix if present
-          const projectName = parts[0].replace(/^(edit-|preview-)?/, '');
-          baseUrl = `https://${projectName}.lovable.app`;
-        }
+      // If in Lovable editor (edit- or preview-), construct production URL
+      if (hostname.includes('lovable.app') && (hostname.startsWith('edit-') || hostname.startsWith('preview-'))) {
+        // Extract project name from edit-xxx.lovable.app or preview-xxx.lovable.app
+        const projectName = hostname.split('.')[0].replace(/^(edit-|preview-)/, '');
+        baseUrl = `https://${projectName}.lovable.app`;
       }
       
       const link = `${baseUrl}/auth?invite=${token}`;
@@ -156,8 +157,8 @@ export const InviteMemberDialog = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      toast.error("O email é obrigatório");
+    if (sendMethod === "email" && !email.trim()) {
+      toast.error("O email é obrigatório para envio por email");
       return;
     }
     inviteMutation.mutate();
@@ -190,15 +191,22 @@ export const InviteMemberDialog = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">
+              Email {sendMethod === "email" && "*"}
+            </Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="usuario@exemplo.com"
-              required
+              placeholder={sendMethod === "link" ? "opcional@exemplo.com" : "usuario@exemplo.com"}
+              required={sendMethod === "email"}
             />
+            {sendMethod === "link" && (
+              <p className="text-xs text-muted-foreground">
+                Email opcional ao gerar link. Recomendado para registro do convite.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -371,25 +379,19 @@ export const InviteMemberDialog = ({
                   : "Copie este link e envie para o novo membro. O link é válido por 7 dias."}
               </p>
               {sendMethod === "link" && (
-                <>
-                  <div className="flex gap-2">
-                    <Input value={inviteLink} readOnly className="font-mono text-xs" />
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        navigator.clipboard.writeText(inviteLink);
-                        toast.success("Link copiado!");
-                      }}
-                    >
-                      Copiar
-                    </Button>
-                  </div>
-                  <div className="text-xs text-primary space-y-1 bg-primary/10 p-3 rounded">
-                    <p className="font-semibold">✅ Link para seu app publicado</p>
-                    <p>Este link direciona para sua plataforma, não para o editor Lovable.</p>
-                  </div>
-                </>
+                <div className="flex gap-2">
+                  <Input value={inviteLink} readOnly className="font-mono text-xs" />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteLink);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    Copiar
+                  </Button>
+                </div>
               )}
             </div>
           )}
