@@ -18,18 +18,22 @@ export default function Projects() {
   const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isAdmin, isGestor } = useWorkspace();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
 
   const { data: projects, isLoading } = useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", workspace?.id],
     queryFn: async () => {
+      if (!workspace?.id) return [];
+      
       const { data, error } = await supabase
         .from("projects")
         .select("*, tasks(id, status)")
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace?.id,
   });
 
   const { data: standaloneTasks, isLoading: isLoadingStandalone } = useQuery({
