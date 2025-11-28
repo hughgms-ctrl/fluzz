@@ -48,19 +48,31 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      const { data, error } = await supabase
+      
+      // First fetch workspace members
+      const { data: members, error: membersError } = await supabase
         .from("workspace_members")
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            full_name
-          )
-        `)
+        .select("user_id, role")
         .eq("workspace_id", workspace.id);
-      if (error) throw error;
-      return data;
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      // Then fetch profiles for those users
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      // Combine the data
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
     },
     enabled: !!workspace,
   });

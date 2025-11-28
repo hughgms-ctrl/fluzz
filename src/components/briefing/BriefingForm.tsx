@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ interface BriefingFormProps {
 
 export default function BriefingForm({ projectId, onSuccess, briefingId }: BriefingFormProps) {
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
   const [data, setData] = useState("");
   const [investimentoTrafego, setInvestimentoTrafego] = useState("");
@@ -68,9 +70,11 @@ export default function BriefingForm({ projectId, onSuccess, briefingId }: Brief
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspace) throw new Error("Workspace não encontrado");
 
       const briefingData = {
         project_id: projectId,
+        workspace_id: workspace.id,
         data,
         investimento_trafego: parseFloat(investimentoTrafego),
         participantes_pagantes: parseInt(participantesPagantes),
