@@ -19,6 +19,7 @@ import Workspace from "./pages/Workspace";
 import Culture from "./pages/workspace/Culture";
 import Vision from "./pages/workspace/Vision";
 import Processes from "./pages/workspace/Processes";
+import GettingStarted from "./pages/workspace/GettingStarted";
 import Positions from "./pages/Positions";
 import PositionDetail from "./pages/PositionDetail";
 import BriefingRepository from "./pages/BriefingRepository";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/workspace/culture" element={<Culture />} />
             <Route path="/workspace/vision" element={<Vision />} />
             <Route path="/workspace/processes" element={<Processes />} />
+            <Route path="/workspace/getting-started" element={<GettingStarted />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
           <Route path="/briefings" element={<BriefingRepository />} />
