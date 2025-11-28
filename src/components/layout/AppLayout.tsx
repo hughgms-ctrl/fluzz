@@ -37,6 +37,12 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     return <Navigate to="/workspace/setup" replace />;
   }
 
+  // Prevent access to setup page if user already has a workspace
+  if (user && !workspaceLoading && workspaces && workspaces.length > 0 && window.location.pathname === "/workspace/setup") {
+    console.log("Usuário já tem workspace - redirecionando para home");
+    return <Navigate to="/" replace />;
+  }
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }

@@ -8,9 +8,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreatePositionDialog } from "@/components/positions/CreatePositionDialog";
 import { PositionCard } from "@/components/positions/PositionCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Positions() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const { isAdmin, isGestor } = useWorkspace();
 
   const { data: positions, isLoading } = useQuery({
     queryKey: ["positions"],
@@ -35,10 +37,12 @@ export default function Positions() {
               Gerencie cargos, setores e suas rotinas
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Cargo
-          </Button>
+          {(isAdmin || isGestor) && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Cargo
+            </Button>
+          )}
         </div>
 
         {isLoading ? (

@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Edit, Save, X } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Vision() {
   const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -79,12 +81,13 @@ export default function Vision() {
               Os princípios fundamentais que guiam nossa empresa
             </p>
           </div>
-          {!isEditing ? (
+          {(isAdmin || isGestor) && !isEditing && (
             <Button onClick={() => setIsEditing(true)} className="gap-2">
               <Edit size={16} />
               Editar
             </Button>
-          ) : (
+          )}
+          {(isAdmin || isGestor) && isEditing && (
             <div className="flex gap-2">
               <Button
                 variant="outline"
