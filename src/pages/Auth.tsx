@@ -181,21 +181,26 @@ export default function Auth() {
 
         if (error) throw error;
 
-        // Aguardar um momento para o trigger do backend processar o convite
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Aguardar processamento do trigger do backend
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Chamar processInvite como fallback (vai verificar se já foi processado)
+        // Chamar processInvite como fallback
         await processInvite();
 
-        toast.success("Senha definida com sucesso! Redirecionando...");
+        toast.success("Senha definida! Aguarde...");
         
-        // Delay maior para garantir que workspace_members foi criado
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Aguardar mais tempo para garantir workspace_members
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Forçar reload completo para garantir que WorkspaceContext carregue o novo workspace
+        // Limpar o estado de convite antes de redirecionar
         setIsInvitedUser(false);
+        setInviteToken(null);
+        setInviteData(null);
+        
+        // Fazer reload completo da página na home
         window.location.href = "/";
       } catch (error: any) {
+        console.error("Erro ao definir senha:", error);
         toast.error(error.message || "Erro ao definir senha");
       } finally {
         setIsLoading(false);

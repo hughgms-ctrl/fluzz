@@ -30,8 +30,10 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
     );
   }
 
-  // Apenas redireciona para criação de workspace se o usuário não pertence a NENHUM workspace
-  if (user && !workspaceLoading && workspaces.length === 0) {
+  // IMPORTANTE: Apenas redireciona para setup se o usuário não tem NENHUM workspace
+  // Usuários convidados devem ter workspaces carregados pelo WorkspaceContext
+  if (user && !workspaceLoading && workspaces.length === 0 && !workspace) {
+    console.log("Redirecionando para setup - sem workspaces");
     return <Navigate to="/workspace/setup" replace />;
   }
 
