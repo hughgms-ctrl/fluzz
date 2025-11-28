@@ -24,24 +24,41 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      const { data, error } = await supabase
+      
+      // First fetch workspace members
+      const { data: members, error: membersError } = await supabase
         .from("workspace_members")
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            full_name
-          )
-        `)
+        .select("user_id, role")
         .eq("workspace_id", workspace.id);
       
-      if (error) {
-        console.error("Error fetching workspace members:", error);
-        throw error;
+      if (membersError) {
+        console.error("Error fetching workspace members:", membersError);
+        throw membersError;
       }
-      console.log("Workspace members loaded:", data);
-      return data;
+
+      if (!members || members.length === 0) return [];
+
+      // Then fetch profiles for those users
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      // Combine the data
+      const combined = members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+
+      console.log("Workspace members loaded:", combined);
+      return combined;
     },
     enabled: !!workspace,
   });
