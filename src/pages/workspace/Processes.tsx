@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { useSearchParams } from "react-router-dom";
 
 export default function Processes() {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const processRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -32,20 +34,26 @@ export default function Processes() {
   const [highlightedProcess, setHighlightedProcess] = useState<string | null>(null);
 
   const { data: processes, isLoading } = useQuery({
-    queryKey: ["process-documentation"],
+    queryKey: ["process-documentation", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("process_documentation")
         .select("*")
+        .eq("workspace_id", workspace.id)
         .order("area")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      if (!workspace) {
+        throw new Error("Workspace não encontrado");
+      }
       const { error } = await supabase
         .from("process_documentation")
         .insert([
@@ -54,6 +62,7 @@ export default function Processes() {
             title,
             content,
             created_by: user!.id,
+            workspace_id: workspace.id,
           },
         ]);
       if (error) throw error;
