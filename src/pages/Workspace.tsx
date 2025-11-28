@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Workspace() {
-  const { isAdmin } = useWorkspace();
+  const { isAdmin, isGestor } = useWorkspace();
   
   return (
     <AppLayout>
@@ -66,7 +66,7 @@ export default function Workspace() {
             </Card>
           </Link>
 
-          {isAdmin && (
+          {(isAdmin || isGestor) && (
             <Link to="/team">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
