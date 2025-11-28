@@ -17,13 +17,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { Plus, FileText, Trash2, ArrowLeft } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 export default function Processes() {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const processRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -148,17 +149,22 @@ export default function Processes() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Processos</h1>
-            <p className="text-muted-foreground mt-1">
-              Documentação de processos organizados por área
-            </p>
-          </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-            <Plus size={20} />
-            Novo Processo
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/workspace")}>
+            <ArrowLeft size={20} />
           </Button>
+          <div className="flex-1 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Processos</h1>
+              <p className="text-muted-foreground mt-1">
+                Documentação de processos organizados por área
+              </p>
+            </div>
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus size={20} />
+              Novo Processo
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-2 flex-wrap">
