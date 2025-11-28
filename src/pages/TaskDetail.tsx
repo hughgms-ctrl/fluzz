@@ -429,7 +429,7 @@ export default function TaskDetail() {
                     <Select
                       value={task.status}
                       onValueChange={(value) => {
-                        updateTaskMutation.mutate({ ...task, status: value });
+                        updateTaskMutation.mutate({ status: value });
                       }}
                     >
                       <SelectTrigger className="mt-2">
