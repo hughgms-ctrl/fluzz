@@ -37,11 +37,7 @@ export default function Analytics() {
       
       const { data, error } = await supabase
         .from("tasks")
-        .select(`
-          *,
-          projects!left(workspace_id)
-        `)
-        .or(`project_id.is.null,projects.workspace_id.eq.${workspace.id}`);
+        .select("*");
       
       if (error) throw error;
       return data;
