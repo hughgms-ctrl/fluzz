@@ -1,10 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, Users, Repeat } from "lucide-react";
+import { Briefcase, Users, Repeat, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 interface PositionCardProps {
   position: {
@@ -16,6 +29,9 @@ interface PositionCardProps {
 
 export function PositionCard({ position }: PositionCardProps) {
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
+  const queryClient = useQueryClient();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const { data: recurringTasksCount } = useQuery({
     queryKey: ["recurring-tasks-count", position.id],
@@ -43,6 +59,25 @@ export function PositionCard({ position }: PositionCardProps) {
     },
   });
 
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from("positions")
+        .delete()
+        .eq("id", position.id);
+
+      if (error) throw error;
+
+      toast.success("Cargo excluído com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["positions"] });
+    } catch (error) {
+      console.error("Erro ao excluir cargo:", error);
+      toast.error("Erro ao excluir cargo");
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
+
   return (
     <Card className="hover:shadow-lg transition-all cursor-pointer" onClick={() => navigate(`/positions/${position.id}`)}>
       <CardHeader className="pb-3">
@@ -67,13 +102,44 @@ export function PositionCard({ position }: PositionCardProps) {
         )}
       </CardHeader>
       <CardContent>
-        <Button variant="outline" size="sm" className="w-full" onClick={(e) => {
-          e.stopPropagation();
-          navigate(`/positions/${position.id}`);
-        }}>
-          Gerenciar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1" onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/positions/${position.id}`);
+          }}>
+            Gerenciar
+          </Button>
+          {(isAdmin || isGestor) && (
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialogOpen(true);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </CardContent>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Cargo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o cargo "{position.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

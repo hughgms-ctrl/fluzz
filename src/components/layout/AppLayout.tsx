@@ -32,15 +32,9 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   // IMPORTANTE: Apenas redireciona para setup se o usuário não tem NENHUM workspace
   // Usuários convidados devem ter workspaces carregados pelo WorkspaceContext
-  if (user && !workspaceLoading && workspaces.length === 0 && !workspace) {
+  if (user && !workspaceLoading && workspaces.length === 0) {
     console.log("Redirecionando para setup - sem workspaces");
     return <Navigate to="/workspace/setup" replace />;
-  }
-
-  // Prevent access to setup page if user already has a workspace
-  if (user && !workspaceLoading && workspaces && workspaces.length > 0 && window.location.pathname === "/workspace/setup") {
-    console.log("Usuário já tem workspace - redirecionando para home");
-    return <Navigate to="/" replace />;
   }
 
   if (!user) {

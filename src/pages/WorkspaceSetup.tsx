@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +12,15 @@ import { Building2 } from "lucide-react";
 
 export default function WorkspaceSetup() {
   const { user } = useAuth();
+  const { workspaces, loading: workspaceLoading } = useWorkspace();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Se o usuário já tem workspaces, redireciona para home
+  if (!workspaceLoading && workspaces.length > 0) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,10 +12,12 @@ import { CreateRoutineDialog } from "@/components/positions/CreateRoutineDialog"
 import { RoutineCard } from "@/components/positions/RoutineCard";
 import { AssignUserDialog } from "@/components/positions/AssignUserDialog";
 import { AssignedUsersList } from "@/components/positions/AssignedUsersList";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function PositionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [assignUserDialogOpen, setAssignUserDialogOpen] = useState(false);
 
@@ -101,12 +103,14 @@ export default function PositionDetail() {
           </TabsList>
 
           <TabsContent value="routines" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={() => setCreateTaskDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Rotina
-              </Button>
-            </div>
+            {(isAdmin || isGestor) && (
+              <div className="flex justify-end">
+                <Button onClick={() => setCreateTaskDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Rotina
+                </Button>
+              </div>
+            )}
 
             {routinesLoading ? (
               <div className="space-y-4">
@@ -138,12 +142,14 @@ export default function PositionDetail() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            <div className="flex justify-end">
-              <Button onClick={() => setAssignUserDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Atribuir Usuário
-              </Button>
-            </div>
+            {(isAdmin || isGestor) && (
+              <div className="flex justify-end">
+                <Button onClick={() => setAssignUserDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Atribuir Usuário
+                </Button>
+              </div>
+            )}
 
             <AssignedUsersList positionId={id!} />
           </TabsContent>
