@@ -248,12 +248,12 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="documentation">Documentação</Label>
+            <Label htmlFor="documentation">INFORMAÇÕES GERAIS</Label>
             <Textarea
               id="documentation"
               value={documentation}
               onChange={(e) => setDocumentation(e.target.value)}
-              placeholder="Adicione documentação, links ou anotações importantes..."
+              placeholder="Adicione informações gerais, links ou anotações importantes..."
               rows={3}
             />
           </div>

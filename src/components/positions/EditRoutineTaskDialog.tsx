@@ -251,12 +251,12 @@ export function EditRoutineTaskDialog({
           </div>
 
           <div>
-            <Label htmlFor="documentation">Documentação</Label>
+            <Label htmlFor="documentation">INFORMAÇÕES GERAIS</Label>
             <Textarea
               id="documentation"
               value={documentation}
               onChange={(e) => setDocumentation(e.target.value)}
-              placeholder="Adicione documentação, links ou anotações importantes..."
+              placeholder="Adicione informações gerais, links ou anotações importantes..."
               rows={3}
             />
           </div>

@@ -429,7 +429,7 @@ export default function TaskDetail() {
                     <Select
                       value={task.status}
                       onValueChange={(value) => {
-                        updateTaskMutation.mutate({ ...task, status: value });
+                        updateTaskMutation.mutate({ status: value });
                       }}
                     >
                       <SelectTrigger className="mt-2">
@@ -472,7 +472,7 @@ export default function TaskDetail() {
                 <div>
                   <Label className="flex items-center gap-2">
                     <FileText size={16} />
-                    Documentação
+                    INFORMAÇÕES GERAIS
                   </Label>
                   {isEditing ? (
                     <Textarea

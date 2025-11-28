@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Edit, Save, X } from "lucide-react";
+import { Edit, Save, X, ArrowLeft } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useNavigate } from "react-router-dom";
 
 export default function Culture() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isAdmin, isGestor } = useWorkspace();
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState("");
@@ -74,45 +76,50 @@ export default function Culture() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/workspace")}>
+            <ArrowLeft size={20} />
+          </Button>
+          <div className="flex-1">
             <h1 className="text-3xl font-bold text-foreground">Cultura da Empresa</h1>
             <p className="text-muted-foreground mt-1">
               Conheça os valores e a cultura que nos guiam
             </p>
           </div>
-          {(isAdmin || isGestor) && !isEditing && (
-            <Button onClick={() => setIsEditing(true)} className="gap-2">
-              <Edit size={16} />
-              Editar
-            </Button>
-          )}
-          {(isAdmin || isGestor) && isEditing && (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsEditing(false);
-                  if (cultureData) {
-                    setTitle(cultureData.title);
-                    setContent(cultureData.content);
-                  }
-                }}
-                className="gap-2"
-              >
-                <X size={16} />
-                Cancelar
+          <div>
+            {(isAdmin || isGestor) && !isEditing && (
+              <Button onClick={() => setIsEditing(true)} className="gap-2">
+                <Edit size={16} />
+                Editar
               </Button>
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-                className="gap-2"
-              >
-                <Save size={16} />
-                Salvar
-              </Button>
-            </div>
-          )}
+            )}
+            {(isAdmin || isGestor) && isEditing && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    if (cultureData) {
+                      setTitle(cultureData.title);
+                      setContent(cultureData.content);
+                    }
+                  }}
+                  className="gap-2"
+                >
+                  <X size={16} />
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={() => saveMutation.mutate()}
+                  disabled={saveMutation.isPending}
+                  className="gap-2"
+                >
+                  <Save size={16} />
+                  Salvar
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         <Card>
