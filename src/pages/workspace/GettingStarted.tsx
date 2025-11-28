@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function GettingStarted() {
   const { workspace, isAdmin, isGestor } = useWorkspace();
+  const navigate = useNavigate();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<any>(null);
   
@@ -35,19 +37,24 @@ export default function GettingStarted() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Comece Aqui</h1>
-            <p className="text-muted-foreground">
-              Tutoriais e guias para usar a plataforma
-            </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/workspace")}>
+            <ArrowLeft size={20} />
+          </Button>
+          <div className="flex-1 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Comece Aqui</h1>
+              <p className="text-muted-foreground">
+                Tutoriais e guias para usar a plataforma
+              </p>
+            </div>
+            {canEdit && (
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Seção
+              </Button>
+            )}
           </div>
-          {canEdit && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Seção
-            </Button>
-          )}
         </div>
 
         {isLoading ? (
