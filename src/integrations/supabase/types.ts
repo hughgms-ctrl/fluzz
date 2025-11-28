@@ -279,6 +279,56 @@ export type Database = {
           },
         ]
       }
+      getting_started_sections: {
+        Row: {
+          content: string | null
+          content_type: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          image_url: string | null
+          section_order: number
+          title: string
+          updated_at: string | null
+          video_url: string | null
+          workspace_id: string
+        }
+        Insert: {
+          content?: string | null
+          content_type: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          section_order?: number
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+          workspace_id: string
+        }
+        Update: {
+          content?: string | null
+          content_type?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          section_order?: number
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "getting_started_sections_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_events: {
         Row: {
           created_at: string | null
