@@ -21,6 +21,7 @@ import Vision from "./pages/workspace/Vision";
 import Processes from "./pages/workspace/Processes";
 import GettingStarted from "./pages/workspace/GettingStarted";
 import Positions from "./pages/Positions";
+import Inventory from "./pages/Inventory";
 import PositionDetail from "./pages/PositionDetail";
 import BriefingRepository from "./pages/BriefingRepository";
 import BriefingDocument from "./pages/BriefingDocument";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/workspace/getting-started" element={<GettingStarted />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
+            <Route path="/inventory" element={<Inventory />} />
           <Route path="/briefings" element={<BriefingRepository />} />
           <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
           <Route path="/workspace/admin" element={<WorkspaceAdmin />} />

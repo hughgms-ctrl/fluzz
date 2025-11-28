@@ -1,4 +1,4 @@
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,6 +35,7 @@ const workspaceItems: MenuItem[] = [
   { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
   { title: "Equipe", url: "/team", icon: Users, permission: "can_view_analytics" },
   { title: "Cargos", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
+  { title: "Inventário", url: "/inventory", icon: Package },
 ];
 
 export function AppSidebar() {

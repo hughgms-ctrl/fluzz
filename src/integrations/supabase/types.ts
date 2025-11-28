@@ -279,6 +279,142 @@ export type Database = {
           },
         ]
       }
+      inventory_events: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          event_id: string | null
+          id: string
+          name: string
+          quantity: number
+          unit: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          name: string
+          quantity?: number
+          unit?: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          event_id?: string | null
+          id?: string
+          name?: string
+          quantity?: number
+          unit?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          date: string | null
+          id: string
+          item_id: string
+          notes: string | null
+          quantity: number
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string | null
+          id?: string
+          item_id: string
+          notes?: string | null
+          quantity: number
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          date?: string | null
+          id?: string
+          item_id?: string
+          notes?: string | null
+          quantity?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
