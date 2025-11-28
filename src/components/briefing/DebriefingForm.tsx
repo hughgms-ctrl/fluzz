@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ interface Vendedor {
 
 export default function DebriefingForm({ projectId, briefingId }: DebriefingFormProps) {
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
   const [investimentoTrafego, setInvestimentoTrafego] = useState("");
   const [leads, setLeads] = useState("");
@@ -92,10 +94,12 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
+      if (!workspace) throw new Error("Workspace não encontrado");
 
       const debriefingData = {
         briefing_id: briefingId,
         project_id: projectId,
+        workspace_id: workspace.id,
         investimento_trafego: parseFloat(investimentoTrafego),
         leads: parseInt(leads),
         vendas_ingressos: parseInt(vendasIngressos),
