@@ -237,15 +237,19 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const canManageMembers = isAdmin;
   const canCreateTasks = isAdmin || isGestor;
 
-  // Log para debug
-  console.log('WorkspaceContext - Role info:', {
-    workspaceId: workspace?.id,
-    workspaceName: workspace?.name,
-    memberId: workspaceMember?.id,
-    role: workspaceMember?.role,
-    isAdmin,
-    isGestor,
-    isMembro
+  // Log detalhado para debug
+  console.log('🔍 WorkspaceContext - Role Check:', {
+    activeWorkspaceId: workspace?.id,
+    activeWorkspaceName: workspace?.name,
+    workspaceMemberId: workspaceMember?.id,
+    workspaceMemberUserId: workspaceMember?.user_id,
+    roleFromDB: workspaceMember?.role,
+    calculatedRoles: {
+      isAdmin,
+      isGestor,
+      isMembro
+    },
+    allWorkspaces: workspaces.map(w => ({ id: w.id, name: w.name }))
   });
 
   return (
