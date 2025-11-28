@@ -20,7 +20,7 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
   const queryClient = useQueryClient();
   const { workspace } = useWorkspace();
 
-  const { data: workspaceMembers } = useQuery({
+  const { data: workspaceMembers, isLoading: isLoadingMembers } = useQuery({
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
@@ -28,6 +28,7 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
         .from("workspace_members")
         .select(`
           user_id,
+          role,
           profiles:user_id (
             id,
             full_name
@@ -35,7 +36,11 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
         `)
         .eq("workspace_id", workspace.id);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching workspace members:", error);
+        throw error;
+      }
+      console.log("Workspace members loaded:", data);
       return data;
     },
     enabled: !!workspace,
@@ -90,22 +95,47 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
             <Label htmlFor="user">Selecionar Usuário *</Label>
             <Select value={selectedUserId} onValueChange={setSelectedUserId} required>
               <SelectTrigger id="user">
-                <SelectValue placeholder="Escolha um usuário" />
+                <SelectValue placeholder={
+                  isLoadingMembers 
+                    ? "Carregando usuários..." 
+                    : !workspaceMembers || workspaceMembers.length === 0
+                    ? "Nenhum usuário disponível"
+                    : "Escolha um usuário"
+                } />
               </SelectTrigger>
               <SelectContent>
-                {workspaceMembers?.map((member: any) => (
-                  <SelectItem key={member.user_id} value={member.user_id}>
-                    {member.profiles?.full_name || "Usuário sem nome"}
-                  </SelectItem>
-                ))}
+                {workspaceMembers && workspaceMembers.length > 0 ? (
+                  workspaceMembers.map((member: any) => (
+                    <SelectItem key={member.user_id} value={member.user_id}>
+                      {member.profiles?.full_name || "Usuário sem nome"} ({member.role})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    Nenhum membro no workspace
+                  </div>
+                )}
               </SelectContent>
             </Select>
+            {!workspace && (
+              <p className="text-xs text-destructive">
+                Workspace não encontrado. Recarregue a página.
+              </p>
+            )}
+            {workspace && workspaceMembers && workspaceMembers.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Convide membros para o workspace na seção "Equipe"
+              </p>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !selectedUserId}>
+            <Button 
+              type="submit" 
+              disabled={loading || !selectedUserId || isLoadingMembers || !workspaceMembers || workspaceMembers.length === 0}
+            >
               {loading ? "Atribuindo..." : "Atribuir"}
             </Button>
           </div>
