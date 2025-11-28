@@ -37,7 +37,11 @@ export default function Analytics() {
       
       const { data, error } = await supabase
         .from("tasks")
-        .select("*");
+        .select(`
+          *,
+          projects!inner(workspace_id)
+        `)
+        .eq("projects.workspace_id", workspace.id);
       
       if (error) throw error;
       return data;
