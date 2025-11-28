@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface AssignUserDialogProps {
   positionId: string;
@@ -17,17 +18,27 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
   const [selectedUserId, setSelectedUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles"],
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name");
+        .from("workspace_members")
+        .select(`
+          user_id,
+          profiles:user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq("workspace_id", workspace.id);
       
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,9 +93,9 @@ export function AssignUserDialog({ positionId, open, onOpenChange }: AssignUserD
                 <SelectValue placeholder="Escolha um usuário" />
               </SelectTrigger>
               <SelectContent>
-                {profiles?.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    {profile.full_name || "Usuário sem nome"}
+                {workspaceMembers?.map((member: any) => (
+                  <SelectItem key={member.user_id} value={member.user_id}>
+                    {member.profiles?.full_name || "Usuário sem nome"}
                   </SelectItem>
                 ))}
               </SelectContent>

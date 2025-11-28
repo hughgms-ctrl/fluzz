@@ -25,6 +25,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface CreateRoutineDialogProps {
   positionId: string;
@@ -43,6 +44,7 @@ export function CreateRoutineDialog({
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,6 +58,11 @@ export function CreateRoutineDialog({
         return;
       }
 
+      if (!workspace) {
+        toast.error("Workspace não encontrado");
+        return;
+      }
+
       const { error } = await supabase.from("routines").insert({
         position_id: positionId,
         name,
@@ -63,6 +70,7 @@ export function CreateRoutineDialog({
         recurrence_type: recurrenceType,
         start_date: format(startDate, "yyyy-MM-dd"),
         created_by: user.id,
+        workspace_id: workspace.id,
       });
 
       if (error) throw error;
