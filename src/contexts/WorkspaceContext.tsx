@@ -77,18 +77,41 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     try {
-      // Buscar todos os memberships do usuário
+      // Buscar todos os memberships do usuário sem depender de RLS recursivo
       const { data: memberData, error: memberError } = await supabase
-        .from("workspace_members")
-        .select("*")
-        .eq("user_id", user.id);
+        .rpc('user_workspace_ids', { _user_id: user.id });
 
       if (memberError) {
-        console.error("Erro ao buscar membro do workspace:", memberError);
+        console.error("Erro ao buscar workspaces do usuário:", memberError);
+        setWorkspace(null);
+        setWorkspaceMember(null);
+        setWorkspaces([]);
         return;
       }
 
+      // Se não há workspaces, retornar
       if (!memberData || memberData.length === 0) {
+        setWorkspace(null);
+        setWorkspaceMember(null);
+        setWorkspaces([]);
+        return;
+      }
+
+      // Buscar memberships completos
+      const wsIds = memberData.map((m: any) => m.workspace_id);
+      
+      const { data: fullMemberData, error: fullMemberError } = await supabase
+        .from("workspace_members")
+        .select("*")
+        .in("workspace_id", wsIds)
+        .eq("user_id", user.id);
+
+      if (fullMemberError) {
+        console.error("Erro ao buscar memberships:", fullMemberError);
+        return;
+      }
+
+      if (!fullMemberData || fullMemberData.length === 0) {
         // Usuário ainda não tem workspace associado
         setWorkspace(null);
         setWorkspaceMember(null);
@@ -101,13 +124,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       if (!activeWorkspaceId && typeof window !== "undefined") {
         const stored = window.localStorage.getItem("currentWorkspaceId");
-        if (stored && memberData.some((m) => m.workspace_id === stored)) {
+        if (stored && fullMemberData.some((m) => m.workspace_id === stored)) {
           activeWorkspaceId = stored;
         }
       }
 
       if (!activeWorkspaceId) {
-        activeWorkspaceId = memberData[0].workspace_id;
+        activeWorkspaceId = fullMemberData[0].workspace_id;
       }
 
       if (typeof window !== "undefined" && activeWorkspaceId) {
@@ -115,18 +138,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const activeMember =
-        memberData.find((m) => m.workspace_id === activeWorkspaceId) ||
-        memberData[0];
+        fullMemberData.find((m) => m.workspace_id === activeWorkspaceId) ||
+        fullMemberData[0];
 
       setWorkspaceMember(activeMember);
 
       // Buscar informações de todos os workspaces aos quais o usuário pertence
-      const workspaceIds = memberData.map((m) => m.workspace_id);
-
       const { data: workspacesData, error: workspacesError } = await supabase
         .from("workspaces")
         .select("*")
-        .in("id", workspaceIds);
+        .in("id", wsIds);
 
       if (workspacesError) {
         console.error("Erro ao buscar workspaces:", workspacesError);
