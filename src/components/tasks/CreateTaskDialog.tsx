@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ interface CreateTaskDialogProps {
 
 export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDialogProps) => {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -42,15 +44,25 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [setor, setSetor] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
 
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles"],
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name");
+        .from("workspace_members")
+        .select(`
+          user_id,
+          role,
+          profiles:user_id (
+            id,
+            full_name
+          )
+        `)
+        .eq("workspace_id", workspace.id);
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   const { data: processes } = useQuery({
@@ -215,9 +227,9 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
                 <SelectValue placeholder="Selecione um responsável" />
               </SelectTrigger>
               <SelectContent>
-                {profiles?.map((profile) => (
-                  <SelectItem key={profile.id} value={profile.id}>
-                    {profile.full_name || "Sem nome"}
+                {workspaceMembers?.map((member: any) => (
+                  <SelectItem key={member.user_id} value={member.user_id}>
+                    {member.profiles?.full_name || "Sem nome"}
                   </SelectItem>
                 ))}
               </SelectContent>
