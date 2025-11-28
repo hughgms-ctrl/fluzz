@@ -24,7 +24,7 @@ export function CreateInventoryItemDialog({ open, onOpenChange }: CreateInventor
     description: "",
     quantity: "",
     unit: "un",
-    event_id: "",
+    event_id: "none",
   });
 
   const { data: events } = useQuery({
@@ -55,7 +55,7 @@ export function CreateInventoryItemDialog({ open, onOpenChange }: CreateInventor
         description: formData.description || null,
         quantity: parseInt(formData.quantity) || 0,
         unit: formData.unit,
-        event_id: formData.event_id || null,
+        event_id: formData.event_id === "none" ? null : formData.event_id,
         created_by: user?.id,
       });
 
@@ -64,7 +64,7 @@ export function CreateInventoryItemDialog({ open, onOpenChange }: CreateInventor
       toast.success("Material cadastrado com sucesso");
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
       onOpenChange(false);
-      setFormData({ name: "", description: "", quantity: "", unit: "un", event_id: "" });
+      setFormData({ name: "", description: "", quantity: "", unit: "un", event_id: "none" });
     } catch (error: any) {
       toast.error(error.message || "Erro ao cadastrar material");
     } finally {
@@ -134,7 +134,7 @@ export function CreateInventoryItemDialog({ open, onOpenChange }: CreateInventor
                 <SelectValue placeholder="Selecione um evento (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sem evento</SelectItem>
+                <SelectItem value="none">Sem evento</SelectItem>
                 {events?.map((event) => (
                   <SelectItem key={event.id} value={event.id}>
                     {event.name}
