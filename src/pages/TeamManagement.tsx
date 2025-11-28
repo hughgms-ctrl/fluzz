@@ -26,7 +26,7 @@ interface WorkspaceMemberWithProfile {
 }
 
 export default function TeamManagement() {
-  const { workspace, isAdmin } = useWorkspace();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
@@ -102,8 +102,8 @@ export default function TeamManagement() {
   });
 
 
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+  if (!isAdmin && !isGestor) {
+    return <Navigate to="/" replace />;
   }
 
   if (membersLoading || invitesLoading) {
@@ -129,10 +129,12 @@ export default function TeamManagement() {
               Clique em um membro para gerenciar suas permissões
             </p>
           </div>
-          <Button onClick={() => setIsInviteDialogOpen(true)} size="lg">
-            <UserPlus className="mr-2 h-5 w-5" />
-            Adicionar Membro
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setIsInviteDialogOpen(true)} size="lg">
+              <UserPlus className="mr-2 h-5 w-5" />
+              Adicionar Membro
+            </Button>
+          )}
         </div>
 
         {pendingInvites && pendingInvites.length > 0 && (
