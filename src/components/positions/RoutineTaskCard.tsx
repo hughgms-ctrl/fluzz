@@ -120,7 +120,7 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
 
             {task.documentation && (
               <div className="text-sm text-muted-foreground">
-                <span className="font-medium">Documentação:</span>{" "}
+                <span className="font-medium">Informações Gerais:</span>{" "}
                 {task.documentation}
               </div>
             )}
