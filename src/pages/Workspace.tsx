@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase, Clipboard, Users } from "lucide-react";
+import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase, Clipboard, Users, GraduationCap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -18,6 +18,18 @@ export default function Workspace() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Link to="/workspace/getting-started">
+            <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+              <CardHeader className="p-4">
+                <GraduationCap className="h-8 w-8 text-primary mb-2" />
+                <CardTitle className="text-lg">Comece Aqui</CardTitle>
+                <CardDescription className="text-sm">
+                  Tutoriais e guias sobre como usar a plataforma
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           <Link to="/workspace/culture">
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
               <CardHeader className="p-4">
