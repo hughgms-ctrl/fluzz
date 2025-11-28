@@ -43,7 +43,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { permissions, isAdmin, isMembro } = useWorkspace();
+  const { permissions, isAdmin, isGestor, isMembro } = useWorkspace();
 
   const isCollapsed = state === "collapsed";
 
@@ -54,6 +54,17 @@ export function AppSidebar() {
   };
 
   const canViewItem = (item: MenuItem) => {
+    // Log para debug
+    console.log('Checking item:', item.title, {
+      adminOnly: item.adminOnly,
+      adminGestorOnly: item.adminGestorOnly,
+      isAdmin: isAdmin,
+      isGestor: isGestor,
+      isMembro: isMembro,
+      permission: item.permission,
+      hasPermission: item.permission ? permissions[item.permission as keyof typeof permissions] : 'N/A'
+    });
+
     if (item.adminOnly && !isAdmin) return false;
     if (item.adminGestorOnly && isMembro) return false;
     if (!item.permission) return true;
