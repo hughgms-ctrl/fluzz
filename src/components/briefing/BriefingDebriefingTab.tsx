@@ -21,6 +21,7 @@ import BriefingForm from "./BriefingForm";
 import BriefingView from "./BriefingView";
 import DebriefingForm from "./DebriefingForm";
 import { FileText, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface BriefingDebriefingTabProps {
   projectId: string;
@@ -30,6 +31,7 @@ export default function BriefingDebriefingTab({ projectId }: BriefingDebriefingT
   const [selectedBriefingId, setSelectedBriefingId] = useState<string>("");
   const [showBriefingForm, setShowBriefingForm] = useState(false);
   const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
 
   const { data: briefings, isLoading } = useQuery({
     queryKey: ["briefings", projectId],
@@ -87,71 +89,73 @@ export default function BriefingDebriefingTab({ projectId }: BriefingDebriefingT
         <div className="space-y-4">
           <BriefingView briefing={latestBriefing} />
           
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowBriefingForm(!showBriefingForm)}
-              >
-                {showBriefingForm ? (
-                  <>
-                    <ChevronUp className="h-4 w-4 mr-2" />
-                    Ocultar Formulário de Edição
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-4 w-4 mr-2" />
-                    Editar Briefing
-                  </>
-                )}
-              </Button>
-              
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza que deseja excluir este briefing? Esta ação também excluirá todos os debriefings associados e não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => deleteBriefingMutation.mutate(latestBriefing.id)}
-                      className="bg-destructive hover:bg-destructive/90"
+          {(isAdmin || isGestor) && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowBriefingForm(!showBriefingForm)}
+                >
+                  {showBriefingForm ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      Ocultar Formulário de Edição
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      Editar Briefing
+                    </>
+                  )}
+                </Button>
+                
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="text-destructive hover:bg-destructive/10"
                     >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            
-            {showBriefingForm && (
-              <div className="mt-4">
-                <BriefingForm 
-                  projectId={projectId} 
-                  briefingId={latestBriefing.id}
-                  onSuccess={handleBriefingCreated} 
-                />
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja excluir este briefing? Esta ação também excluirá todos os debriefings associados e não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteBriefingMutation.mutate(latestBriefing.id)}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        Excluir
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
-            )}
-          </div>
+              
+              {showBriefingForm && (
+                <div className="mt-4">
+                  <BriefingForm 
+                    projectId={projectId} 
+                    briefingId={latestBriefing.id}
+                    onSuccess={handleBriefingCreated} 
+                  />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Criar Novo Briefing se não houver nenhum */}
-      {!latestBriefing && !isLoading && (
+      {!latestBriefing && !isLoading && (isAdmin || isGestor) && (
         <BriefingForm projectId={projectId} onSuccess={handleBriefingCreated} />
       )}
 

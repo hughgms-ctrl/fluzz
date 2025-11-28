@@ -11,12 +11,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects"],
@@ -122,11 +124,13 @@ export default function Projects() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
             <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="hidden sm:inline">Novo Projeto</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
+          {(isAdmin || isGestor) && (
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Novo Projeto</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          )}
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived" | "standalone")}>
