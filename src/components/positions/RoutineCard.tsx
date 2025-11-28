@@ -29,6 +29,7 @@ interface RoutineCardProps {
     start_date: string;
   };
   positionId: string;
+  canEdit?: boolean;
 }
 
 const recurrenceLabels: Record<string, string> = {
@@ -38,7 +39,7 @@ const recurrenceLabels: Record<string, string> = {
   yearly: "Anual",
 };
 
-export function RoutineCard({ routine, positionId }: RoutineCardProps) {
+export function RoutineCard({ routine, positionId, canEdit = true }: RoutineCardProps) {
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [editRoutineDialogOpen, setEditRoutineDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -80,35 +81,41 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
             <Badge variant="secondary">
               {recurrenceLabels[routine.recurrence_type]}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditRoutineDialogOpen(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            {canEdit && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditRoutineDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setCreateTaskDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Tarefa
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCreateTaskDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Tarefa
+            </Button>
+          </div>
+        )}
 
         <RoutineTasksList routineId={routine.id} />
 

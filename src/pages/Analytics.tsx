@@ -39,9 +39,10 @@ export default function Analytics() {
         .from("tasks")
         .select(`
           *,
-          projects!inner(workspace_id)
+          projects!inner(workspace_id, archived)
         `)
-        .eq("projects.workspace_id", workspace.id);
+        .eq("projects.workspace_id", workspace.id)
+        .eq("projects.archived", false);
       
       if (error) throw error;
       return data;
@@ -57,7 +58,8 @@ export default function Analytics() {
       const { data, error } = await supabase
         .from("projects")
         .select("*")
-        .eq("workspace_id", workspace.id);
+        .eq("workspace_id", workspace.id)
+        .eq("archived", false);
       
       if (error) throw error;
       return data;

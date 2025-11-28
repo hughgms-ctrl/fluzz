@@ -21,6 +21,7 @@ interface MenuItem {
   icon: any;
   permission?: string | null;
   adminOnly?: boolean;
+  adminGestorOnly?: boolean;
 }
 
 const menuItems: MenuItem[] = [
@@ -33,16 +34,16 @@ const menuItems: MenuItem[] = [
 
 const workspaceItems: MenuItem[] = [
   { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
-  { title: "Equipe", url: "/team", icon: Users, permission: "can_view_analytics" },
-  { title: "Cargos", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
-  { title: "Inventário", url: "/inventory", icon: Package },
+  { title: "Equipe", url: "/team", icon: Users, permission: "can_view_analytics", adminGestorOnly: true },
+  { title: "Cargos", url: "/positions", icon: Briefcase, permission: "can_view_positions", adminGestorOnly: true },
+  { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { permissions, isAdmin } = useWorkspace();
+  const { permissions, isAdmin, isMembro } = useWorkspace();
 
   const isCollapsed = state === "collapsed";
 
@@ -54,6 +55,7 @@ export function AppSidebar() {
 
   const canViewItem = (item: MenuItem) => {
     if (item.adminOnly && !isAdmin) return false;
+    if (item.adminGestorOnly && isMembro) return false;
     if (!item.permission) return true;
     return permissions[item.permission as keyof typeof permissions];
   };

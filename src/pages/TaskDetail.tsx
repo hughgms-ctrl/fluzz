@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,10 +50,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { TaskActivityLog } from "@/components/tasks/TaskActivityLog";
 
 export default function TaskDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin, isGestor, isMembro } = useWorkspace();
   const queryClient = useQueryClient();
   const [newSubtask, setNewSubtask] = useState("");
   const [isAddingProcess, setIsAddingProcess] = useState(false);
@@ -421,11 +426,23 @@ export default function TaskDetail() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="mt-2">
-                      <Badge variant="outline">
-                        {statusLabels[task.status as keyof typeof statusLabels]}
-                      </Badge>
-                    </div>
+                    <Select
+                      value={task.status}
+                      onValueChange={(value) => {
+                        updateTaskMutation.mutate({ ...task, status: value });
+                      }}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue>
+                          {statusLabels[task.status as keyof typeof statusLabels]}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">A Fazer</SelectItem>
+                        <SelectItem value="in_progress">Em Progresso</SelectItem>
+                        <SelectItem value="completed">Concluído</SelectItem>
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
 
@@ -509,24 +526,26 @@ export default function TaskDetail() {
                   </div>
                 ))}
 
-                <div className="flex gap-2 pt-2">
-                  <Input
-                    placeholder="Nova subtarefa..."
-                    value={newSubtask}
-                    onChange={(e) => setNewSubtask(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter" && newSubtask.trim()) {
-                        addSubtaskMutation.mutate(newSubtask);
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={() => newSubtask.trim() && addSubtaskMutation.mutate(newSubtask)}
-                    disabled={!newSubtask.trim()}
-                  >
-                    <Plus size={16} />
-                  </Button>
-                </div>
+                {!isMembro && (
+                  <div className="flex gap-2 pt-2">
+                    <Input
+                      placeholder="Nova subtarefa..."
+                      value={newSubtask}
+                      onChange={(e) => setNewSubtask(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter" && newSubtask.trim()) {
+                          addSubtaskMutation.mutate(newSubtask);
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={() => newSubtask.trim() && addSubtaskMutation.mutate(newSubtask)}
+                      disabled={!newSubtask.trim()}
+                    >
+                      <Plus size={16} />
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -621,6 +640,8 @@ export default function TaskDetail() {
                 )}
               </CardContent>
             </Card>
+            
+            <TaskActivityLog taskId={id!} />
           </div>
         </div>
 

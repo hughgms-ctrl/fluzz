@@ -26,6 +26,9 @@ export default function DebriefingResults({
 
   // Cálculos automáticos
   const cpl = debriefing.leads > 0 ? debriefing.investimento_trafego / debriefing.leads : 0;
+  const cpa = debriefing.vendas_ingressos > 0 
+    ? debriefing.investimento_trafego / debriefing.vendas_ingressos 
+    : 0;
   const roasIngressos = debriefing.investimento_trafego > 0 
     ? debriefing.retorno_vendas_ingressos / debriefing.investimento_trafego 
     : 0;
@@ -46,8 +49,10 @@ export default function DebriefingResults({
   const investimentoVariacao = briefing.investimento_trafego > 0
     ? ((debriefing.investimento_trafego - briefing.investimento_trafego) / briefing.investimento_trafego) * 100
     : 0;
+  
+  const totalParticipantesRealizados = debriefing.vendas_ingressos + debriefing.participantes_outras_estrategias;
   const participantesVariacao = briefing.participantes_pagantes > 0
-    ? ((debriefing.total_participantes - briefing.participantes_pagantes) / briefing.participantes_pagantes) * 100
+    ? ((totalParticipantesRealizados - briefing.participantes_pagantes) / briefing.participantes_pagantes) * 100
     : 0;
 
   const formatCurrency = (value: number) => {
@@ -136,12 +141,19 @@ export default function DebriefingResults({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {/* CPL */}
             <div className="text-center p-4 rounded-lg border bg-background">
               <p className="text-sm text-muted-foreground mb-2">CPL</p>
               <p className="text-sm text-muted-foreground mb-1">Custo por Lead</p>
               <p className="text-3xl font-bold text-foreground">{formatCurrency(cpl)}</p>
+            </div>
+
+            {/* CPA */}
+            <div className="text-center p-4 rounded-lg border bg-background">
+              <p className="text-sm text-muted-foreground mb-2">CPA</p>
+              <p className="text-sm text-muted-foreground mb-1">Custo por Aquisição</p>
+              <p className="text-3xl font-bold text-foreground">{formatCurrency(cpa)}</p>
             </div>
 
             {/* ROAS Ingresso - DESTAQUE */}
@@ -233,7 +245,7 @@ export default function DebriefingResults({
                 <p className="text-sm font-semibold text-muted-foreground mb-1">Participantes Pagantes</p>
                 <div className="flex gap-4 mt-1">
                   <span className="text-sm">Planejado: <span className="font-medium">{briefing.participantes_pagantes}</span></span>
-                  <span className="text-sm">Realizado: <span className="font-medium">{debriefing.total_participantes}</span></span>
+                  <span className="text-sm">Realizado: <span className="font-medium">{totalParticipantesRealizados}</span></span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
