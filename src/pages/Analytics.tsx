@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -28,33 +28,41 @@ const COLORS = {
 };
 
 export default function Analytics() {
-  const { user } = useAuth();
+  const { workspace } = useWorkspace();
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["all-tasks", user?.id],
+    queryKey: ["all-tasks", workspace?.id],
     queryFn: async () => {
+      if (!workspace?.id) return [];
+      
       const { data, error } = await supabase
         .from("tasks")
         .select(`
           *,
-          projects!inner(user_id)
+          projects!left(workspace_id)
         `)
-        .eq('projects.user_id', user!.id);
+        .or(`project_id.is.null,projects.workspace_id.eq.${workspace.id}`);
+      
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace?.id,
   });
 
   const { data: projects, isLoading: projectsLoading } = useQuery({
-    queryKey: ["user-projects", user?.id],
+    queryKey: ["workspace-projects", workspace?.id],
     queryFn: async () => {
+      if (!workspace?.id) return [];
+      
       const { data, error } = await supabase
         .from("projects")
         .select("*")
-        .eq("user_id", user!.id);
+        .eq("workspace_id", workspace.id);
+      
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace?.id,
   });
 
   if (tasksLoading || projectsLoading) {
