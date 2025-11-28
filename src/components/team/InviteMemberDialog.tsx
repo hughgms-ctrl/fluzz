@@ -22,7 +22,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { Mail, Link as LinkIcon, UserCheck } from "lucide-react";
+import { Mail, UserCheck } from "lucide-react";
 
 interface InviteMemberDialogProps {
   open: boolean;
@@ -38,7 +38,6 @@ export const InviteMemberDialog = ({
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "gestor" | "membro">("membro");
-  const [sendMethod, setSendMethod] = useState<"direct" | "link">("direct");
   const [existingUser, setExistingUser] = useState<{ user_id: string; email: string } | null>(null);
   const [existingMember, setExistingMember] = useState<{
     role: string;
@@ -55,8 +54,6 @@ export const InviteMemberDialog = ({
     can_view_processes: true,
     can_view_briefings: true,
   });
-
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   // Check if user exists when email changes
   useEffect(() => {
@@ -118,16 +115,13 @@ export const InviteMemberDialog = ({
                   can_view_briefings: permData.can_view_briefings,
                 });
               }
-              setSendMethod("direct");
             } else {
               setExistingMember(null);
-              setSendMethod("direct");
             }
           }
         } else {
           setExistingUser(null);
           setExistingMember(null);
-          setSendMethod("link");
         }
       } catch (error) {
         console.error("Erro ao verificar usuário:", error);
@@ -156,7 +150,7 @@ export const InviteMemberDialog = ({
       if (!user) throw new Error("Usuário não autenticado");
 
       // For updating existing members
-      if (sendMethod === "direct" && existingUser && existingMember) {
+      if (existingUser && existingMember) {
         // Update role
         const { error: roleError } = await supabase
           .from("workspace_members")
@@ -185,7 +179,7 @@ export const InviteMemberDialog = ({
       }
 
       // For direct invites (existing users, not yet members)
-      if (sendMethod === "direct" && existingUser && !existingMember) {
+      if (existingUser && !existingMember) {
         // Add user directly to workspace
         const { error: memberError } = await supabase
           .from("workspace_members")
@@ -284,32 +278,27 @@ export const InviteMemberDialog = ({
         }
       } catch (emailError) {
         console.error("Erro ao enviar email:", emailError);
-        // Don't throw - we still want to show the link even if email fails
+        throw new Error("Erro ao enviar email de convite");
       }
       
-      // Always generate the link as fallback
-      setInviteLink(link);
-      return link;
+      return null;
     },
-    onSuccess: (link) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       queryClient.invalidateQueries({ queryKey: ["pending-invites"] });
       
-      if (sendMethod === "direct" && existingMember) {
+      if (existingMember) {
         toast.success("Permissões do membro atualizadas com sucesso!");
-        setTimeout(() => {
-          resetForm();
-          onOpenChange(false);
-        }, 1500);
-      } else if (sendMethod === "direct") {
+      } else if (existingUser) {
         toast.success("Membro adicionado com sucesso!");
-        setTimeout(() => {
-          resetForm();
-          onOpenChange(false);
-        }, 1500);
       } else {
-        toast.success("Email de convite enviado! O link também está disponível abaixo caso precise.");
+        toast.success("Email de convite enviado com sucesso!");
       }
+      
+      setTimeout(() => {
+        resetForm();
+        onOpenChange(false);
+      }, 1500);
     },
     onError: (error: any) => {
       console.error("Erro ao criar convite:", error);
@@ -320,8 +309,6 @@ export const InviteMemberDialog = ({
   const resetForm = () => {
     setEmail("");
     setRole("membro");
-    setSendMethod("direct");
-    setInviteLink(null);
     setExistingUser(null);
     setExistingMember(null);
     setPermissions({
@@ -412,19 +399,13 @@ export const InviteMemberDialog = ({
             )}
             
             {email && !existingUser && !checkingEmail && email.includes('@') && (
-              <p className="text-sm text-muted-foreground">
-                Usuário novo. Escolha como enviar o convite abaixo.
-              </p>
+              <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg mt-2">
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  <strong>Usuário novo detectado.</strong> Será enviado um email de convite automaticamente.
+                </p>
+              </div>
             )}
           </div>
-
-          {!existingUser && email && email.includes('@') && (
-            <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg">
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                <strong>Usuário novo detectado.</strong> Será enviado um email de convite automaticamente. O link também ficará disponível para compartilhamento manual.
-              </p>
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="role">Cargo *</Label>
@@ -556,30 +537,6 @@ export const InviteMemberDialog = ({
             </div>
           )}
 
-          {inviteLink && (
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <Label className="text-sm font-semibold">
-                Link de Convite Gerado
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Email enviado! Você também pode copiar este link para compartilhar manualmente. O link é válido por 7 dias.
-              </p>
-                <div className="flex gap-2">
-                  <Input value={inviteLink} readOnly className="font-mono text-xs" />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      navigator.clipboard.writeText(inviteLink);
-                      toast.success("Link copiado!");
-                    }}
-                  >
-                    Copiar
-                  </Button>
-                </div>
-            </div>
-          )}
-
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"
@@ -589,19 +546,17 @@ export const InviteMemberDialog = ({
                 onOpenChange(false);
               }}
             >
-              {inviteLink ? "Fechar" : "Cancelar"}
+              Cancelar
             </Button>
-            {!inviteLink && (
-              <Button type="submit" disabled={inviteMutation.isPending}>
-                {inviteMutation.isPending
-                  ? "Processando..."
-                  : existingMember
-                  ? "Atualizar Permissões"
-                  : existingUser
-                  ? "Adicionar à Equipe"
-                  : "Gerar Link"}
-              </Button>
-            )}
+            <Button type="submit" disabled={inviteMutation.isPending}>
+              {inviteMutation.isPending
+                ? "Processando..."
+                : existingMember
+                ? "Atualizar Permissões"
+                : existingUser
+                ? "Adicionar à Equipe"
+                : "Enviar Convite"}
+            </Button>
           </div>
         </form>
       </DialogContent>
