@@ -2,14 +2,13 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Edit2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CreateSectionDialog } from "@/components/getting-started/CreateSectionDialog";
 import { EditSectionDialog } from "@/components/getting-started/EditSectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSidebar } from "@/components/ui/sidebar";
 
 import { GettingStartedSidebar } from "@/components/getting-started/GettingStartedSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,17 +17,11 @@ import { Badge } from "@/components/ui/badge";
 export default function GettingStarted() {
   const { workspace, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
-  const { setOpen } = useSidebar();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<any>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   
   const canEdit = isAdmin || isGestor;
-
-  // Fecha o sidebar principal quando a página carregar
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
 
   const { data: sections, isLoading } = useQuery({
     queryKey: ["getting-started-sections", workspace?.id],
