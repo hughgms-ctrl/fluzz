@@ -31,6 +31,7 @@ import WorkspaceSetup from "./pages/WorkspaceSetup";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMemberPermissions from "./pages/TeamMemberPermissions";
 import WorkspaceManagement from "./pages/WorkspaceManagement";
+import WorkspaceMembers from "./pages/WorkspaceMembers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/workspace/vision" element={<Vision />} />
             <Route path="/workspace/processes" element={<Processes />} />
             <Route path="/workspace/getting-started" element={<GettingStarted />} />
+            <Route path="/workspace/members" element={<WorkspaceMembers />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
             <Route path="/sectors" element={<Sectors />} />

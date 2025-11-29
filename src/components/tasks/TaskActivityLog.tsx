@@ -22,11 +22,14 @@ export const TaskActivityLog = ({ taskId }: TaskActivityLogProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("task_activity_logs")
-        .select("*, profiles:user_id(full_name)")
+        .select("*")
         .eq("task_id", taskId)
         .order("created_at", { ascending: false })
         .limit(20);
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching task activity logs:", error);
+        throw error;
+      }
       return data;
     },
   });
@@ -61,10 +64,15 @@ export const TaskActivityLog = ({ taskId }: TaskActivityLogProps) => {
                 <p className="font-medium">
                   {actionLabels[log.action] || log.action}
                 </p>
-                <p className="text-muted-foreground text-xs">
-                  {log.old_value && `De "${log.old_value}" para "${log.new_value}"`}
-                  {!log.old_value && `Novo valor: "${log.new_value}"`}
-                </p>
+                {log.old_value && log.new_value ? (
+                  <p className="text-muted-foreground text-xs">
+                    De "{log.old_value}" para "{log.new_value}"
+                  </p>
+                ) : log.new_value ? (
+                  <p className="text-muted-foreground text-xs">
+                    Novo valor: "{log.new_value}"
+                  </p>
+                ) : null}
                 <p className="text-muted-foreground text-xs">
                   {format(new Date(log.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
