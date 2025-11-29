@@ -9,7 +9,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CreateSectionDialog } from "@/components/getting-started/CreateSectionDialog";
 import { EditSectionDialog } from "@/components/getting-started/EditSectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+
 import { GettingStartedSidebar } from "@/components/getting-started/GettingStartedSidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -100,7 +100,7 @@ export default function GettingStarted() {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <>
       <div className="min-h-screen flex w-full">
         <GettingStartedSidebar
           sections={sections}
@@ -117,7 +117,6 @@ export default function GettingStarted() {
                 <Button variant="ghost" size="icon" onClick={() => navigate("/workspace")}>
                   <ArrowLeft size={20} />
                 </Button>
-                <SidebarTrigger className="-ml-1" />
                 <div className="flex-1">
                   <h1 className="text-3xl font-bold tracking-tight">Comece Aqui</h1>
                   <p className="text-muted-foreground">
@@ -217,6 +216,6 @@ export default function GettingStarted() {
           onOpenChange={(open) => !open && setEditingSection(null)}
         />
       )}
-    </SidebarProvider>
+    </>
   );
 }
