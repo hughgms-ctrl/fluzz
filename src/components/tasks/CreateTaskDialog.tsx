@@ -128,6 +128,19 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Get position name if position is selected
+      let positionName = null;
+      if (selectedPositionId) {
+        const { data: position, error: positionError } = await supabase
+          .from("positions")
+          .select("name")
+          .eq("id", selectedPositionId)
+          .single();
+        
+        if (positionError) throw positionError;
+        positionName = position.name;
+      }
+
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
@@ -140,7 +153,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             due_date: dueDate || null,
             assigned_to: assignedTo || user!.id,
             documentation: documentation || null,
-            setor: selectedPositionId || null,
+            setor: positionName,
           },
         ])
         .select()

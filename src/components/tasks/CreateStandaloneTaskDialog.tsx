@@ -90,6 +90,19 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Get position name if position is selected
+      let positionName = null;
+      if (selectedPositionId) {
+        const { data: position, error: positionError } = await supabase
+          .from("positions")
+          .select("name")
+          .eq("id", selectedPositionId)
+          .single();
+        
+        if (positionError) throw positionError;
+        positionName = position.name;
+      }
+
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
@@ -101,6 +114,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
             due_date: dueDate || null,
             assigned_to: user!.id,
             project_id: null,
+            setor: positionName,
           },
         ])
         .select()

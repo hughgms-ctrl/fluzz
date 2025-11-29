@@ -290,6 +290,13 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
               {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
             </div>
           )}
+
+          {assignedUser && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <User size={10} />
+              <span>{assignedUser.full_name}</span>
+            </div>
+          )}
         </div>
 
         {totalSubtasks > 0 && (

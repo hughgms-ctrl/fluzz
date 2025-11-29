@@ -170,6 +170,19 @@ export const CreateUnifiedTaskDialog = ({
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      // Get position name if position is selected
+      let positionName = null;
+      if (selectedPositionId) {
+        const { data: position, error: positionError } = await supabase
+          .from("positions")
+          .select("name")
+          .eq("id", selectedPositionId)
+          .single();
+        
+        if (positionError) throw positionError;
+        positionName = position.name;
+      }
+
       const taskData: any = {
         title,
         description,
@@ -178,7 +191,7 @@ export const CreateUnifiedTaskDialog = ({
         due_date: dueDate || null,
         assigned_to: assignedTo || user?.id,
         documentation: documentation || null,
-        setor: selectedPositionId || null,
+        setor: positionName,
         project_id: null,
         routine_id: null,
       };
