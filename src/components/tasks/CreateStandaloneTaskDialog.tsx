@@ -36,7 +36,45 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
+  const [selectedPositionId, setSelectedPositionId] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+
+  const { data: positions } = useQuery({
+    queryKey: ["positions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: positionUsers } = useQuery({
+    queryKey: ["position-users", selectedPositionId],
+    queryFn: async () => {
+      if (!selectedPositionId) return [];
+      
+      const { data: userPositions, error: upError } = await supabase
+        .from("user_positions")
+        .select("user_id")
+        .eq("position_id", selectedPositionId);
+      
+      if (upError) throw upError;
+      if (!userPositions || userPositions.length === 0) return [];
+
+      const userIds = userPositions.map(up => up.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+      return profiles;
+    },
+    enabled: !!selectedPositionId,
+  });
 
   const { data: processes } = useQuery({
     queryKey: ["processes"],
@@ -99,6 +137,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     setDescription("");
     setPriority("medium");
     setDueDate("");
+    setSelectedPositionId("");
     setSelectedProcesses([]);
   };
 
@@ -164,6 +203,32 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="position">Cargo</Label>
+            <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                {positions?.map((position) => (
+                  <SelectItem key={position.id} value={position.id}>
+                    {position.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <Select value={user?.id} disabled>
+              <SelectTrigger>
+                <SelectValue placeholder="Você" />
+              </SelectTrigger>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Tarefas avulsas são sempre atribuídas a você
+            </p>
           </div>
           <div className="space-y-2">
             <Label>Processos Vinculados</Label>
