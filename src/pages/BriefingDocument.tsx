@@ -3,42 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Download } from "lucide-react";
+import { ArrowLeft, FileText } from "lucide-react";
 import BriefingView from "@/components/briefing/BriefingView";
 import DebriefingResults from "@/components/briefing/DebriefingResults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import html2pdf from "html2pdf.js";
-import { useRef } from "react";
-import { toast } from "sonner";
 
 export default function BriefingDocument() {
   const { briefingId } = useParams();
   const navigate = useNavigate();
-  const documentRef = useRef<HTMLDivElement>(null);
-
-  const handleDownloadPDF = async () => {
-    if (!documentRef.current) return;
-
-    toast.loading("Gerando PDF...");
-
-    const opt = {
-      margin: 10,
-      filename: `briefing-debriefing-${briefing?.data || 'documento'}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-    };
-
-    try {
-      await html2pdf().set(opt).from(documentRef.current).save();
-      toast.dismiss();
-      toast.success("PDF baixado com sucesso!");
-    } catch (error) {
-      toast.dismiss();
-      toast.error("Erro ao gerar PDF");
-      console.error(error);
-    }
-  };
 
   const { data: briefing, isLoading: briefingLoading } = useQuery({
     queryKey: ["briefing", briefingId],
@@ -131,28 +103,16 @@ export default function BriefingDocument() {
               </h1>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {debriefing && (
-              <Button
-                variant="default"
-                onClick={handleDownloadPDF}
-                className="gap-2"
-              >
-                <Download size={16} />
-                Baixar PDF
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/projects/${briefing.project_id}`)}
-            >
-              Ir para o Projeto
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate(`/projects/${briefing.project_id}`)}
+          >
+            Ir para o Projeto
+          </Button>
         </div>
 
         {/* Documento Consolidado */}
-        <div ref={documentRef} className="space-y-8">
+        <div className="space-y-8">
           {/* Parte 1: Briefing (Planejamento) */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Planejamento (Briefing)</h2>

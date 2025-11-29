@@ -21,7 +21,6 @@ import Vision from "./pages/workspace/Vision";
 import Processes from "./pages/workspace/Processes";
 import GettingStarted from "./pages/workspace/GettingStarted";
 import Positions from "./pages/Positions";
-import Sectors from "./pages/Sectors";
 import Inventory from "./pages/Inventory";
 import PositionDetail from "./pages/PositionDetail";
 import BriefingRepository from "./pages/BriefingRepository";
@@ -31,7 +30,6 @@ import WorkspaceSetup from "./pages/WorkspaceSetup";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMemberPermissions from "./pages/TeamMemberPermissions";
 import WorkspaceManagement from "./pages/WorkspaceManagement";
-import WorkspaceMembers from "./pages/WorkspaceMembers";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,10 +58,8 @@ const App = () => (
             <Route path="/workspace/vision" element={<Vision />} />
             <Route path="/workspace/processes" element={<Processes />} />
             <Route path="/workspace/getting-started" element={<GettingStarted />} />
-            <Route path="/workspace/members" element={<WorkspaceMembers />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
-            <Route path="/sectors" element={<Sectors />} />
             <Route path="/inventory" element={<Inventory />} />
           <Route path="/briefings" element={<BriefingRepository />} />
           <Route path="/briefing/:briefingId" element={<BriefingDocument />} />

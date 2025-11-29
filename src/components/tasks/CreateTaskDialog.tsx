@@ -3,12 +3,24 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -29,74 +41,37 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [dueDate, setDueDate] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [documentation, setDocumentation] = useState("");
-  const [selectedPositionId, setSelectedPositionId] = useState("");
+  const [setor, setSetor] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
-
-  const { data: positions } = useQuery({
-    queryKey: ["positions", workspace?.id],
-    queryFn: async () => {
-      if (!workspace) return [];
-      const { data, error } = await supabase
-        .from("positions")
-        .select("id, name")
-        .eq("workspace_id", workspace.id)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!workspace,
-  });
-
-  const { data: positionUsers } = useQuery({
-    queryKey: ["position-users", selectedPositionId],
-    queryFn: async () => {
-      if (!selectedPositionId) return [];
-
-      const { data: userPositions, error: upError } = await supabase
-        .from("user_positions")
-        .select("user_id")
-        .eq("position_id", selectedPositionId);
-
-      if (upError) throw upError;
-      if (!userPositions || userPositions.length === 0) return [];
-
-      const userIds = userPositions.map((up) => up.user_id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", userIds);
-
-      if (profilesError) throw profilesError;
-      return profiles;
-    },
-    enabled: !!selectedPositionId,
-  });
 
   const { data: workspaceMembers } = useQuery({
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-
+      
+      // First fetch workspace members
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
         .select("user_id, role")
         .eq("workspace_id", workspace.id);
-
+      
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
 
-      const userIds = members.map((m) => m.user_id);
+      // Then fetch profiles for those users
+      const userIds = members.map(m => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
-
+      
       if (profilesError) throw profilesError;
 
-      return members.map((member) => ({
+      // Combine the data
+      return members.map(member => ({
         user_id: member.user_id,
         role: member.role,
-        profiles: profiles?.find((p) => p.id === member.user_id),
+        profiles: profiles?.find(p => p.id === member.user_id)
       }));
     },
     enabled: !!workspace,
@@ -105,7 +80,10 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const { data: processes } = useQuery({
     queryKey: ["processes"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("process_documentation").select("id, title, area").order("title");
+      const { data, error } = await supabase
+        .from("process_documentation")
+        .select("id, title, area")
+        .order("title");
       if (error) throw error;
       return data;
     },
@@ -113,19 +91,6 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Get position name if position is selected
-      let positionName = null;
-      if (selectedPositionId) {
-        const { data: position, error: positionError } = await supabase
-          .from("positions")
-          .select("name")
-          .eq("id", selectedPositionId)
-          .single();
-
-        if (positionError) throw positionError;
-        positionName = position.name;
-      }
-
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
@@ -138,7 +103,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             due_date: dueDate || null,
             assigned_to: assignedTo || user!.id,
             documentation: documentation || null,
-            setor: positionName,
+            setor: setor || null,
           },
         ])
         .select()
@@ -147,12 +112,14 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
 
       // Link selected processes
       if (selectedProcesses.length > 0) {
-        const { error: processError } = await supabase.from("task_processes").insert(
-          selectedProcesses.map((processId) => ({
-            task_id: newTask.id,
-            process_id: processId,
-          })),
-        );
+        const { error: processError } = await supabase
+          .from("task_processes")
+          .insert(
+            selectedProcesses.map((processId) => ({
+              task_id: newTask.id,
+              process_id: processId,
+            }))
+          );
         if (processError) throw processError;
       }
     },
@@ -176,7 +143,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     setDueDate("");
     setAssignedTo("");
     setDocumentation("");
-    setSelectedPositionId("");
+    setSetor("");
     setSelectedProcesses([]);
   };
 
@@ -194,7 +161,9 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Nova Tarefa</DialogTitle>
-          <DialogDescription>Crie uma nova tarefa para este projeto</DialogDescription>
+          <DialogDescription>
+            Crie uma nova tarefa para este projeto
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -246,23 +215,22 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="position">Cargo</Label>
-            <Select value={selectedPositionId} onValueChange={setSelectedPositionId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um cargo" />
-              </SelectTrigger>
-              <SelectContent>
-                {positions?.map((position) => (
-                  <SelectItem key={position.id} value={position.id}>
-                    {position.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="setor">Setor</Label>
+            <Input
+              id="setor"
+              value={setor}
+              onChange={(e) => setSetor(e.target.value)}
+              placeholder="Ex: Marketing, Vendas, TI..."
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="due_date">Data de Vencimento</Label>
-            <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <Input
+              id="due_date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="assigned_to">Responsável</Label>
@@ -271,22 +239,16 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
                 <SelectValue placeholder="Selecione um responsável" />
               </SelectTrigger>
               <SelectContent>
-                {selectedPositionId && positionUsers && positionUsers.length > 0
-                  ? positionUsers.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.full_name || "Sem nome"}
-                      </SelectItem>
-                    ))
-                  : workspaceMembers?.map((member: any) => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
-                        {member.profiles?.full_name || "Sem nome"}
-                      </SelectItem>
-                    ))}
+                {workspaceMembers?.map((member: any) => (
+                  <SelectItem key={member.user_id} value={member.user_id}>
+                    {member.profiles?.full_name || "Sem nome"}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="documentation">INFORMAÇÕES GERAIS</Label>
+            <Label htmlFor="documentation">Documentação</Label>
             <Textarea
               id="documentation"
               value={documentation}

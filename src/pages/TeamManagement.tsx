@@ -1,26 +1,15 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate } from "react-router-dom";
-import { ChevronRight, UserPlus, Trash2 } from "lucide-react";
+import { ChevronRight, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { InviteMemberDialog } from "@/components/team/InviteMemberDialog";
-import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface WorkspaceMemberWithProfile {
   id: string;
@@ -40,9 +29,6 @@ export default function TeamManagement() {
   const { workspace, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
-  const queryClient = useQueryClient();
 
   const { data: members, isLoading: membersLoading } = useQuery({
     queryKey: ["team-members", workspace?.id],
@@ -83,27 +69,6 @@ export default function TeamManagement() {
     },
     enabled: !!workspace?.id,
   });
-
-  const handleDeleteMember = async () => {
-    if (!memberToDelete) return;
-    
-    try {
-      const { error } = await supabase
-        .from("workspace_members")
-        .delete()
-        .eq("id", memberToDelete);
-
-      if (error) throw error;
-
-      toast.success("Membro removido com sucesso!");
-      queryClient.invalidateQueries({ queryKey: ["team-members", workspace?.id] });
-      setDeleteDialogOpen(false);
-      setMemberToDelete(null);
-    } catch (error) {
-      console.error("Error deleting member:", error);
-      toast.error("Erro ao remover membro");
-    }
-  };
 
   const { data: pendingInvites, isLoading: invitesLoading } = useQuery({
     queryKey: ["pending-invites", workspace?.id],
@@ -243,13 +208,14 @@ export default function TeamManagement() {
               });
 
               return (
-                <Card key={member.id}>
+                <Card 
+                  key={member.id} 
+                  className="cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => navigate(`/team/${member.user_id}`)}
+                >
                   <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                      <div 
-                        className="flex items-center gap-4 flex-1 cursor-pointer"
-                        onClick={() => navigate(`/team/${member.user_id}`)}
-                      >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
                         <Avatar>
                           <AvatarFallback>{initials}</AvatarFallback>
                         </Avatar>
@@ -272,22 +238,7 @@ export default function TeamManagement() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {isAdmin && member.role !== "admin" && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMemberToDelete(member.id);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        )}
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                   </CardContent>
                 </Card>
@@ -301,23 +252,6 @@ export default function TeamManagement() {
         open={isInviteDialogOpen}
         onOpenChange={setIsInviteDialogOpen}
       />
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover este membro do workspace?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteMember} className="bg-destructive text-destructive-foreground">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppLayout>
   );
 }

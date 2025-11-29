@@ -3,12 +3,24 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -17,7 +29,10 @@ interface CreateStandaloneTaskForMemberProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const CreateStandaloneTaskForMember = ({ open, onOpenChange }: CreateStandaloneTaskForMemberProps) => {
+export const CreateStandaloneTaskForMember = ({ 
+  open, 
+  onOpenChange 
+}: CreateStandaloneTaskForMemberProps) => {
   const { user } = useAuth();
   const { workspace, canCreateTasks } = useWorkspace();
   const queryClient = useQueryClient();
@@ -37,15 +52,13 @@ export const CreateStandaloneTaskForMember = ({ open, onOpenChange }: CreateStan
       if (!workspace) return [];
       const { data, error } = await supabase
         .from("workspace_members")
-        .select(
-          `
+        .select(`
           *,
           profiles:user_id (
             id,
             full_name
           )
-        `,
-        )
+        `)
         .eq("workspace_id", workspace.id);
       if (error) throw error;
       return data;
@@ -96,12 +109,14 @@ export const CreateStandaloneTaskForMember = ({ open, onOpenChange }: CreateStan
 
       // Link selected processes
       if (selectedProcesses.length > 0) {
-        const { error: processError } = await supabase.from("task_processes").insert(
-          selectedProcesses.map((processId) => ({
-            task_id: newTask.id,
-            process_id: processId,
-          })),
-        );
+        const { error: processError } = await supabase
+          .from("task_processes")
+          .insert(
+            selectedProcesses.map((processId) => ({
+              task_id: newTask.id,
+              process_id: processId,
+            }))
+          );
         if (processError) throw processError;
       }
     },
@@ -151,7 +166,9 @@ export const CreateStandaloneTaskForMember = ({ open, onOpenChange }: CreateStan
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Tarefa Avulsa para Colaborador</DialogTitle>
-          <DialogDescription>Crie uma tarefa avulsa e atribua a um membro do workspace</DialogDescription>
+          <DialogDescription>
+            Crie uma tarefa avulsa e atribua a um membro do workspace
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -228,10 +245,15 @@ export const CreateStandaloneTaskForMember = ({ open, onOpenChange }: CreateStan
           </div>
           <div className="space-y-2">
             <Label htmlFor="due_date">Data de Vencimento</Label>
-            <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <Input
+              id="due_date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="documentation">INFORMAÇÕES GERAIS</Label>
+            <Label htmlFor="documentation">Documentação</Label>
             <Textarea
               id="documentation"
               value={documentation}

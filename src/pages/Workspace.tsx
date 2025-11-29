@@ -127,18 +127,6 @@ export default function Workspace() {
               </CardHeader>
             </Card>
           </Link>
-
-          <Link to="/workspace/members">
-            <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
-              <CardHeader className="p-4">
-                <Users className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Membros e Cargos</CardTitle>
-                <CardDescription className="text-sm">
-                  Visualize todos os membros e seus cargos no workspace
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
         </div>
       </div>
     </AppLayout>

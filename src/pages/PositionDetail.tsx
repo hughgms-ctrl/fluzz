@@ -126,12 +126,7 @@ export default function PositionDetail() {
             ) : routines && routines.length > 0 ? (
               <div className="space-y-4">
                 {routines.map((routine) => (
-                  <RoutineCard 
-                    key={routine.id} 
-                    routine={routine} 
-                    positionId={id!} 
-                    canEdit={isAdmin || isGestor}
-                  />
+                  <RoutineCard key={routine.id} routine={routine} positionId={id!} />
                 ))}
               </div>
             ) : (

@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,12 +35,9 @@ interface ProjectCardProps {
 export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }: ProjectCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { isAdmin, isGestor } = useWorkspace();
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState(project.name);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
-  const canManageProjects = isAdmin || isGestor;
 
   const updateNameMutation = useMutation({
     mutationFn: async (newName: string) => {
@@ -204,13 +200,12 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
                 {project.name}
               </h3>
             )}
-            {canManageProjects && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-50 bg-popover">
                 <DropdownMenuItem 
                   onClick={(e) => {
@@ -252,7 +247,6 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            )}
           </div>
           
           <div className="flex items-center justify-between gap-2">

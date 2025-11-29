@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { isAdmin, isGestor, canCreateTasks } = useWorkspace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -305,12 +303,10 @@ export default function ProjectDetail() {
               <Users size={16} />
               Membros
             </Button>
-            {canCreateTasks && (
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                <Plus size={20} />
-                Nova Tarefa
-              </Button>
-            )}
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+              <Plus size={20} />
+              Nova Tarefa
+            </Button>
           </div>
         </div>
 
