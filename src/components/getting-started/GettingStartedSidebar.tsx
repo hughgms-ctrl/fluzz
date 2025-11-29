@@ -1,16 +1,6 @@
 import { BookOpen, Plus } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Section {
   id: string;
@@ -33,44 +23,40 @@ export function GettingStartedSidebar({
   canEdit,
   onCreateSection,
 }: GettingStartedSidebarProps) {
-  const { open } = useSidebar();
-
   return (
-    <Sidebar className={open ? "w-64" : "w-14"} collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <div className="flex items-center justify-between px-2 mb-2">
-            {open && <SidebarGroupLabel>Seções</SidebarGroupLabel>}
-            {canEdit && open && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onCreateSection}
-                className="h-6 w-6 p-0"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+    <aside className="w-64 border-r bg-card flex-shrink-0 hidden md:flex flex-col">
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="font-semibold text-lg">Seções</h2>
+        {canEdit && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onCreateSection}
+            className="h-8 w-8 p-0"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {sections.map((section) => (
-                <SidebarMenuItem key={section.id}>
-                  <SidebarMenuButton
-                    onClick={() => onSelectSection(section.id)}
-                    isActive={selectedSectionId === section.id}
-                    className="hover:bg-muted/50"
-                  >
-                    <BookOpen className="h-4 w-4" />
-                    {open && <span className="truncate">{section.title}</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+      <ScrollArea className="flex-1">
+        <div className="p-2 space-y-1">
+          {sections.map((section) => (
+            <button
+              key={section.id}
+              onClick={() => onSelectSection(section.id)}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                selectedSectionId === section.id
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted/50"
+              }`}
+            >
+              <BookOpen className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate text-left">{section.title}</span>
+            </button>
+          ))}
+        </div>
+      </ScrollArea>
+    </aside>
   );
 }
