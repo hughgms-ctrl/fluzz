@@ -26,11 +26,11 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
   const { workspace } = useWorkspace();
 
   const { data: workspaceMembers, isLoading } = useQuery({
-    queryKey: ["workspace-members", workspace?.id, positionId],
+    queryKey: ["workspace-members-drawer", workspace?.id, positionId],
     queryFn: async () => {
-      if (!workspace) return [];
+      if (!workspace?.id) return [];
       
-      // Fetch workspace members
+      // Fetch workspace members with profiles
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
         .select("user_id, role")
@@ -76,7 +76,7 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
           profile: profiles?.find(p => p.id === member.user_id)
         }));
     },
-    enabled: !!workspace,
+    enabled: !!workspace?.id,
   });
 
   const selectedMember = workspaceMembers?.find(m => m.user_id === value);

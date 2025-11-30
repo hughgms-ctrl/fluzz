@@ -24,12 +24,12 @@ export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerPro
   const { workspace } = useWorkspace();
 
   const { data: sectors, isLoading } = useQuery({
-    queryKey: ["sectors", workspace?.id],
+    queryKey: ["positions", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
       
       const { data, error } = await supabase
-        .from("sectors")
+        .from("positions")
         .select("*")
         .eq("workspace_id", workspace.id)
         .order("name");
@@ -49,9 +49,9 @@ export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerPro
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[80vh]">
         <SheetHeader>
-          <SheetTitle>Selecionar Setor</SheetTitle>
+          <SheetTitle>Selecionar Cargo</SheetTitle>
           <SheetDescription>
-            Escolha o setor responsável por esta tarefa
+            Escolha o cargo responsável por esta tarefa
           </SheetDescription>
         </SheetHeader>
         
@@ -94,9 +94,9 @@ export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerPro
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Briefcase size={48} className="mx-auto mb-4 opacity-20" />
-                <p>Nenhum setor cadastrado</p>
+                <p>Nenhum cargo cadastrado</p>
                 <p className="text-sm mt-2">
-                  Cadastre setores em Cargos e Setores
+                  Cadastre cargos em Cargos e Setores
                 </p>
               </div>
             )}
