@@ -48,11 +48,16 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { SectorDrawer } from "@/components/tasks/SectorDrawer";
+import { MemberDrawer } from "@/components/tasks/MemberDrawer";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
 
 export default function TaskDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
   const [newSubtask, setNewSubtask] = useState("");
   const [isAddingProcess, setIsAddingProcess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -65,7 +70,8 @@ export default function TaskDetail() {
     status: "",
     setor: "",
     due_date: "",
-    documentation: ""
+    documentation: "",
+    assigned_to: ""
   });
 
   const { data: task, isLoading } = useQuery({
@@ -102,7 +108,8 @@ export default function TaskDetail() {
         status: task.status || "todo",
         setor: task.setor || "",
         due_date: task.due_date || "",
-        documentation: task.documentation || ""
+        documentation: task.documentation || "",
+        assigned_to: task.assigned_to || ""
       });
     }
   }, [task]);
@@ -117,6 +124,51 @@ export default function TaskDetail() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: sectors } = useQuery({
+    queryKey: ["sectors", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("sectors")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+    },
+    enabled: !!workspace,
   });
 
   const addSubtaskMutation = useMutation({
@@ -320,7 +372,8 @@ export default function TaskDetail() {
                     status: task.status || "todo",
                     setor: task.setor || "",
                     due_date: task.due_date || "",
-                    documentation: task.documentation || ""
+                    documentation: task.documentation || "",
+                    assigned_to: task.assigned_to || ""
                   });
                 }}>
                   Cancelar
@@ -366,15 +419,44 @@ export default function TaskDetail() {
                 <div>
                   <Label>Setor</Label>
                   {isEditing ? (
-                    <Input
-                      value={editedTask.setor}
-                      onChange={(e) => setEditedTask({ ...editedTask, setor: e.target.value })}
-                      placeholder="Ex: Vendas, Marketing..."
-                      className="mt-2"
-                    />
+                    <SectorDrawer 
+                      value={editedTask.setor} 
+                      onValueChange={(value) => setEditedTask({ ...editedTask, setor: value, assigned_to: "" })}
+                    >
+                      <Button variant="outline" className="w-full justify-between mt-2" type="button">
+                        <span className="flex items-center gap-2">
+                          <Briefcase size={16} />
+                          {editedTask.setor && sectors?.find(s => s.id === editedTask.setor)?.name || "Selecione um setor"}
+                        </span>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </SectorDrawer>
                   ) : (
                     <p className="text-muted-foreground mt-2">
-                      {task.setor || "Sem setor definido"}
+                      {task.setor && sectors?.find(s => s.id === task.setor)?.name || "Sem setor definido"}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Responsável</Label>
+                  {isEditing ? (
+                    <MemberDrawer 
+                      value={editedTask.assigned_to} 
+                      onValueChange={(value) => setEditedTask({ ...editedTask, assigned_to: value })}
+                      positionId={editedTask.setor || undefined}
+                    >
+                      <Button variant="outline" className="w-full justify-between mt-2" type="button">
+                        <span className="flex items-center gap-2">
+                          <UserCircle size={16} />
+                          {editedTask.assigned_to && workspaceMembers?.find(m => m.user_id === editedTask.assigned_to)?.profiles?.full_name || "Selecione um responsável"}
+                        </span>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </MemberDrawer>
+                  ) : (
+                    <p className="text-muted-foreground mt-2">
+                      {task.assigned_to && workspaceMembers?.find(m => m.user_id === task.assigned_to)?.profiles?.full_name || "Sem responsável"}
                     </p>
                   )}
                 </div>

@@ -954,6 +954,44 @@ export type Database = {
           },
         ]
       }
+      sectors: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sectors_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subtasks: {
         Row: {
           completed: boolean | null
@@ -982,6 +1020,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_activity_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          new_value: string | null
+          old_value: string | null
+          task_id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          task_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_activity_logs_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
@@ -1116,6 +1192,7 @@ export type Database = {
           can_view_analytics: boolean
           can_view_briefings: boolean
           can_view_culture: boolean
+          can_view_inventory: boolean | null
           can_view_positions: boolean
           can_view_processes: boolean
           can_view_projects: boolean
@@ -1131,6 +1208,7 @@ export type Database = {
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
+          can_view_inventory?: boolean | null
           can_view_positions?: boolean
           can_view_processes?: boolean
           can_view_projects?: boolean
@@ -1146,6 +1224,7 @@ export type Database = {
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
+          can_view_inventory?: boolean | null
           can_view_positions?: boolean
           can_view_processes?: boolean
           can_view_projects?: boolean
