@@ -21,6 +21,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { SectorDrawer } from "../tasks/SectorDrawer";
+import { MemberDrawer } from "../tasks/MemberDrawer";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
 
 interface CreateRoutineTaskDialogProps {
   routineId: string;
@@ -37,12 +41,14 @@ export function CreateRoutineTaskDialog({
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
-  const [setor, setSetor] = useState("");
+  const [sectorId, setSectorId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [documentation, setDocumentation] = useState("");
   const [projectId, setProjectId] = useState<string>("none");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   const { data: projects } = useQuery({
     queryKey: ["projects"],
@@ -73,6 +79,51 @@ export function CreateRoutineTaskDialog({
     enabled: open,
   });
 
+  const { data: sectors } = useQuery({
+    queryKey: ["sectors", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("sectors")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace && open,
+  });
+
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+    },
+    enabled: !!workspace && open,
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -86,7 +137,7 @@ export function CreateRoutineTaskDialog({
           description,
           priority,
           status,
-          setor: setor || null,
+          setor: sectorId || null,
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
         })
@@ -125,7 +176,8 @@ export function CreateRoutineTaskDialog({
     setDescription("");
     setPriority("medium");
     setStatus("todo");
-    setSetor("");
+    setSectorId("");
+    setAssignedTo("");
     setDocumentation("");
     setProjectId("none");
     setSelectedProcesses([]);
@@ -195,13 +247,36 @@ export function CreateRoutineTaskDialog({
           </div>
 
           <div>
-            <Label htmlFor="setor">Setor</Label>
-            <Input
-              id="setor"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              placeholder="Ex: Marketing, Vendas, TI..."
-            />
+            <Label>Setor</Label>
+            <SectorDrawer value={sectorId} onValueChange={(value) => {
+              setSectorId(value);
+              setAssignedTo("");
+            }}>
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <Briefcase size={16} />
+                  {sectorId && sectors?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </SectorDrawer>
+          </div>
+
+          <div>
+            <Label>Responsável (Opcional)</Label>
+            <MemberDrawer 
+              value={assignedTo} 
+              onValueChange={setAssignedTo}
+              positionId={sectorId || undefined}
+            >
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <UserCircle size={16} />
+                  {assignedTo && workspaceMembers?.find(m => m.user_id === assignedTo)?.profiles?.full_name || "Selecione um responsável"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </MemberDrawer>
           </div>
 
           <div>

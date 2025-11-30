@@ -23,6 +23,10 @@ import {
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
+import { SectorDrawer } from "./SectorDrawer";
+import { MemberDrawer } from "./MemberDrawer";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
 
 interface CreateStandaloneTaskDialogProps {
   open: boolean;
@@ -31,11 +35,14 @@ interface CreateStandaloneTaskDialogProps {
 
 export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandaloneTaskDialogProps) => {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
+  const [sectorId, setSectorId] = useState("");
+  const [assignedTo, setAssignedTo] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
 
   const { data: processes } = useQuery({
@@ -50,6 +57,51 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     },
   });
 
+  const { data: sectors } = useQuery({
+    queryKey: ["sectors", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("sectors")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+    },
+    enabled: !!workspace,
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data: newTask, error: taskError } = await supabase
@@ -61,7 +113,8 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
             priority,
             status: "todo",
             due_date: dueDate || null,
-            assigned_to: user!.id,
+            assigned_to: assignedTo || user!.id,
+            setor: sectorId || null,
             project_id: null,
           },
         ])
@@ -99,6 +152,8 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     setDescription("");
     setPriority("medium");
     setDueDate("");
+    setSectorId("");
+    setAssignedTo("");
     setSelectedProcesses([]);
   };
 
@@ -164,6 +219,37 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Setor</Label>
+            <SectorDrawer value={sectorId} onValueChange={(value) => {
+              setSectorId(value);
+              setAssignedTo("");
+            }}>
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <Briefcase size={16} />
+                  {sectorId && sectors?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </SectorDrawer>
+          </div>
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <MemberDrawer 
+              value={assignedTo} 
+              onValueChange={setAssignedTo}
+              positionId={sectorId || undefined}
+            >
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <UserCircle size={16} />
+                  {assignedTo && workspaceMembers?.find(m => m.user_id === assignedTo)?.profiles?.full_name || "Selecione um responsável"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </MemberDrawer>
           </div>
           <div className="space-y-2">
             <Label>Processos Vinculados</Label>

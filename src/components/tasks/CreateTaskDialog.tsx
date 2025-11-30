@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectorDrawer } from "./SectorDrawer";
+import { MemberDrawer } from "./MemberDrawer";
+import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -41,7 +44,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [dueDate, setDueDate] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [documentation, setDocumentation] = useState("");
-  const [setor, setSetor] = useState("");
+  const [sectorId, setSectorId] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
 
   const { data: workspaceMembers } = useQuery({
@@ -89,6 +92,21 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     },
   });
 
+  const { data: sectors } = useQuery({
+    queryKey: ["sectors", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("sectors")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       const { data: newTask, error: taskError } = await supabase
@@ -103,7 +121,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             due_date: dueDate || null,
             assigned_to: assignedTo || user!.id,
             documentation: documentation || null,
-            setor: setor || null,
+            setor: sectorId || null,
           },
         ])
         .select()
@@ -143,7 +161,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     setDueDate("");
     setAssignedTo("");
     setDocumentation("");
-    setSetor("");
+    setSectorId("");
     setSelectedProcesses([]);
   };
 
@@ -215,13 +233,20 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="setor">Setor</Label>
-            <Input
-              id="setor"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              placeholder="Ex: Marketing, Vendas, TI..."
-            />
+            <Label>Setor</Label>
+            <SectorDrawer value={sectorId} onValueChange={(value) => {
+              setSectorId(value);
+              // Clear assignedTo when sector changes to refilter members
+              setAssignedTo("");
+            }}>
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <Briefcase size={16} />
+                  {sectorId && sectors?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </SectorDrawer>
           </div>
           <div className="space-y-2">
             <Label htmlFor="due_date">Data de Vencimento</Label>
@@ -233,19 +258,20 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="assigned_to">Responsável</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaceMembers?.map((member: any) => (
-                  <SelectItem key={member.user_id} value={member.user_id}>
-                    {member.profiles?.full_name || "Sem nome"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Responsável</Label>
+            <MemberDrawer 
+              value={assignedTo} 
+              onValueChange={setAssignedTo}
+              positionId={sectorId || undefined}
+            >
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <UserCircle size={16} />
+                  {assignedTo && workspaceMembers?.find(m => m.user_id === assignedTo)?.profiles?.full_name || "Selecione um responsável"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </MemberDrawer>
           </div>
           <div className="space-y-2">
             <Label htmlFor="documentation">Documentação</Label>

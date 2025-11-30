@@ -1,0 +1,171 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { User } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+interface MemberDrawerProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  children: React.ReactNode;
+  positionId?: string; // Optional: filter by position
+}
+
+export const MemberDrawer = ({ value, onValueChange, children, positionId }: MemberDrawerProps) => {
+  const { workspace } = useWorkspace();
+
+  const { data: workspaceMembers, isLoading } = useQuery({
+    queryKey: ["workspace-members", workspace?.id, positionId],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      // Fetch workspace members
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      let userIds = members.map(m => m.user_id);
+
+      // If positionId is provided, filter by users assigned to that position
+      if (positionId) {
+        const { data: userPositions, error: positionsError } = await supabase
+          .from("user_positions")
+          .select("user_id")
+          .eq("position_id", positionId);
+        
+        if (positionsError) throw positionsError;
+        
+        if (userPositions && userPositions.length > 0) {
+          const positionUserIds = userPositions.map(up => up.user_id);
+          userIds = userIds.filter(uid => positionUserIds.includes(uid));
+        } else {
+          // No users assigned to this position
+          return [];
+        }
+      }
+
+      // Fetch profiles for filtered users
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      // Combine data
+      return members
+        .filter(m => userIds.includes(m.user_id))
+        .map(member => ({
+          user_id: member.user_id,
+          role: member.role,
+          profile: profiles?.find(p => p.id === member.user_id)
+        }));
+    },
+    enabled: !!workspace,
+  });
+
+  const selectedMember = workspaceMembers?.find(m => m.user_id === value);
+
+  const getRoleLabel = (role: string) => {
+    const labels: Record<string, string> = {
+      admin: "Administrador",
+      gestor: "Gestor",
+      membro: "Membro"
+    };
+    return labels[role] || role;
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        {children}
+      </SheetTrigger>
+      <SheetContent side="bottom" className="h-[80vh]">
+        <SheetHeader>
+          <SheetTitle>Selecionar Responsável</SheetTitle>
+          <SheetDescription>
+            Escolha o membro da equipe responsável por esta tarefa
+          </SheetDescription>
+        </SheetHeader>
+        
+        <ScrollArea className="h-[calc(80vh-120px)] mt-4">
+          <div className="space-y-2">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              </div>
+            ) : workspaceMembers && workspaceMembers.length > 0 ? (
+              workspaceMembers.map((member) => (
+                <Button
+                  key={member.user_id}
+                  variant={value === member.user_id ? "default" : "outline"}
+                  className="w-full justify-between h-auto py-4"
+                  onClick={() => {
+                    onValueChange(member.user_id);
+                    // Close drawer after selection
+                    document.querySelector('[data-radix-dialog-close]')?.dispatchEvent(
+                      new Event('click', { bubbles: true })
+                    );
+                  }}
+                >
+                  <div className="flex items-center gap-3 flex-1 text-left">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback>
+                        {getInitials(member.profile?.full_name || "")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold">
+                        {member.profile?.full_name || "Sem nome"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {getRoleLabel(member.role)}
+                      </div>
+                    </div>
+                  </div>
+                  {value === member.user_id && (
+                    <Badge variant="secondary" className="ml-2">Selecionado</Badge>
+                  )}
+                </Button>
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <User size={48} className="mx-auto mb-4 opacity-20" />
+                <p>
+                  {positionId 
+                    ? "Nenhum membro atribuído a este setor"
+                    : "Nenhum membro na equipe"
+                  }
+                </p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
+};
