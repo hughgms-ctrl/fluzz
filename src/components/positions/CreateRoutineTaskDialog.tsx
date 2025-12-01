@@ -51,32 +51,36 @@ export function CreateRoutineTaskDialog({
   const { workspace } = useWorkspace();
 
   const { data: projects } = useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
         .select("id, name")
+        .eq("workspace_id", workspace.id)
         .eq("archived", false)
         .order("name");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   const { data: processes } = useQuery({
-    queryKey: ["processes"],
+    queryKey: ["processes", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("process_documentation")
         .select("id, title, area")
+        .eq("workspace_id", workspace.id)
         .order("title");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   const { data: sectors } = useQuery({
