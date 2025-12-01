@@ -144,6 +144,7 @@ export function CreateRoutineTaskDialog({
           setor: sectorId || null,
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
+          assigned_to: assignedTo || null,
         })
         .select()
         .single();
