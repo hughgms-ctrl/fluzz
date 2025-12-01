@@ -12,19 +12,23 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Positions() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const { isAdmin, isGestor } = useWorkspace();
+  const { isAdmin, isGestor, workspace } = useWorkspace();
 
   const { data: positions, isLoading } = useQuery({
-    queryKey: ["positions"],
+    queryKey: ["positions", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
+      
       const { data, error } = await supabase
         .from("positions")
         .select("*")
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   return (

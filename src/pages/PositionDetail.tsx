@@ -17,38 +17,44 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 export default function PositionDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isAdmin, isGestor } = useWorkspace();
+  const { isAdmin, isGestor, workspace } = useWorkspace();
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [assignUserDialogOpen, setAssignUserDialogOpen] = useState(false);
 
   const { data: position, isLoading: positionLoading } = useQuery({
-    queryKey: ["position", id],
+    queryKey: ["position", id, workspace?.id],
     queryFn: async () => {
+      if (!workspace) return null;
+      
       const { data, error } = await supabase
         .from("positions")
         .select("*")
         .eq("id", id)
+        .eq("workspace_id", workspace.id)
         .single();
       
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && !!workspace,
   });
 
   const { data: routines, isLoading: routinesLoading } = useQuery({
-    queryKey: ["routines", id],
+    queryKey: ["routines", id, workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
+      
       const { data, error } = await supabase
         .from("routines")
         .select("*")
         .eq("position_id", id)
+        .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!id,
+    enabled: !!id && !!workspace,
   });
 
   if (positionLoading) {
