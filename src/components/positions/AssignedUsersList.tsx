@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface AssignedUsersListProps {
   positionId: string;
@@ -13,10 +14,23 @@ interface AssignedUsersListProps {
 
 export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   const { data: assignedUsers, isLoading } = useQuery({
-    queryKey: ["assigned-users", positionId],
+    queryKey: ["assigned-users", positionId, workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
+      
+      // First get the position to verify workspace_id
+      const { data: position } = await supabase
+        .from("positions")
+        .select("workspace_id")
+        .eq("id", positionId)
+        .eq("workspace_id", workspace.id)
+        .single();
+      
+      if (!position) return [];
+      
       const { data, error } = await supabase
         .from("user_positions")
         .select("id, user_id, assigned_at, profiles!inner(id, full_name)")
@@ -26,6 +40,7 @@ export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace && !!positionId,
   });
 
   const handleUnassign = async (assignmentId: string) => {
