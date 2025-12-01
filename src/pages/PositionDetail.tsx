@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreateRoutineDialog } from "@/components/positions/CreateRoutineDialog";
 import { RoutineCard } from "@/components/positions/RoutineCard";
 import { AssignUserDialog } from "@/components/positions/AssignUserDialog";
@@ -56,6 +56,34 @@ export default function PositionDetail() {
     },
     enabled: !!id && !!workspace,
   });
+
+  useEffect(() => {
+    if (!id || !workspace || !routines || routines.length === 0) return;
+
+    const syncRoutineTasksForAssignedUsers = async () => {
+      try {
+        const { data: assignments, error } = await supabase
+          .from("user_positions")
+          .select("user_id")
+          .eq("position_id", id);
+
+        if (error) throw error;
+        if (!assignments || assignments.length === 0) return;
+
+        await Promise.all(
+          assignments.map((assignment) =>
+            supabase.functions.invoke("generate-recurring-tasks", {
+              body: { userId: assignment.user_id, positionId: id },
+            })
+          )
+        );
+      } catch (error) {
+        console.error("Erro ao sincronizar tarefas de rotina para o cargo:", error);
+      }
+    };
+
+    syncRoutineTasksForAssignedUsers();
+  }, [id, workspace?.id, routines?.length]);
 
   if (positionLoading) {
     return (
