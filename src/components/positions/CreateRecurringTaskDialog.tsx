@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface CreateRecurringTaskDialogProps {
   positionId: string;
@@ -24,36 +25,41 @@ export function CreateRecurringTaskDialog({ positionId, open, onOpenChange }: Cr
   const [processId, setProcessId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   // Fetch projects for optional linking
   const { data: projects } = useQuery({
-    queryKey: ["projects-for-routine"],
+    queryKey: ["projects-for-routine", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
         .select("id, name")
+        .eq("workspace_id", workspace.id)
         .eq("archived", false)
         .order("name");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   // Fetch processes for optional linking
   const { data: processes } = useQuery({
-    queryKey: ["processes-for-routine"],
+    queryKey: ["processes-for-routine", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("process_documentation")
         .select("id, title, area")
+        .eq("workspace_id", workspace.id)
         .order("title");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {

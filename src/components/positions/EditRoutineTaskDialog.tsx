@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface EditRoutineTaskDialogProps {
   task: {
@@ -57,34 +58,39 @@ export function EditRoutineTaskDialog({
   );
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
 
   const { data: projects } = useQuery({
-    queryKey: ["projects"],
+    queryKey: ["projects", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
         .select("id, name")
+        .eq("workspace_id", workspace.id)
         .eq("archived", false)
         .order("name");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   const { data: processes } = useQuery({
-    queryKey: ["processes"],
+    queryKey: ["processes", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("process_documentation")
         .select("id, title, area")
+        .eq("workspace_id", workspace.id)
         .order("title");
       
       if (error) throw error;
       return data;
     },
-    enabled: open,
+    enabled: open && !!workspace,
   });
 
   useEffect(() => {
