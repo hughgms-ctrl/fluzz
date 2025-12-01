@@ -6,41 +6,50 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface AssignedUsersListProps {
   positionId: string;
 }
 
+interface AssignmentWithProfile {
+  id: string;
+  user_id: string;
+  assigned_at: string;
+  profile: {
+    id: string;
+    full_name: string | null;
+  } | null;
+}
+
 export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
   const queryClient = useQueryClient();
-  const { workspace } = useWorkspace();
 
-  const { data: assignedUsers, isLoading } = useQuery({
-    queryKey: ["assigned-users", positionId, workspace?.id],
+  const { data: assignedUsers, isLoading } = useQuery<AssignmentWithProfile[]>({
+    queryKey: ["assigned-users", positionId],
     queryFn: async () => {
-      if (!workspace) return [];
-      
-      // First get the position to verify workspace_id
-      const { data: position } = await supabase
-        .from("positions")
-        .select("workspace_id")
-        .eq("id", positionId)
-        .eq("workspace_id", workspace.id)
-        .single();
-      
-      if (!position) return [];
-      
-      const { data, error } = await supabase
+      const { data: assignments, error } = await supabase
         .from("user_positions")
-        .select("id, user_id, assigned_at, profiles!inner(id, full_name)")
+        .select("id, user_id, assigned_at")
         .eq("position_id", positionId)
         .order("assigned_at", { ascending: false });
-      
+
       if (error) throw error;
-      return data;
+      if (!assignments || assignments.length === 0) return [];
+
+      const userIds = assignments.map((assignment) => assignment.user_id);
+
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+
+      if (profilesError) throw profilesError;
+
+      return assignments.map((assignment) => ({
+        ...assignment,
+        profile: profiles?.find((profile) => profile.id === assignment.user_id) || null,
+      }));
     },
-    enabled: !!workspace && !!positionId,
   });
 
   const handleUnassign = async (assignmentId: string) => {
@@ -89,17 +98,19 @@ export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
 
   return (
     <div className="space-y-4">
-      {assignedUsers.map((assignment: any) => (
+      {assignedUsers.map((assignment) => (
         <Card key={assignment.id}>
           <CardContent className="flex items-center justify-between p-4">
             <div className="flex items-center gap-3">
               <Avatar>
                 <AvatarFallback>
-                  {assignment.profiles?.full_name?.charAt(0) || "U"}
+                  {assignment.profile?.full_name?.charAt(0) || "U"}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium">{assignment.profiles?.full_name || "Usuário sem nome"}</p>
+                <p className="font-medium">
+                  {assignment.profile?.full_name || "Usuário sem nome"}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   Atribuído em {new Date(assignment.assigned_at).toLocaleDateString()}
                 </p>
