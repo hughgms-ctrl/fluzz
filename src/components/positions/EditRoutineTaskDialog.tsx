@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { MemberDrawer } from "../tasks/MemberDrawer";
+import { UserCircle, ChevronRight } from "lucide-react";
 
 interface EditRoutineTaskDialogProps {
   task: {
@@ -55,6 +57,9 @@ export function EditRoutineTaskDialog({
   const [projectId, setProjectId] = useState<string>(task.project_id || "none");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>(
     task.process_id ? [task.process_id] : []
+  );
+  const [assignedTo, setAssignedTo] = useState(
+    (task as any).assigned_to || ""
   );
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -103,6 +108,7 @@ export function EditRoutineTaskDialog({
       setDocumentation(task.documentation || "");
       setProjectId(task.project_id || "none");
       setSelectedProcesses(task.process_id ? [task.process_id] : []);
+      setAssignedTo((task as any).assigned_to || "");
     }
   }, [open, task]);
 
@@ -122,6 +128,7 @@ export function EditRoutineTaskDialog({
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
           process_id: selectedProcesses.length > 0 ? selectedProcesses[0] : null,
+          assigned_to: assignedTo || null,
         })
         .eq("id", task.id);
 
@@ -209,6 +216,22 @@ export function EditRoutineTaskDialog({
               onChange={(e) => setSetor(e.target.value)}
               placeholder="Ex: Marketing, Vendas, TI..."
             />
+          </div>
+
+          <div>
+            <Label>Responsável (Opcional)</Label>
+            <MemberDrawer 
+              value={assignedTo} 
+              onValueChange={setAssignedTo}
+            >
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <UserCircle size={16} />
+                  {assignedTo ? "Responsável selecionado" : "Selecione um responsável"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </MemberDrawer>
           </div>
 
           <div>

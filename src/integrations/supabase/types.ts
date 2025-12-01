@@ -829,6 +829,7 @@ export type Database = {
       }
       routine_tasks: {
         Row: {
+          assigned_to: string | null
           created_at: string
           description: string | null
           documentation: string | null
@@ -844,6 +845,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           created_at?: string
           description?: string | null
           documentation?: string | null
@@ -859,6 +861,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           created_at?: string
           description?: string | null
           documentation?: string | null

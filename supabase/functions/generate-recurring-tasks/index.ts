@@ -24,6 +24,7 @@ interface RoutineTask {
   documentation: string | null;
   project_id: string | null;
   process_id: string | null;
+  assigned_to: string | null;
 }
 
 Deno.serve(async (req) => {
@@ -88,69 +89,85 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Check if tasks already exist for this routine for the user today
-      const { data: existingTasks } = await supabase
-        .from('tasks')
-        .select('id')
-        .eq('routine_id', routine.id)
-        .eq('assigned_to', userId)
-        .gte('due_date', today.toISOString().split('T')[0])
-        .eq('status', 'todo');
-
-      if (existingTasks && existingTasks.length > 0) {
-        console.log('Tasks already exist for routine:', routine.name);
-        continue;
-      }
-
       const dueDate = calculateDueDate(routine.recurrence_type, routine.start_date);
 
-      // Create tasks for each routine task
-      const tasksToCreate = (routineTasks as RoutineTask[]).map((rt) => ({
-        title: rt.title,
-        description: rt.description,
-        priority: rt.priority,
-        status: rt.status || 'todo',
-        setor: rt.setor,
-        documentation: rt.documentation,
-        project_id: rt.project_id,
-        assigned_to: userId,
-        due_date: dueDate,
-        routine_id: routine.id,
-      }));
-
-      const { data: newTasks, error: insertError } = await supabase
-        .from('tasks')
-        .insert(tasksToCreate)
-        .select();
-
-      if (insertError) throw insertError;
-
-      // Link processes to newly created tasks
-      if (newTasks && newTasks.length > 0) {
-        const taskProcessLinks = [];
-        for (let i = 0; i < newTasks.length; i++) {
-          const routineTask = routineTasks[i] as RoutineTask;
-          if (routineTask.process_id) {
-            taskProcessLinks.push({
-              task_id: newTasks[i].id,
-              process_id: routineTask.process_id,
-            });
-          }
+      // Process each routine task
+      for (const routineTask of routineTasks as RoutineTask[]) {
+        // Determine who should receive this task
+        let targetUserIds: string[] = [];
+        
+        if (routineTask.assigned_to) {
+          // Task has a specific assignee - only create for that user
+          targetUserIds = [routineTask.assigned_to];
+        } else {
+          // No specific assignee - create for all users in this position
+          const { data: positionUsers, error: positionUsersError } = await supabase
+            .from('user_positions')
+            .select('user_id')
+            .eq('position_id', positionId);
+          
+          if (positionUsersError) throw positionUsersError;
+          targetUserIds = positionUsers?.map(pu => pu.user_id) || [];
         }
 
-        if (taskProcessLinks.length > 0) {
-          const { error: processLinkError } = await supabase
-            .from('task_processes')
-            .insert(taskProcessLinks);
+        // Create tasks for each target user
+        for (const targetUserId of targetUserIds) {
+          // Check if task already exists for this user today
+          const { data: existingTasks } = await supabase
+            .from('tasks')
+            .select('id')
+            .eq('routine_id', routine.id)
+            .eq('assigned_to', targetUserId)
+            .gte('due_date', today.toISOString().split('T')[0])
+            .eq('status', 'todo')
+            .eq('title', routineTask.title);
 
-          if (processLinkError) {
-            console.error('Error linking processes:', processLinkError);
+          if (existingTasks && existingTasks.length > 0) {
+            console.log(`Task "${routineTask.title}" already exists for user ${targetUserId}`);
+            continue;
           }
+
+          // Create the task
+          const taskToCreate = {
+            title: routineTask.title,
+            description: routineTask.description,
+            priority: routineTask.priority,
+            status: routineTask.status || 'todo',
+            setor: routineTask.setor,
+            documentation: routineTask.documentation,
+            project_id: routineTask.project_id,
+            assigned_to: targetUserId,
+            due_date: dueDate,
+            routine_id: routine.id,
+          };
+
+          const { data: newTask, error: insertError } = await supabase
+            .from('tasks')
+            .insert(taskToCreate)
+            .select()
+            .single();
+
+          if (insertError) throw insertError;
+
+          // Link processes if needed
+          if (newTask && routineTask.process_id) {
+            const { error: processLinkError } = await supabase
+              .from('task_processes')
+              .insert({
+                task_id: newTask.id,
+                process_id: routineTask.process_id,
+              });
+
+            if (processLinkError) {
+              console.error('Error linking process:', processLinkError);
+            }
+          }
+
+          totalTasksCreated++;
+          console.log(`Created task "${routineTask.title}" for user ${targetUserId}`);
         }
       }
 
-      totalTasksCreated += tasksToCreate.length;
-      console.log('Created', tasksToCreate.length, 'tasks for routine:', routine.name);
     }
 
     console.log('Successfully generated', totalTasksCreated, 'tasks total');
