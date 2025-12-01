@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
@@ -16,6 +17,7 @@ import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 
 export default function MyTasks() {
   const { user } = useAuth();
+  const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -60,15 +62,18 @@ export default function MyTasks() {
   });
 
   const { data: projects } = useQuery({
-    queryKey: ["my-projects-filter"],
+    queryKey: ["my-projects-filter", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
         .select("id, name")
+        .eq("workspace_id", workspace.id)
         .order("name");
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   const deleteTaskMutation = useMutation({

@@ -115,15 +115,18 @@ export default function TaskDetail() {
   }, [task]);
 
   const { data: processes } = useQuery({
-    queryKey: ["processes"],
+    queryKey: ["processes", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return [];
       const { data, error } = await supabase
         .from("process_documentation")
         .select("id, title, area")
+        .eq("workspace_id", workspace.id)
         .order("title");
       if (error) throw error;
       return data;
     },
+    enabled: !!workspace,
   });
 
   const { data: sectors } = useQuery({
