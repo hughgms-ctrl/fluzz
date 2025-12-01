@@ -112,7 +112,7 @@ export default function MyTasks() {
 
   // Helper function to determine task type
   const getTaskType = (task: any): "project" | "standalone" | "routine" => {
-    if (task.recurring_task_id) return "routine";
+    if (task.routine_id || task.recurring_task_id) return "routine";
     if (!task.project_id) return "standalone";
     return "project";
   };
