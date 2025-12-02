@@ -92,12 +92,12 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     },
   });
 
-  const { data: sectors } = useQuery({
-    queryKey: ["sectors", workspace?.id],
+  const { data: positions } = useQuery({
+    queryKey: ["positions", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
       const { data, error } = await supabase
-        .from("sectors")
+        .from("positions")
         .select("*")
         .eq("workspace_id", workspace.id)
         .order("name");
@@ -242,7 +242,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <Briefcase size={16} />
-                  {sectorId && sectors?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
+                  {sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
                 </span>
                 <ChevronRight size={16} />
               </Button>

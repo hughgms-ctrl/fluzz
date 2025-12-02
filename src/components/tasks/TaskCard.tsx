@@ -1,12 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "lucide-react";
+import { Calendar, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ interface TaskCardProps {
 export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }: TaskCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { workspace } = useWorkspace();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [taskTitle, setTaskTitle] = useState(task.title);
 
@@ -40,6 +42,21 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: sectorData } = useQuery({
+    queryKey: ["position", task.setor],
+    queryFn: async () => {
+      if (!task.setor) return null;
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .eq("id", task.setor)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!task.setor,
   });
 
   const totalSubtasks = subtasks?.length || 0;
@@ -273,6 +290,13 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
             <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
               <Calendar size={10} />
               {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+            </div>
+          )}
+
+          {sectorData && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Briefcase size={10} />
+              {sectorData.name}
             </div>
           )}
         </div>
