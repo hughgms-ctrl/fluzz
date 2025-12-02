@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,9 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 
 interface WorkspaceMemberWithProfile {
   id: string;
@@ -37,6 +56,7 @@ interface UserPermissions {
 export default function TeamMemberPermissions() {
   const { userId } = useParams<{ userId: string }>();
   const { workspace, isAdmin } = useWorkspace();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -111,6 +131,56 @@ export default function TeamMemberPermissions() {
     },
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: async (newRole: "admin" | "gestor" | "membro") => {
+      const { error } = await supabase
+        .from("workspace_members")
+        .update({ role: newRole })
+        .eq("user_id", userId!)
+        .eq("workspace_id", workspace!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-member"] });
+      queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      toast.success("Função atualizada com sucesso");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar função");
+    },
+  });
+
+  const deleteMemberMutation = useMutation({
+    mutationFn: async () => {
+      // Delete user permissions first
+      await supabase
+        .from("user_permissions")
+        .delete()
+        .eq("user_id", userId!)
+        .eq("workspace_id", workspace!.id);
+
+      // Then delete workspace member
+      const { error } = await supabase
+        .from("workspace_members")
+        .delete()
+        .eq("user_id", userId!)
+        .eq("workspace_id", workspace!.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      toast.success("Membro removido com sucesso");
+      navigate("/team");
+    },
+    onError: () => {
+      toast.error("Erro ao remover membro");
+    },
+  });
+
+  const isCurrentUser = user?.id === userId;
+
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -178,12 +248,52 @@ export default function TeamMemberPermissions() {
                 <CardTitle className="text-2xl">
                   {member.profiles?.full_name || "Usuário"}
                 </CardTitle>
-                <CardDescription className="mt-2">
-                  <Badge variant={member.role === "admin" ? "default" : "secondary"}>
-                    {member.role}
-                  </Badge>
+                <CardDescription className="mt-2 flex items-center gap-2">
+                  <Select 
+                    value={member.role} 
+                    onValueChange={(value) => updateRoleMutation.mutate(value as "admin" | "gestor" | "membro")}
+                    disabled={isCurrentUser}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="gestor">Gestor</SelectItem>
+                      <SelectItem value="membro">Membro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {isCurrentUser && (
+                    <span className="text-xs text-muted-foreground">(você)</span>
+                  )}
                 </CardDescription>
               </div>
+              {!isCurrentUser && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remover membro</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja remover {member.profiles?.full_name || "este membro"} do workspace? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={() => deleteMemberMutation.mutate()}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Remover
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           </CardHeader>
           <CardContent>
