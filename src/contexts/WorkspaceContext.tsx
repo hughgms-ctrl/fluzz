@@ -231,7 +231,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = workspaceMember?.role === 'admin';
   const isGestor = workspaceMember?.role === 'gestor';
   const isMembro = workspaceMember?.role === 'membro';
-  const canManageMembers = isAdmin;
+  const canManageMembers = isAdmin || isGestor;
   const canCreateTasks = isAdmin || isGestor;
 
   return (
