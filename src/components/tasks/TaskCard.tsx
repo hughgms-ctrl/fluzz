@@ -130,6 +130,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["project"] });
       toast.success("Status atualizado!");
     },
