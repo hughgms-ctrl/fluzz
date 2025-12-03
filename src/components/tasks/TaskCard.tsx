@@ -204,13 +204,15 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
 
         <div className="flex flex-wrap gap-1.5 items-center">
           <DropdownMenu>
-            <DropdownMenuTrigger 
-              asChild 
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-              }}
-            >
-              <button className="focus:outline-none">
+            <DropdownMenuTrigger asChild>
+              <button 
+                type="button"
+                className="focus:outline-none"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
                 <Badge 
                   variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
                   className="cursor-pointer text-xs px-2 py-0 h-5 hover:opacity-80"
@@ -222,37 +224,30 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
             <DropdownMenuContent 
               align="start" 
               className="z-50 bg-popover"
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                updatePriorityMutation.mutate("high");
-              }}>
+              <DropdownMenuItem onSelect={() => updatePriorityMutation.mutate("high")}>
                 Alta
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                updatePriorityMutation.mutate("medium");
-              }}>
+              <DropdownMenuItem onSelect={() => updatePriorityMutation.mutate("medium")}>
                 Média
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                updatePriorityMutation.mutate("low");
-              }}>
+              <DropdownMenuItem onSelect={() => updatePriorityMutation.mutate("low")}>
                 Baixa
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <DropdownMenu>
-            <DropdownMenuTrigger 
-              asChild
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-              }}
-            >
-              <button className="focus:outline-none">
+            <DropdownMenuTrigger asChild>
+              <button 
+                type="button"
+                className="focus:outline-none"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+              >
                 <Badge className={`cursor-pointer text-xs px-2 py-0 h-5 hover:opacity-80 ${statusColors[task.status as keyof typeof statusColors]}`}>
                   {statusLabels[task.status as keyof typeof statusLabels]}
                 </Badge>
@@ -261,27 +256,33 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
             <DropdownMenuContent 
               align="start" 
               className="z-50 bg-popover"
-              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                if (onStatusChange) onStatusChange("todo");
-                else updateStatusMutation.mutate("todo");
-              }}>
+              <DropdownMenuItem 
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (onStatusChange) onStatusChange("todo");
+                  else updateStatusMutation.mutate("todo");
+                }}
+              >
                 A Fazer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                if (onStatusChange) onStatusChange("in_progress");
-                else updateStatusMutation.mutate("in_progress");
-              }}>
+              <DropdownMenuItem 
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (onStatusChange) onStatusChange("in_progress");
+                  else updateStatusMutation.mutate("in_progress");
+                }}
+              >
                 Fazendo
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => {
-                e.stopPropagation();
-                if (onStatusChange) onStatusChange("completed");
-                else updateStatusMutation.mutate("completed");
-              }}>
+              <DropdownMenuItem 
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (onStatusChange) onStatusChange("completed");
+                  else updateStatusMutation.mutate("completed");
+                }}
+              >
                 Concluído
               </DropdownMenuItem>
             </DropdownMenuContent>
