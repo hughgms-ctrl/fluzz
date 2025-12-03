@@ -262,6 +262,23 @@ export default function TaskDetail() {
     }
   });
 
+  const quickStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: newStatus })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      toast.success("Status atualizado!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar status");
+    }
+  });
+
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -491,27 +508,26 @@ export default function TaskDetail() {
 
                 <div>
                   <Label>Status</Label>
-                  {isEditing ? (
-                    <Select
-                      value={editedTask.status}
-                      onValueChange={(value) => setEditedTask({ ...editedTask, status: value })}
-                    >
-                      <SelectTrigger className="mt-2">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="todo">A Fazer</SelectItem>
-                        <SelectItem value="in_progress">Em Progresso</SelectItem>
-                        <SelectItem value="completed">Concluído</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="mt-2">
-                      <Badge variant="outline">
-                        {statusLabels[task.status as keyof typeof statusLabels]}
-                      </Badge>
-                    </div>
-                  )}
+                  <Select
+                    value={isEditing ? editedTask.status : task.status}
+                    onValueChange={(value) => {
+                      if (isEditing) {
+                        setEditedTask({ ...editedTask, status: value });
+                      } else {
+                        quickStatusMutation.mutate(value);
+                      }
+                    }}
+                    disabled={quickStatusMutation.isPending}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">A Fazer</SelectItem>
+                      <SelectItem value="in_progress">Em Progresso</SelectItem>
+                      <SelectItem value="completed">Concluído</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
