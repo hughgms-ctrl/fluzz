@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SectorDrawer } from "./SectorDrawer";
 
 interface CreateUnifiedTaskDialogProps {
   open: boolean;
@@ -125,6 +126,21 @@ export const CreateUnifiedTaskDialog = ({
         .select("id, title, area")
         .eq("workspace_id", workspace.id)
         .order("title");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: positions } = useQuery({
+    queryKey: ["positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .eq("workspace_id", workspace.id)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -350,13 +366,18 @@ export const CreateUnifiedTaskDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="setor">Setor</Label>
-            <Input
-              id="setor"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              placeholder="Ex: Marketing, Vendas, TI..."
-            />
+            <Label>Setor</Label>
+            <SectorDrawer value={setor} onValueChange={setSetor}>
+              <Button variant="outline" className="w-full justify-start">
+                {setor ? (
+                  <span className="truncate">
+                    {positions?.find(p => p.id === setor)?.name || "Setor selecionado"}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">Selecione um setor</span>
+                )}
+              </Button>
+            </SectorDrawer>
           </div>
 
           <div className="space-y-2">
