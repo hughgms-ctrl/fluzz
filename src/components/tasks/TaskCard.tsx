@@ -259,8 +259,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
               <DropdownMenuItem 
-                onSelect={(e) => {
-                  e.preventDefault();
+                onSelect={() => {
                   if (onStatusChange) onStatusChange("todo");
                   else updateStatusMutation.mutate("todo");
                 }}
@@ -268,8 +267,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
                 A Fazer
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onSelect={(e) => {
-                  e.preventDefault();
+                onSelect={() => {
                   if (onStatusChange) onStatusChange("in_progress");
                   else updateStatusMutation.mutate("in_progress");
                 }}
@@ -277,8 +275,7 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
                 Fazendo
               </DropdownMenuItem>
               <DropdownMenuItem 
-                onSelect={(e) => {
-                  e.preventDefault();
+                onSelect={() => {
                   if (onStatusChange) onStatusChange("completed");
                   else updateStatusMutation.mutate("completed");
                 }}
