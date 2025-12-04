@@ -21,11 +21,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 interface TaskCardProps {
   task: any;
   onDelete: () => void;
-  onStatusChange?: (status: string) => void;
   isDraggable?: boolean;
 }
 
-export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }: TaskCardProps) => {
+export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { workspace } = useWorkspace();
@@ -120,33 +119,26 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async (status: string) => {
-      console.log("TaskCard - Atualizando status:", { taskId: task.id, status });
-      const { data, error } = await supabase
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      const { error } = await supabase
         .from("tasks")
-        .update({ status })
-        .eq("id", task.id)
-        .select();
+        .update({ status: newStatus })
+        .eq("id", task.id);
+      
       if (error) {
-        console.error("TaskCard - Erro Supabase:", error);
-        throw error;
+        toast.error("Erro ao atualizar status");
+        return;
       }
-      console.log("TaskCard - Resposta Supabase:", data);
-      return data;
-    },
-    onSuccess: (data) => {
-      console.log("TaskCard - onSuccess:", data);
+      
+      toast.success("Status atualizado!");
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["project"] });
-      toast.success("Status atualizado!");
-    },
-    onError: (error) => {
-      console.error("TaskCard - onError:", error);
+    } catch (err) {
       toast.error("Erro ao atualizar status");
-    },
-  });
+    }
+  };
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
 
@@ -270,28 +262,13 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
               className="z-50 bg-popover"
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
-              <DropdownMenuItem 
-                onSelect={() => {
-                  if (onStatusChange) onStatusChange("todo");
-                  else updateStatusMutation.mutate("todo");
-                }}
-              >
+              <DropdownMenuItem onSelect={() => handleStatusChange("todo")}>
                 A Fazer
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onSelect={() => {
-                  if (onStatusChange) onStatusChange("in_progress");
-                  else updateStatusMutation.mutate("in_progress");
-                }}
-              >
+              <DropdownMenuItem onSelect={() => handleStatusChange("in_progress")}>
                 Fazendo
               </DropdownMenuItem>
-              <DropdownMenuItem 
-                onSelect={() => {
-                  if (onStatusChange) onStatusChange("completed");
-                  else updateStatusMutation.mutate("completed");
-                }}
-              >
+              <DropdownMenuItem onSelect={() => handleStatusChange("completed")}>
                 Concluído
               </DropdownMenuItem>
             </DropdownMenuContent>

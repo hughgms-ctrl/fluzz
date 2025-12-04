@@ -43,7 +43,6 @@ export const TaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: TaskBoardProp
                     key={task.id}
                     task={task}
                     onDelete={() => onDeleteTask(task.id)}
-                    onStatusChange={(newStatus) => onUpdateStatus(task.id, newStatus)}
                   />
                 ))
               )}

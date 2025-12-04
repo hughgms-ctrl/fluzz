@@ -70,7 +70,6 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
       <TaskCard
         task={task}
         onDelete={onDelete}
-        onStatusChange={onStatusChange}
         isDraggable
       />
     </div>
@@ -175,7 +174,6 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
             <TaskCard
               task={activeTask}
               onDelete={() => {}}
-              onStatusChange={() => {}}
               isDraggable
             />
           </div>
