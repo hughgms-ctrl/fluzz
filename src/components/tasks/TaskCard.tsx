@@ -122,17 +122,29 @@ export const TaskCard = ({ task, onDelete, onStatusChange, isDraggable = false }
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: string) => {
-      const { error } = await supabase
+      console.log("TaskCard - Atualizando status:", { taskId: task.id, status });
+      const { data, error } = await supabase
         .from("tasks")
         .update({ status })
-        .eq("id", task.id);
-      if (error) throw error;
+        .eq("id", task.id)
+        .select();
+      if (error) {
+        console.error("TaskCard - Erro Supabase:", error);
+        throw error;
+      }
+      console.log("TaskCard - Resposta Supabase:", data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("TaskCard - onSuccess:", data);
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["project"] });
       toast.success("Status atualizado!");
+    },
+    onError: (error) => {
+      console.error("TaskCard - onError:", error);
+      toast.error("Erro ao atualizar status");
     },
   });
 
