@@ -213,9 +213,6 @@ export default function MyTasks() {
             <TaskCard
               task={task}
               onDelete={() => deleteTaskMutation.mutate(task.id)}
-              onStatusChange={(status) =>
-                updateTaskStatusMutation.mutate({ taskId: task.id, status })
-              }
             />
           </div>
         ))}
