@@ -127,37 +127,28 @@ export default function ProjectDetail() {
 
   const updateTaskStatusMutation = useMutation({
     mutationFn: async ({ taskId, status }: { taskId: string; status: string }) => {
-      const { error } = await supabase
+      console.log("ProjectDetail - Atualizando status:", { taskId, status });
+      const { data, error } = await supabase
         .from("tasks")
         .update({ status })
-        .eq("id", taskId);
-      if (error) throw error;
-    },
-    onMutate: async ({ taskId, status }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["tasks", id] });
-      
-      // Snapshot previous value
-      const previousTasks = queryClient.getQueryData(["tasks", id]);
-      
-      // Optimistically update
-      queryClient.setQueryData(["tasks", id], (old: any) => {
-        return old?.map((task: any) => 
-          task.id === taskId ? { ...task, status } : task
-        );
-      });
-      
-      return { previousTasks };
-    },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      if (context?.previousTasks) {
-        queryClient.setQueryData(["tasks", id], context.previousTasks);
+        .eq("id", taskId)
+        .select();
+      if (error) {
+        console.error("ProjectDetail - Erro Supabase:", error);
+        throw error;
       }
+      console.log("ProjectDetail - Resposta Supabase:", data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("ProjectDetail - onSuccess:", data);
       queryClient.invalidateQueries({ queryKey: ["tasks", id] });
       queryClient.invalidateQueries({ queryKey: ["project", id] });
+      toast.success("Status atualizado!");
+    },
+    onError: (error) => {
+      console.error("ProjectDetail - onError:", error);
+      toast.error("Erro ao atualizar status");
     },
   });
 
