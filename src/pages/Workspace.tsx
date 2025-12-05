@@ -107,9 +107,7 @@ export default function Workspace() {
               <CardHeader className="p-4">
                 <Briefcase className="h-8 w-8 text-primary mb-2" />
                 <CardTitle className="text-lg">Setores</CardTitle>
-                <CardDescription className="text-sm">
-                  Gerencie cargos, setores e tarefas recorrentes
-                </CardDescription>
+                <CardDescription className="text-sm">Gerencie setores e tarefas recorrentes</CardDescription>
               </CardHeader>
             </Card>
           </Link>
