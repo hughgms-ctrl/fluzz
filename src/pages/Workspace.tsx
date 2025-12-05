@@ -3,12 +3,12 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { BookOpen, Target, Heart, FileText, TrendingUp, Briefcase, Clipboard, Users, GraduationCap } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-
 export default function Workspace() {
-  const { isAdmin, isGestor } = useWorkspace();
-  
-  return (
-    <AppLayout>
+  const {
+    isAdmin,
+    isGestor
+  } = useWorkspace();
+  return <AppLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Workspace</h1>
@@ -66,8 +66,7 @@ export default function Workspace() {
             </Card>
           </Link>
 
-          {(isAdmin || isGestor) && (
-            <Link to="/team">
+          {(isAdmin || isGestor) && <Link to="/team">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
                   <Users className="h-8 w-8 text-primary mb-2" />
@@ -77,8 +76,7 @@ export default function Workspace() {
                   </CardDescription>
                 </CardHeader>
               </Card>
-            </Link>
-          )}
+            </Link>}
 
           <Link to="/">
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
@@ -108,7 +106,7 @@ export default function Workspace() {
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
               <CardHeader className="p-4">
                 <Briefcase className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Cargos e Rotinas</CardTitle>
+                <CardTitle className="text-lg">Setores</CardTitle>
                 <CardDescription className="text-sm">
                   Gerencie cargos, setores e tarefas recorrentes
                 </CardDescription>
@@ -129,6 +127,5 @@ export default function Workspace() {
           </Link>
         </div>
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 }
