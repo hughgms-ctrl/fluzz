@@ -9,30 +9,32 @@ import { CreatePositionDialog } from "@/components/positions/CreatePositionDialo
 import { PositionCard } from "@/components/positions/PositionCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-
 export default function Positions() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const { isAdmin, isGestor, workspace } = useWorkspace();
-
-  const { data: positions, isLoading } = useQuery({
+  const {
+    isAdmin,
+    isGestor,
+    workspace
+  } = useWorkspace();
+  const {
+    data: positions,
+    isLoading
+  } = useQuery({
     queryKey: ["positions", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      
-      const { data, error } = await supabase
-        .from("positions")
-        .select("*")
-        .eq("workspace_id", workspace.id)
-        .order("created_at", { ascending: false });
-      
+      const {
+        data,
+        error
+      } = await supabase.from("positions").select("*").eq("workspace_id", workspace.id).order("created_at", {
+        ascending: false
+      });
       if (error) throw error;
       return data;
     },
-    enabled: !!workspace,
+    enabled: !!workspace
   });
-
-  return (
-    <AppLayout>
+  return <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -41,18 +43,14 @@ export default function Positions() {
               Gerencie setores e suas rotinas
             </p>
           </div>
-          {(isAdmin || isGestor) && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
+          {(isAdmin || isGestor) && <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Novo Cargo
-            </Button>
-          )}
+              Novo Setor
+            </Button>}
         </div>
 
-        {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <Card key={i}>
+        {isLoading ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => <Card key={i}>
                 <CardHeader>
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full mt-2" />
@@ -60,31 +58,19 @@ export default function Positions() {
                 <CardContent>
                   <Skeleton className="h-20 w-full" />
                 </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : positions && positions.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {positions.map((position) => (
-              <PositionCard key={position.id} position={position} />
-            ))}
-          </div>
-        ) : (
-          <Card>
+              </Card>)}
+          </div> : positions && positions.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {positions.map(position => <PositionCard key={position.id} position={position} />)}
+          </div> : <Card>
             <CardHeader>
               <CardTitle>Nenhum cargo cadastrado</CardTitle>
               <CardDescription>
                 Comece criando seu primeiro cargo ou setor
               </CardDescription>
             </CardHeader>
-          </Card>
-        )}
+          </Card>}
 
-        <CreatePositionDialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-        />
+        <CreatePositionDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 }
