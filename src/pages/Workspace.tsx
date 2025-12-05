@@ -116,7 +116,7 @@ export default function Workspace() {
             <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
               <CardHeader className="p-4">
                 <Clipboard className="h-8 w-8 text-primary mb-2" />
-                <CardTitle className="text-lg">Briefings & Debriefings</CardTitle>
+                <CardTitle className="text-lg">Painel de Briefings    </CardTitle>
                 <CardDescription className="text-sm">
                   Repositório centralizado de todos os briefings e debriefings
                 </CardDescription>
