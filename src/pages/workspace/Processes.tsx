@@ -152,7 +152,7 @@ export default function Processes() {
 
         <div className="flex gap-2 flex-wrap">
           <Button variant={selectedArea === null ? "default" : "outline"} onClick={() => setSelectedArea(null)}>
-            Todas as Setores 
+            Todas os Setores 
           </Button>
           {areas.map(areaName => <Button key={areaName} variant={selectedArea === areaName ? "default" : "outline"} onClick={() => setSelectedArea(areaName)}>
               {areaName}
