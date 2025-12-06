@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, FileText, Trash2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
@@ -39,6 +40,21 @@ export default function Processes() {
         .order("created_at", {
           ascending: false,
         });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: positions } = useQuery({
+    queryKey: ["positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .eq("workspace_id", workspace.id)
+        .order("name");
       if (error) throw error;
       return data;
     },
@@ -211,13 +227,18 @@ export default function Processes() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="area">Setor *</Label>
-              <Input
-                id="area"
-                value={area}
-                onChange={(e) => setArea(e.target.value)}
-                placeholder="Ex: Vendas, RH, TI, Financeiro..."
-                required
-              />
+              <Select value={area} onValueChange={setArea}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions?.map((position) => (
+                    <SelectItem key={position.id} value={position.name}>
+                      {position.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
