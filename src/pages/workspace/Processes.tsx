@@ -10,24 +10,38 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, ChevronRight, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+
+interface Process {
+  id: string;
+  area: string;
+  title: string;
+  content: string;
+  created_at: string;
+  created_by: string | null;
+  workspace_id: string | null;
+}
+
 export default function Processes() {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const processRefs = useRef<{
-    [key: string]: HTMLDivElement | null;
-  }>({});
+  const processRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [area, setArea] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [highlightedProcess, setHighlightedProcess] = useState<string | null>(null);
+
   const { data: processes, isLoading } = useQuery({
     queryKey: ["process-documentation", workspace?.id],
     queryFn: async () => {
@@ -37,21 +51,19 @@ export default function Processes() {
         .select("*")
         .eq("workspace_id", workspace.id)
         .order("area")
-        .order("created_at", {
-          ascending: false,
-        });
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Process[];
     },
     enabled: !!workspace,
   });
 
-  const { data: positions } = useQuery({
-    queryKey: ["positions", workspace?.id],
+  const { data: sectors } = useQuery({
+    queryKey: ["sectors", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
       const { data, error } = await supabase
-        .from("positions")
+        .from("sectors")
         .select("id, name")
         .eq("workspace_id", workspace.id)
         .order("name");
@@ -60,11 +72,10 @@ export default function Processes() {
     },
     enabled: !!workspace,
   });
+
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!workspace) {
-        throw new Error("Workspace não encontrado");
-      }
+      if (!workspace) throw new Error("Workspace não encontrado");
       const { error } = await supabase.from("process_documentation").insert([
         {
           area,
@@ -77,9 +88,7 @@ export default function Processes() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["process-documentation"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["process-documentation"] });
       toast.success("Processo criado com sucesso!");
       resetForm();
       setIsCreateOpen(false);
@@ -88,23 +97,25 @@ export default function Processes() {
       toast.error("Erro ao criar processo");
     },
   });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("process_documentation").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["process-documentation"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["process-documentation"] });
       toast.success("Processo excluído!");
+      setSelectedProcess(null);
     },
   });
+
   const resetForm = () => {
     setArea("");
     setTitle("");
     setContent("");
   };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!area.trim() || !title.trim() || !content.trim()) {
@@ -113,30 +124,34 @@ export default function Processes() {
     }
     createMutation.mutate();
   };
+
   const areas = Array.from(new Set(processes?.map((p) => p.area) || []));
   const filteredProcesses = selectedArea ? processes?.filter((p) => p.area === selectedArea) : processes;
+
+  // Group processes by area for the sidebar menu
+  const processesGroupedByArea = filteredProcesses?.reduce((acc, process) => {
+    if (!acc[process.area]) acc[process.area] = [];
+    acc[process.area].push(process);
+    return acc;
+  }, {} as Record<string, Process[]>);
 
   // Handle processId from URL
   useEffect(() => {
     const processId = searchParams.get("processId");
-    if (processId && processes && processRefs.current[processId]) {
-      // Scroll to the process
-      processRefs.current[processId]?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      // Highlight the process
-      setHighlightedProcess(processId);
-
-      // Remove highlight after 3 seconds
-      const timer = setTimeout(() => {
-        setHighlightedProcess(null);
-        setSearchParams({});
-      }, 3000);
-      return () => clearTimeout(timer);
+    if (processId && processes) {
+      const process = processes.find(p => p.id === processId);
+      if (process) {
+        setSelectedProcess(process);
+        setHighlightedProcess(processId);
+        const timer = setTimeout(() => {
+          setHighlightedProcess(null);
+          setSearchParams({});
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
     }
   }, [processes, searchParams, setSearchParams]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -146,13 +161,16 @@ export default function Processes() {
       </AppLayout>
     );
   }
+
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6 px-2 md:px-0">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Processos</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">Documentação de processos organizados por área</p>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Documentação de processos organizados por setor
+            </p>
           </div>
           <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
             <Plus size={20} />
@@ -161,13 +179,13 @@ export default function Processes() {
         </div>
 
         <div className="flex gap-2 flex-wrap overflow-x-auto pb-2">
-          <Button 
-            variant={selectedArea === null ? "default" : "outline"} 
+          <Button
+            variant={selectedArea === null ? "default" : "outline"}
             onClick={() => setSelectedArea(null)}
             size="sm"
             className="shrink-0"
           >
-            Todas os Setores
+            Todos os Setores
           </Button>
           {areas.map((areaName) => (
             <Button
@@ -183,30 +201,25 @@ export default function Processes() {
         </div>
 
         {filteredProcesses && filteredProcesses.length > 0 ? (
-          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+          <div className="grid gap-3 md:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {filteredProcesses.map((process) => (
               <Card
                 key={process.id}
                 ref={(el) => (processRefs.current[process.id] = el)}
-                className={`transition-all duration-300 ${highlightedProcess === process.id ? "ring-2 ring-primary shadow-lg scale-[1.02]" : ""}`}
+                onClick={() => setSelectedProcess(process)}
+                className={`cursor-pointer transition-all duration-200 hover:shadow-md hover:border-primary/50 ${
+                  highlightedProcess === process.id ? "ring-2 ring-primary shadow-lg" : ""
+                }`}
               >
-                <CardHeader className="p-4 md:p-6">
+                <CardHeader className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs text-muted-foreground mb-1">{process.area}</div>
-                      <CardTitle className="text-base md:text-lg truncate">{process.title}</CardTitle>
+                      <div className="text-xs text-muted-foreground mb-1 font-medium">{process.area}</div>
+                      <CardTitle className="text-sm md:text-base line-clamp-2">{process.title}</CardTitle>
                     </div>
-                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => deleteMutation.mutate(process.id)}>
-                      <Trash2 size={16} className="text-destructive" />
-                    </Button>
+                    <ChevronRight size={18} className="text-muted-foreground shrink-0 mt-1" />
                   </div>
                 </CardHeader>
-                <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
-                  <div 
-                    className="text-sm text-muted-foreground prose prose-sm max-w-none break-words"
-                    dangerouslySetInnerHTML={{ __html: process.content }}
-                  />
-                </CardContent>
               </Card>
             ))}
           </div>
@@ -216,7 +229,7 @@ export default function Processes() {
               <div className="text-center">
                 <FileText className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                 <p className="text-sm md:text-base text-muted-foreground mb-4">
-                  {selectedArea ? `Nenhum processo nesta área ainda` : `Nenhum processo cadastrado ainda`}
+                  {selectedArea ? `Nenhum processo neste setor ainda` : `Nenhum processo cadastrado ainda`}
                 </p>
                 <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
                   <Plus size={20} />
@@ -228,6 +241,77 @@ export default function Processes() {
         )}
       </div>
 
+      {/* Process Detail Sheet */}
+      <Sheet open={!!selectedProcess} onOpenChange={(open) => !open && setSelectedProcess(null)}>
+        <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
+          <SheetHeader className="p-4 md:p-6 border-b shrink-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-primary font-medium mb-1">{selectedProcess?.area}</div>
+                <SheetTitle className="text-lg md:text-xl text-left">{selectedProcess?.title}</SheetTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedProcess) deleteMutation.mutate(selectedProcess.id);
+                }}
+              >
+                <Trash2 size={18} />
+              </Button>
+            </div>
+          </SheetHeader>
+
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar menu with topics */}
+            <aside className="hidden md:flex w-48 lg:w-56 border-r flex-col shrink-0">
+              <div className="p-3 border-b">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Processos
+                </h3>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-2">
+                  {Object.entries(processesGroupedByArea || {}).map(([areaName, areaProcesses]) => (
+                    <div key={areaName} className="mb-3">
+                      <div className="text-xs font-semibold text-muted-foreground px-2 py-1 uppercase">
+                        {areaName}
+                      </div>
+                      {areaProcesses.map((process) => (
+                        <button
+                          key={process.id}
+                          onClick={() => setSelectedProcess(process)}
+                          className={`w-full text-left text-sm px-2 py-1.5 rounded-md transition-colors ${
+                            selectedProcess?.id === process.id
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="line-clamp-1">{process.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </aside>
+
+            {/* Main content */}
+            <ScrollArea className="flex-1">
+              <div className="p-4 md:p-6">
+                <div
+                  className="prose prose-sm md:prose max-w-none dark:prose-invert break-words"
+                  dangerouslySetInnerHTML={{ __html: selectedProcess?.content || "" }}
+                />
+              </div>
+            </ScrollArea>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Create Process Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
@@ -242,11 +326,17 @@ export default function Processes() {
                   <SelectValue placeholder="Selecione um setor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {positions?.map((position) => (
-                    <SelectItem key={position.id} value={position.name}>
-                      {position.name}
-                    </SelectItem>
-                  ))}
+                  {sectors && sectors.length > 0 ? (
+                    sectors.map((sector) => (
+                      <SelectItem key={sector.id} value={sector.name}>
+                        {sector.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                      Nenhum setor cadastrado
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
