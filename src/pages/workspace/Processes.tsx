@@ -148,20 +148,25 @@ export default function Processes() {
   }
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 md:space-y-6 px-2 md:px-0">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Processos</h1>
-            <p className="text-muted-foreground mt-1">Documentação de processos organizados por área</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Processos</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">Documentação de processos organizados por área</p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
             <Plus size={20} />
             Novo Processo
           </Button>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
-          <Button variant={selectedArea === null ? "default" : "outline"} onClick={() => setSelectedArea(null)}>
+        <div className="flex gap-2 flex-wrap overflow-x-auto pb-2">
+          <Button 
+            variant={selectedArea === null ? "default" : "outline"} 
+            onClick={() => setSelectedArea(null)}
+            size="sm"
+            className="shrink-0"
+          >
             Todas os Setores
           </Button>
           {areas.map((areaName) => (
@@ -169,6 +174,8 @@ export default function Processes() {
               key={areaName}
               variant={selectedArea === areaName ? "default" : "outline"}
               onClick={() => setSelectedArea(areaName)}
+              size="sm"
+              className="shrink-0"
             >
               {areaName}
             </Button>
@@ -176,27 +183,27 @@ export default function Processes() {
         </div>
 
         {filteredProcesses && filteredProcesses.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
             {filteredProcesses.map((process) => (
               <Card
                 key={process.id}
                 ref={(el) => (processRefs.current[process.id] = el)}
                 className={`transition-all duration-300 ${highlightedProcess === process.id ? "ring-2 ring-primary shadow-lg scale-[1.02]" : ""}`}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+                <CardHeader className="p-4 md:p-6">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
                       <div className="text-xs text-muted-foreground mb-1">{process.area}</div>
-                      <CardTitle className="text-lg">{process.title}</CardTitle>
+                      <CardTitle className="text-base md:text-lg truncate">{process.title}</CardTitle>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(process.id)}>
+                    <Button variant="ghost" size="icon" className="shrink-0" onClick={() => deleteMutation.mutate(process.id)}>
                       <Trash2 size={16} className="text-destructive" />
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
                   <div 
-                    className="text-sm text-muted-foreground prose prose-sm max-w-none"
+                    className="text-sm text-muted-foreground prose prose-sm max-w-none break-words"
                     dangerouslySetInnerHTML={{ __html: process.content }}
                   />
                 </CardContent>
@@ -205,13 +212,13 @@ export default function Processes() {
           </div>
         ) : (
           <Card>
-            <CardContent className="py-16">
+            <CardContent className="py-12 md:py-16 px-4">
               <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">
+                <FileText className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-sm md:text-base text-muted-foreground mb-4">
                   {selectedArea ? `Nenhum processo nesta área ainda` : `Nenhum processo cadastrado ainda`}
                 </p>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
                   <Plus size={20} />
                   Criar Primeiro Processo
                 </Button>
@@ -222,7 +229,7 @@ export default function Processes() {
       </div>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
           <DialogHeader>
             <DialogTitle>Novo Processo</DialogTitle>
             <DialogDescription>Documente um novo processo da empresa</DialogDescription>
@@ -261,10 +268,11 @@ export default function Processes() {
                 placeholder="Descreva o processo em detalhes..."
               />
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   resetForm();
                   setIsCreateOpen(false);
@@ -272,7 +280,7 @@ export default function Processes() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={createMutation.isPending}>
+              <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
                 {createMutation.isPending ? "Criando..." : "Criar Processo"}
               </Button>
             </div>
