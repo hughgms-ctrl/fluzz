@@ -59,11 +59,11 @@ export default function Processes() {
   });
 
   const { data: sectors } = useQuery({
-    queryKey: ["sectors", workspace?.id],
+    queryKey: ["positions", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
       const { data, error } = await supabase
-        .from("sectors")
+        .from("positions")
         .select("id, name")
         .eq("workspace_id", workspace.id)
         .order("name");
