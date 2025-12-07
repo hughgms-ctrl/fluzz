@@ -17,7 +17,7 @@ import {
   Heading2,
   Quote
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 interface RichTextEditorProps {
   content: string;
@@ -26,6 +26,8 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui..." }: RichTextEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -60,12 +62,25 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
     },
   });
 
-  const addImage = useCallback(() => {
-    const url = window.prompt("URL da imagem:");
-    if (url && editor) {
-      editor.chain().focus().setImage({ src: url }).run();
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && editor) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        editor.chain().focus().setImage({ src: base64 }).run();
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   }, [editor]);
+
+  const addImage = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   const addVideo = useCallback(() => {
     const url = window.prompt("URL do vídeo (YouTube, Vimeo, etc):");
@@ -85,6 +100,13 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
 
   return (
     <div className="border rounded-md overflow-hidden bg-background">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        className="hidden"
+      />
       <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/50">
         <Button
           type="button"
@@ -155,6 +177,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           variant="ghost"
           size="sm"
           onClick={addImage}
+          title="Adicionar imagem local"
         >
           <ImageIcon size={16} />
         </Button>
