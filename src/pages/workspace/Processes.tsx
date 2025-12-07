@@ -330,17 +330,16 @@ export default function Processes() {
                     </div>
                     <ScrollArea className="flex-1">
                       <div className="p-2 space-y-1">
-                        {processTopics.map((topic, index) => (
+                        {processTopics.map((topic) => (
                           <button
                             key={topic.id}
                             onClick={() => setActiveTopicId(topic.id)}
-                            className={`w-full text-left text-sm px-3 py-2 rounded-md transition-colors flex items-center gap-2 ${
+                            className={`w-full text-left text-sm px-3 py-2 rounded-md transition-colors ${
                               currentTopicId === topic.id
                                 ? "bg-primary/10 text-primary font-medium"
                                 : "text-foreground hover:bg-muted"
                             }`}
                           >
-                            <span className="text-xs text-muted-foreground w-5">{index + 1}.</span>
                             <span className="line-clamp-2">{topic.title}</span>
                           </button>
                         ))}
@@ -355,9 +354,9 @@ export default function Processes() {
                         <SelectValue placeholder="Selecione um tópico" />
                       </SelectTrigger>
                       <SelectContent>
-                        {processTopics.map((topic, index) => (
+                        {processTopics.map((topic) => (
                           <SelectItem key={topic.id} value={topic.id}>
-                            {index + 1}. {topic.title}
+                            {topic.title}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -433,12 +432,11 @@ export default function Processes() {
               </div>
 
               <div className="space-y-4">
-                {topics.map((topic, index) => (
+                {topics.map((topic) => (
                   <Card key={topic.id} className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="flex items-center gap-2 pt-2">
+                      <div className="flex items-center pt-2">
                         <GripVertical size={16} className="text-muted-foreground" />
-                        <span className="text-sm font-medium text-muted-foreground w-6">{index + 1}.</span>
                       </div>
                       <div className="flex-1 space-y-3">
                         <div className="flex items-center gap-2">
