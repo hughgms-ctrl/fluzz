@@ -175,26 +175,20 @@ export default function Processes() {
           </Button>
         </div>
 
-        <div className="flex gap-2 flex-wrap overflow-x-auto pb-2">
-          <Button
-            variant={selectedArea === null ? "default" : "outline"}
-            onClick={() => setSelectedArea(null)}
-            size="sm"
-            className="shrink-0"
-          >
-            Todos os Setores
-          </Button>
-          {areas.map((areaName) => (
-            <Button
-              key={areaName}
-              variant={selectedArea === areaName ? "default" : "outline"}
-              onClick={() => setSelectedArea(areaName)}
-              size="sm"
-              className="shrink-0"
-            >
-              {areaName}
-            </Button>
-          ))}
+        <div className="w-full sm:w-64">
+          <Select value={selectedArea || "all"} onValueChange={(val) => setSelectedArea(val === "all" ? null : val)}>
+            <SelectTrigger className="bg-background">
+              <SelectValue placeholder="Filtrar por setor" />
+            </SelectTrigger>
+            <SelectContent className="bg-background">
+              <SelectItem value="all">Todos os Setores</SelectItem>
+              {areas.map((areaName) => (
+                <SelectItem key={areaName} value={areaName}>
+                  {areaName}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {filteredProcesses && filteredProcesses.length > 0 ? (
