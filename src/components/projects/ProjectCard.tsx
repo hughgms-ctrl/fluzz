@@ -103,17 +103,17 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
           taskIdToIndex[task.id] = index;
         });
 
-        // Mapear tarefas removendo datas e IDs
+        // Mapear tarefas removendo datas e IDs, resetando status para 'todo'
         const newTasks = tasks.map((task) => ({
           title: task.title,
           description: task.description,
-          status: task.status,
+          status: 'todo',
           priority: task.priority,
           assigned_to: task.assigned_to,
           setor: task.setor,
           documentation: task.documentation,
           process_id: task.process_id,
-          completed_verified: task.completed_verified,
+          completed_verified: false,
           project_id: newProject.id,
         }));
 
@@ -135,7 +135,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
             if (originalTask.subtasks && originalTask.subtasks.length > 0) {
               const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
                 title: subtask.title,
-                completed: subtask.completed,
+                completed: false,
                 task_id: newTask.id,
               }));
               
