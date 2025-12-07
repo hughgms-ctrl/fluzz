@@ -168,6 +168,46 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
               if (tpInsertError) console.warn("Erro ao copiar task_processes:", tpInsertError);
             }
           }
+
+          // Criar notificações para usuários com tarefas atribuídas
+          const assignedUserTasks: Record<string, { taskId: string; taskTitle: string }[]> = {};
+          
+          insertedTasks.forEach((task) => {
+            if (task.assigned_to) {
+              if (!assignedUserTasks[task.assigned_to]) {
+                assignedUserTasks[task.assigned_to] = [];
+              }
+              assignedUserTasks[task.assigned_to].push({
+                taskId: task.id,
+                taskTitle: task.title,
+              });
+            }
+          });
+
+          // Criar notificações em batch por usuário
+          const notifications = Object.entries(assignedUserTasks).map(([userId, userTasks]) => ({
+            user_id: userId,
+            workspace_id: newProject.workspace_id,
+            type: 'task_assigned',
+            title: 'Novas tarefas atribuídas',
+            message: userTasks.length === 1
+              ? `Você foi atribuído à tarefa "${userTasks[0].taskTitle}" no projeto ${newProject.name}`
+              : `Você foi atribuído a ${userTasks.length} tarefas no projeto ${newProject.name}`,
+            link: `/projects/${newProject.id}`,
+            data: {
+              project_id: newProject.id,
+              project_name: newProject.name,
+              tasks: userTasks,
+            },
+          }));
+
+          if (notifications.length > 0) {
+            const { error: notifError } = await supabase
+              .from("notifications")
+              .insert(notifications);
+            
+            if (notifError) console.warn("Erro ao criar notificações:", notifError);
+          }
         }
       }
 
