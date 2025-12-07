@@ -63,7 +63,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto com status ativo e sem datas
+      // Criar novo projeto com status ativo e sem datas, incluindo workspace_id
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -72,6 +72,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
             description: project.description,
             status: 'active',
             user_id: user.id,
+            workspace_id: project.workspace_id,
           },
         ])
         .select()
@@ -79,7 +80,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
 
       if (projectError) throw projectError;
 
-      // Copiar tarefas com todos os dados exceto datas
+      // Buscar tarefas com subtasks e task_processes
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select("*, subtasks(*)")
@@ -87,7 +88,21 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
 
       if (tasksError) throw tasksError;
 
+      // Buscar task_processes separadamente
+      const { data: taskProcesses, error: tpError } = await supabase
+        .from("task_processes")
+        .select("*")
+        .in("task_id", tasks?.map(t => t.id) || []);
+
+      if (tpError) console.warn("Erro ao buscar task_processes:", tpError);
+
       if (tasks && tasks.length > 0) {
+        // Criar mapeamento de task_id antigo -> índice
+        const taskIdToIndex: Record<string, number> = {};
+        tasks.forEach((task, index) => {
+          taskIdToIndex[task.id] = index;
+        });
+
         // Mapear tarefas removendo datas e IDs
         const newTasks = tasks.map((task) => ({
           title: task.title,
@@ -100,7 +115,6 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
           process_id: task.process_id,
           completed_verified: task.completed_verified,
           project_id: newProject.id,
-          // Não copiar: due_date, created_at, updated_at, id
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
@@ -110,9 +124,9 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
 
         if (insertError) throw insertError;
 
-        // Copiar subtasks para cada tarefa
         if (insertedTasks && insertedTasks.length > 0) {
-          const allSubtasks = [];
+          // Copiar subtasks para cada tarefa
+          const allSubtasks: any[] = [];
           
           for (let i = 0; i < tasks.length; i++) {
             const originalTask = tasks[i];
@@ -123,7 +137,6 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
                 title: subtask.title,
                 completed: subtask.completed,
                 task_id: newTask.id,
-                // Não copiar: id, created_at, updated_at
               }));
               
               allSubtasks.push(...subtasksForTask);
@@ -135,7 +148,25 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
               .from("subtasks")
               .insert(allSubtasks);
             
-            if (subtasksError) throw subtasksError;
+            if (subtasksError) console.warn("Erro ao copiar subtasks:", subtasksError);
+          }
+
+          // Copiar task_processes (relacionamento de tarefas com processos)
+          if (taskProcesses && taskProcesses.length > 0) {
+            const newTaskProcesses = taskProcesses
+              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
+              .map(tp => ({
+                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
+                process_id: tp.process_id,
+              }));
+
+            if (newTaskProcesses.length > 0) {
+              const { error: tpInsertError } = await supabase
+                .from("task_processes")
+                .insert(newTaskProcesses);
+              
+              if (tpInsertError) console.warn("Erro ao copiar task_processes:", tpInsertError);
+            }
           }
         }
       }
