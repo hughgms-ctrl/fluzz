@@ -1,21 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2, ChevronRight } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { Plus, FileText, Trash2, ChevronRight, Pencil } from "lucide-react";
 
 interface Process {
   id: string;
@@ -28,17 +23,13 @@ interface Process {
 }
 
 export default function Processes() {
-  const { user } = useAuth();
   const { workspace } = useWorkspace();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const processRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
-  const [area, setArea] = useState("");
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [highlightedProcess, setHighlightedProcess] = useState<string | null>(null);
 
@@ -58,46 +49,6 @@ export default function Processes() {
     enabled: !!workspace,
   });
 
-  const { data: sectors } = useQuery({
-    queryKey: ["positions", workspace?.id],
-    queryFn: async () => {
-      if (!workspace) return [];
-      const { data, error } = await supabase
-        .from("positions")
-        .select("id, name")
-        .eq("workspace_id", workspace.id)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!workspace,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: async () => {
-      if (!workspace) throw new Error("Workspace não encontrado");
-      const { error } = await supabase.from("process_documentation").insert([
-        {
-          area,
-          title,
-          content,
-          created_by: user!.id,
-          workspace_id: workspace.id,
-        },
-      ]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["process-documentation"] });
-      toast.success("Processo criado com sucesso!");
-      resetForm();
-      setIsCreateOpen(false);
-    },
-    onError: () => {
-      toast.error("Erro ao criar processo");
-    },
-  });
-
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("process_documentation").delete().eq("id", id);
@@ -109,25 +60,6 @@ export default function Processes() {
       setSelectedProcess(null);
     },
   });
-
-  const resetForm = () => {
-    setArea("");
-    setTitle("");
-    setContent("");
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!area.trim() || !title.trim()) {
-      toast.error("Preencha o setor e título");
-      return;
-    }
-    if (!content.trim()) {
-      toast.error("Preencha o conteúdo do processo");
-      return;
-    }
-    createMutation.mutate();
-  };
 
   const areas = Array.from(new Set(processes?.map((p) => p.area) || []));
   const filteredProcesses = selectedArea ? processes?.filter((p) => p.area === selectedArea) : processes;
@@ -169,7 +101,7 @@ export default function Processes() {
               Documentação de processos organizados por setor
             </p>
           </div>
-          <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
+          <Button onClick={() => navigate("/workspace/processes/new")} className="gap-2 w-full sm:w-auto">
             <Plus size={20} />
             Novo Processo
           </Button>
@@ -222,7 +154,7 @@ export default function Processes() {
                 <p className="text-sm md:text-base text-muted-foreground mb-4">
                   {selectedArea ? `Nenhum processo neste setor ainda` : `Nenhum processo cadastrado ainda`}
                 </p>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
+                <Button onClick={() => navigate("/workspace/processes/new")} className="gap-2 w-full sm:w-auto">
                   <Plus size={20} />
                   Criar Primeiro Processo
                 </Button>
@@ -245,17 +177,33 @@ export default function Processes() {
                 <div className="text-xs text-primary font-medium mb-1">{selectedProcess?.area}</div>
                 <SheetTitle className="text-lg md:text-xl text-left">{selectedProcess?.title}</SheetTitle>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (selectedProcess) deleteMutation.mutate(selectedProcess.id);
-                }}
-              >
-                <Trash2 size={18} />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedProcess) {
+                      setSelectedProcess(null);
+                      navigate(`/workspace/processes/${selectedProcess.id}/edit`);
+                    }
+                  }}
+                >
+                  <Pencil size={18} />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (selectedProcess) deleteMutation.mutate(selectedProcess.id);
+                  }}
+                >
+                  <Trash2 size={18} />
+                </Button>
+              </div>
             </div>
           </SheetHeader>
 
@@ -269,77 +217,6 @@ export default function Processes() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
-
-      {/* Create Process Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Processo</DialogTitle>
-            <DialogDescription>Documente um novo processo</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="area">Setor *</Label>
-                <Select value={area} onValueChange={setArea}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um setor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sectors && sectors.length > 0 ? (
-                      sectors.map((sector) => (
-                        <SelectItem key={sector.id} value={sector.name}>
-                          {sector.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                        Nenhum setor cadastrado
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="title">Título do Processo *</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Onboarding de novos funcionários"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Conteúdo *</Label>
-              <RichTextEditor
-                content={content}
-                onChange={setContent}
-                placeholder="Escreva o conteúdo do processo..."
-              />
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  resetForm();
-                  setIsCreateOpen(false);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
-                {createMutation.isPending ? "Criando..." : "Criar Processo"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }
