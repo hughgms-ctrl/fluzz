@@ -44,18 +44,33 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   });
 
   const { data: sectorData } = useQuery({
-    queryKey: ["position", task.setor],
+    queryKey: ["position", task.setor, workspace?.id],
     queryFn: async () => {
-      if (!task.setor) return null;
+      if (!task.setor || !workspace) return null;
+      
+      // Check if setor is a valid UUID format
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(task.setor);
+      
+      if (isUUID) {
+        const { data, error } = await supabase
+          .from("positions")
+          .select("id, name")
+          .eq("id", task.setor)
+          .single();
+        if (!error && data) return data;
+      }
+      
+      // Fallback: try to find by name
       const { data, error } = await supabase
         .from("positions")
         .select("id, name")
-        .eq("id", task.setor)
+        .eq("workspace_id", workspace.id)
+        .eq("name", task.setor)
         .single();
-      if (error) return null;
+      if (error) return { id: task.setor, name: task.setor };
       return data;
     },
-    enabled: !!task.setor,
+    enabled: !!task.setor && !!workspace,
   });
 
   const totalSubtasks = subtasks?.length || 0;
