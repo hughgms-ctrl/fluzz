@@ -51,10 +51,10 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
     queryFn: async () => {
       if (!workspace?.id) return [];
       const { data, error } = await supabase
-        .from("projects")
+        .from("project_templates")
         .select("id, name, description")
         .eq("workspace_id", workspace.id)
-        .eq("is_template", true);
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -107,26 +107,25 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
         throw new Error("Workspace ou usuário não encontrado");
       }
 
-      // Buscar o projeto template
+      // Fetch template from project_templates table
       const { data: template, error: templateError } = await supabase
-        .from("projects")
+        .from("project_templates")
         .select("*")
         .eq("id", templateId)
         .single();
 
       if (templateError) throw templateError;
 
-      // Criar novo projeto baseado no template
+      // Create new project based on template
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
           {
-            name: `${template.name} (Cópia)`,
+            name: template.name,
             description: template.description,
             status: "active",
             user_id: user.id,
             workspace_id: workspace.id,
-            is_template: false,
           },
         ])
         .select()
@@ -134,34 +133,38 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
 
       if (projectError) throw projectError;
 
-      // Buscar tarefas do template com subtasks
-      const { data: tasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*, subtasks(*)")
-        .eq("project_id", templateId);
+      // Fetch template tasks with subtasks
+      const { data: templateTasks, error: tasksError } = await supabase
+        .from("template_tasks")
+        .select("*")
+        .eq("template_id", templateId)
+        .order("task_order");
 
       if (tasksError) throw tasksError;
 
-      // Buscar task_processes
-      const { data: taskProcesses, error: tpError } = await supabase
-        .from("task_processes")
+      // Fetch template subtasks
+      const { data: templateSubtasks } = await supabase
+        .from("template_subtasks")
         .select("*")
-        .in("task_id", tasks?.map(t => t.id) || []);
+        .in("template_task_id", templateTasks?.map(t => t.id) || []);
 
-      if (tpError) console.warn("Erro ao buscar task_processes:", tpError);
+      // Fetch template task processes
+      const { data: templateTaskProcesses } = await supabase
+        .from("template_task_processes")
+        .select("*")
+        .in("template_task_id", templateTasks?.map(t => t.id) || []);
 
-      if (tasks && tasks.length > 0) {
+      if (templateTasks && templateTasks.length > 0) {
         const taskIdToIndex: Record<string, number> = {};
-        tasks.forEach((task, index) => {
+        templateTasks.forEach((task, index) => {
           taskIdToIndex[task.id] = index;
         });
 
-        const newTasks = tasks.map((task) => ({
+        const newTasks = templateTasks.map((task) => ({
           title: task.title,
           description: task.description,
           status: "todo",
           priority: task.priority,
-          assigned_to: task.assigned_to,
           setor: task.setor,
           documentation: task.documentation,
           process_id: task.process_id,
@@ -177,13 +180,15 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
         if (insertError) throw insertError;
 
         if (insertedTasks && insertedTasks.length > 0) {
-          // Copiar subtasks
+          // Copy subtasks
           const allSubtasks: any[] = [];
-          for (let i = 0; i < tasks.length; i++) {
-            const originalTask = tasks[i];
+          for (let i = 0; i < templateTasks.length; i++) {
+            const originalTask = templateTasks[i];
             const newTask = insertedTasks[i];
-            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
+            const taskSubtasks = templateSubtasks?.filter(s => s.template_task_id === originalTask.id) || [];
+            
+            if (taskSubtasks.length > 0) {
+              const subtasksForTask = taskSubtasks.map((subtask) => ({
                 title: subtask.title,
                 completed: false,
                 task_id: newTask.id,
@@ -196,12 +201,12 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
             await supabase.from("subtasks").insert(allSubtasks);
           }
 
-          // Copiar task_processes
-          if (taskProcesses && taskProcesses.length > 0) {
-            const newTaskProcesses = taskProcesses
-              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
+          // Copy task_processes
+          if (templateTaskProcesses && templateTaskProcesses.length > 0) {
+            const newTaskProcesses = templateTaskProcesses
+              .filter(tp => taskIdToIndex[tp.template_task_id] !== undefined)
               .map(tp => ({
-                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
+                task_id: insertedTasks[taskIdToIndex[tp.template_task_id]].id,
                 process_id: tp.process_id,
               }));
 
@@ -253,7 +258,7 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
   const deleteTemplateMutation = useMutation({
     mutationFn: async (templateId: string) => {
       const { error } = await supabase
-        .from("projects")
+        .from("project_templates")
         .delete()
         .eq("id", templateId);
       if (error) throw error;

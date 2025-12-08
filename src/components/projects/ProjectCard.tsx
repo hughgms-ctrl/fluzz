@@ -63,25 +63,23 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Create a copy of the project as a template
-      const { data: newProject, error: projectError } = await supabase
-        .from("projects")
+      // Create a template entry in project_templates table
+      const { data: newTemplate, error: templateError } = await supabase
+        .from("project_templates")
         .insert([
           {
-            name: `[Modelo] ${project.name}`,
+            name: project.name,
             description: project.description,
-            status: 'active',
-            user_id: user.id,
             workspace_id: project.workspace_id,
-            is_template: true,
+            created_by: user.id,
           },
         ])
         .select()
         .single();
 
-      if (projectError) throw projectError;
+      if (templateError) throw templateError;
 
-      // Copy tasks with subtasks
+      // Copy tasks to template_tasks
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select("*, subtasks(*)")
@@ -101,66 +99,63 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
           taskIdToIndex[task.id] = index;
         });
 
-        const newTasks = tasks.map((task) => ({
+        const newTemplateTasks = tasks.map((task, index) => ({
+          template_id: newTemplate.id,
           title: task.title,
           description: task.description,
-          status: 'todo',
           priority: task.priority,
-          assigned_to: task.assigned_to,
           setor: task.setor,
           documentation: task.documentation,
           process_id: task.process_id,
-          completed_verified: false,
-          project_id: newProject.id,
+          task_order: index,
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
-          .from("tasks")
-          .insert(newTasks)
+          .from("template_tasks")
+          .insert(newTemplateTasks)
           .select();
 
         if (insertError) throw insertError;
 
         if (insertedTasks && insertedTasks.length > 0) {
-          // Copy subtasks
+          // Copy subtasks to template_subtasks
           const allSubtasks: any[] = [];
           for (let i = 0; i < tasks.length; i++) {
             const originalTask = tasks[i];
             const newTask = insertedTasks[i];
             if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
+              const subtasksForTask = originalTask.subtasks.map((subtask: any, subIndex: number) => ({
+                template_task_id: newTask.id,
                 title: subtask.title,
-                completed: false,
-                task_id: newTask.id,
+                task_order: subIndex,
               }));
               allSubtasks.push(...subtasksForTask);
             }
           }
 
           if (allSubtasks.length > 0) {
-            await supabase.from("subtasks").insert(allSubtasks);
+            await supabase.from("template_subtasks").insert(allSubtasks);
           }
 
-          // Copy task_processes
+          // Copy task_processes to template_task_processes
           if (taskProcesses && taskProcesses.length > 0) {
             const newTaskProcesses = taskProcesses
               .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
               .map(tp => ({
-                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
+                template_task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
                 process_id: tp.process_id,
               }));
 
             if (newTaskProcesses.length > 0) {
-              await supabase.from("task_processes").insert(newTaskProcesses);
+              await supabase.from("template_task_processes").insert(newTaskProcesses);
             }
           }
         }
       }
 
-      return newProject;
+      return newTemplate;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
       queryClient.invalidateQueries({ queryKey: ["project-templates"] });
       toast.success("Projeto salvo como modelo!");
     },
