@@ -119,6 +119,60 @@ export default function MyTasks() {
     return "project";
   };
 
+  // Natural sort function
+  const naturalSort = (a: string, b: string) => {
+    return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  };
+
+  // Apply filters (moved before conditional return)
+  const filteredTasks = useMemo(() => {
+    if (!tasks) return [];
+    return tasks.filter((task) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
+      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
+      const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
+      
+      const taskType = getTaskType(task);
+      const matchesType = typeFilter === "all" || taskType === typeFilter;
+
+      let matchesDueDate = true;
+      if (dueDateFilter !== "all" && task.due_date) {
+        const dueDate = new Date(task.due_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (dueDateFilter === "overdue") {
+          matchesDueDate = dueDate < today && task.status !== "completed";
+        } else if (dueDateFilter === "today") {
+          matchesDueDate = dueDate.toDateString() === today.toDateString();
+        } else if (dueDateFilter === "week") {
+          const weekFromNow = new Date(today);
+          weekFromNow.setDate(today.getDate() + 7);
+          matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
+        } else if (dueDateFilter === "month") {
+          const monthFromNow = new Date(today);
+          monthFromNow.setMonth(today.getMonth() + 1);
+          matchesDueDate = dueDate >= today && dueDate <= monthFromNow;
+        }
+      }
+
+      return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject && matchesType;
+    });
+  }, [tasks, searchTerm, priorityFilter, statusFilter, dueDateFilter, projectFilter, typeFilter]);
+
+  // Computed values based on filtered tasks
+  const todoTasks = useMemo(() => filteredTasks.filter((t) => t.status === "todo"), [filteredTasks]);
+  const inProgressTasks = useMemo(() => filteredTasks.filter((t) => t.status === "in_progress"), [filteredTasks]);
+  const completedTasks = useMemo(() => filteredTasks.filter((t) => t.status === "completed"), [filteredTasks]);
+  const projectTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "project"), [filteredTasks]);
+  const standaloneTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "standalone"), [filteredTasks]);
+  const routineTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "routine"), [filteredTasks]);
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -128,53 +182,6 @@ export default function MyTasks() {
       </AppLayout>
     );
   }
-
-  // Apply filters
-  const filteredTasks = tasks?.filter((task) => {
-    const matchesSearch =
-      searchTerm === "" ||
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesPriority = priorityFilter === "all" || task.priority === priorityFilter;
-    const matchesStatus = statusFilter === "all" || task.status === statusFilter;
-    const matchesProject = projectFilter === "all" || task.project_id === projectFilter;
-    
-    const taskType = getTaskType(task);
-    const matchesType = typeFilter === "all" || taskType === typeFilter;
-
-    let matchesDueDate = true;
-    if (dueDateFilter !== "all" && task.due_date) {
-      const dueDate = new Date(task.due_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (dueDateFilter === "overdue") {
-        matchesDueDate = dueDate < today && task.status !== "completed";
-      } else if (dueDateFilter === "today") {
-        matchesDueDate = dueDate.toDateString() === today.toDateString();
-      } else if (dueDateFilter === "week") {
-        const weekFromNow = new Date(today);
-        weekFromNow.setDate(today.getDate() + 7);
-        matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
-      } else if (dueDateFilter === "month") {
-        const monthFromNow = new Date(today);
-        monthFromNow.setMonth(today.getMonth() + 1);
-        matchesDueDate = dueDate >= today && dueDate <= monthFromNow;
-      }
-    }
-
-    return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject && matchesType;
-  }) || [];
-
-  const todoTasks = filteredTasks.filter((t) => t.status === "todo");
-  const inProgressTasks = filteredTasks.filter((t) => t.status === "in_progress");
-  const completedTasks = filteredTasks.filter((t) => t.status === "completed");
-
-  // Count by type
-  const projectTasks = filteredTasks.filter((t) => getTaskType(t) === "project");
-  const standaloneTasks = filteredTasks.filter((t) => getTaskType(t) === "standalone");
-  const routineTasks = filteredTasks.filter((t) => getTaskType(t) === "routine");
 
   const TaskTypeIcon = ({ type }: { type: "project" | "standalone" | "routine" }) => {
     const icons = {
@@ -205,47 +212,6 @@ export default function MyTasks() {
       </Badge>
     );
   };
-
-  // Natural sort function
-  const naturalSort = (a: string, b: string) => {
-    return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
-  };
-
-  // Group tasks by project with natural sort
-  const groupedTasks = useMemo(() => {
-    const groups: { [key: string]: { name: string; tasks: any[]; type: "project" | "standalone" | "routine" } } = {};
-    
-    filteredTasks.forEach((task) => {
-      const taskType = getTaskType(task);
-      
-      if (taskType === "standalone") {
-        if (!groups["standalone"]) {
-          groups["standalone"] = { name: "Tarefas Avulsas", tasks: [], type: "standalone" };
-        }
-        groups["standalone"].tasks.push(task);
-      } else if (taskType === "routine") {
-        if (!groups["routine"]) {
-          groups["routine"] = { name: "Tarefas de Rotina", tasks: [], type: "routine" };
-        }
-        groups["routine"].tasks.push(task);
-      } else if (task.project_id) {
-        const projectKey = task.project_id;
-        if (!groups[projectKey]) {
-          groups[projectKey] = { 
-            name: task.projects?.name || "Projeto", 
-            tasks: [], 
-            type: "project" 
-          };
-        }
-        groups[projectKey].tasks.push(task);
-      }
-    });
-    
-    // Sort groups by name using natural sort
-    return Object.entries(groups)
-      .sort(([, a], [, b]) => naturalSort(a.name, b.name))
-      .map(([id, group]) => ({ id, ...group }));
-  }, [filteredTasks]);
 
   const renderTaskList = (taskList: any[], emptyMessage: string) => (
     taskList.length > 0 ? (
