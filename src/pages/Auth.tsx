@@ -273,6 +273,7 @@ export default function Auth() {
   return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="space-y-1 text-center">
+          <img src="/favicon.png" alt="Fluzz Logo" className="w-16 h-16 mx-auto mb-2" />
           <CardTitle className="text-3xl font-bold text-primary">Fluzz</CardTitle>
           <CardDescription>
             {inviteData ? `Você foi convidado para ${(inviteData.workspaces as any).name}` : "Gerenciamento de projetos simplificado"}
