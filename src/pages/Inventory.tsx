@@ -21,7 +21,7 @@ export default function Inventory() {
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["inventory-events", workspace?.id],
