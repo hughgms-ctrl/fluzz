@@ -10,12 +10,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { FileText, FolderPlus, ArrowLeft, Check } from "lucide-react";
+import { FileText, FolderPlus, ArrowLeft, Check, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +44,7 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
   const [description, setDescription] = useState("");
   const [step, setStep] = useState<DialogStep>("choose");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
   const { data: templates } = useQuery({
     queryKey: ["project-templates", workspace?.id],
@@ -239,7 +250,46 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
     createFromTemplateMutation.mutate(selectedTemplate);
   };
 
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const { error } = await supabase
+        .from("projects")
+        .delete()
+        .eq("id", templateId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
+      toast.success("Modelo excluído com sucesso!");
+      setTemplateToDelete(null);
+      setSelectedTemplate(null);
+    },
+    onError: () => {
+      toast.error("Erro ao excluir modelo");
+    },
+  });
+
   return (
+    <>
+      <AlertDialog open={!!templateToDelete} onOpenChange={() => setTemplateToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Modelo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir este modelo? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => templateToDelete && deleteTemplateMutation.mutate(templateToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
         {step === "choose" && (
@@ -379,7 +429,7 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
                   onClick={() => setSelectedTemplate(template.id)}
                 >
                   <CardContent className="p-4 flex items-center justify-between">
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h4 className="font-medium">{template.name}</h4>
                       {template.description && (
                         <p className="text-sm text-muted-foreground line-clamp-1">
@@ -387,9 +437,22 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
                         </p>
                       )}
                     </div>
-                    {selectedTemplate === template.id && (
-                      <Check className="h-5 w-5 text-primary" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {selectedTemplate === template.id && (
+                        <Check className="h-5 w-5 text-primary" />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTemplateToDelete(template.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -413,5 +476,6 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 };
