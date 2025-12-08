@@ -3,8 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, LayoutGrid, List } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { ProjectCard } from "@/components/projects/ProjectCard";
+import { ProjectListView } from "@/components/projects/ProjectListView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +19,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();
@@ -128,13 +132,33 @@ export default function Projects() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
             <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
           </div>
-          {(isAdmin || isGestor) && (
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 w-full sm:w-auto">
-              <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Novo Projeto</span>
-              <span className="sm:hidden">Novo</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="icon"
+                onClick={() => setViewMode("grid")}
+                className="rounded-r-none"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="icon"
+                onClick={() => setViewMode("list")}
+                className="rounded-l-none"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+            {(isAdmin || isGestor) && (
+              <Button onClick={() => setIsCreateOpen(true)} className="gap-2 flex-1 sm:flex-initial">
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Novo Projeto</span>
+                <span className="sm:hidden">Novo</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived" | "standalone")}>
@@ -167,7 +191,7 @@ export default function Projects() {
                   Criar Primeiro Projeto
                 </Button>
               </div>
-            ) : (
+            ) : viewMode === "grid" ? (
               <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {activeProjects.map((project: any) => (
                   <ProjectCard
@@ -178,6 +202,13 @@ export default function Projects() {
                   />
                 ))}
               </div>
+            ) : (
+              <ProjectListView
+                projects={activeProjects}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
+                navigate={navigate}
+              />
             )}
           </TabsContent>
 
@@ -188,7 +219,7 @@ export default function Projects() {
                   Você não tem projetos arquivados.
                 </p>
               </div>
-            ) : (
+            ) : viewMode === "grid" ? (
               <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {archivedProjects.map((project: any) => (
                   <ProjectCard
@@ -200,6 +231,14 @@ export default function Projects() {
                   />
                 ))}
               </div>
+            ) : (
+              <ProjectListView
+                projects={archivedProjects}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
+                navigate={navigate}
+                isArchived
+              />
             )}
           </TabsContent>
 
