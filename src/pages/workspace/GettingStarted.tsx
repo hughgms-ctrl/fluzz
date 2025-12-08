@@ -34,18 +34,19 @@ export default function GettingStarted() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Comece Aqui</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Comece Aqui</h1>
+            <p className="text-sm md:text-base text-muted-foreground">
               Tutoriais e guias para usar a plataforma
             </p>
           </div>
           {canEdit && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Seção
+            <Button onClick={() => setCreateDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Nova Seção</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           )}
         </div>

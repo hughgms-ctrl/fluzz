@@ -64,21 +64,22 @@ export default function Inventory() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventário</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Inventário</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Gerencie materiais, controle estoque e organize por eventos
           </p>
         </div>
         <Tabs defaultValue="items" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="items">
-              <Package className="h-4 w-4 mr-2" />
-              Materiais
+          <TabsList className="grid w-full max-w-md grid-cols-2 h-auto">
+            <TabsTrigger value="items" className="text-xs sm:text-sm">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Materiais</span>
+              <span className="sm:hidden">Materiais</span>
             </TabsTrigger>
-            <TabsTrigger value="events">
-              <Calendar className="h-4 w-4 mr-2" />
+            <TabsTrigger value="events" className="text-xs sm:text-sm">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               Eventos
             </TabsTrigger>
           </TabsList>
@@ -106,12 +107,13 @@ export default function Inventory() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <div className="flex border rounded-md">
                   <Button
                     variant={viewMode === "grid" ? "secondary" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("grid")}
+                    className="h-8 w-8 sm:h-9 sm:w-9"
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
@@ -119,13 +121,15 @@ export default function Inventory() {
                     variant={viewMode === "list" ? "secondary" : "ghost"}
                     size="icon"
                     onClick={() => setViewMode("list")}
+                    className="h-8 w-8 sm:h-9 sm:w-9"
                   >
                     <List className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button onClick={() => setCreateItemOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Material
+                <Button onClick={() => setCreateItemOpen(true)} size="sm" className="flex-1 sm:flex-initial">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Novo Material</span>
+                  <span className="sm:hidden">Novo</span>
                 </Button>
               </div>
             </div>
@@ -154,9 +158,10 @@ export default function Inventory() {
 
           <TabsContent value="events" className="space-y-4">
             <div className="flex justify-end">
-              <Button onClick={() => setCreateEventOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Evento
+              <Button onClick={() => setCreateEventOpen(true)} size="sm">
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Evento</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             </div>
 

@@ -314,12 +314,13 @@ export default function ProjectDetail() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/projects")}
+              className="flex-shrink-0 mt-1"
             >
               <ArrowLeft size={20} />
             </Button>
@@ -336,12 +337,12 @@ export default function ProjectDetail() {
                       setIsEditingName(false);
                     }
                   }}
-                  className="text-3xl font-bold h-12 max-w-2xl"
+                  className="text-xl sm:text-2xl md:text-3xl font-bold h-auto py-1 max-w-full"
                   autoFocus
                 />
               ) : (
                 <h1 
-                  className="text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer"
+                  className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer break-words"
                   onClick={() => setIsEditingName(true)}
                 >
                   {project.name}
@@ -359,13 +360,13 @@ export default function ProjectDetail() {
                       setIsEditingDescription(false);
                     }
                   }}
-                  className="text-muted-foreground mt-1 max-w-2xl"
+                  className="text-sm text-muted-foreground mt-1 max-w-full"
                   placeholder="Adicione uma descrição..."
                   autoFocus
                 />
               ) : (
                 <p 
-                  className="text-muted-foreground mt-1 hover:text-foreground transition-colors cursor-pointer"
+                  className="text-xs sm:text-sm text-muted-foreground mt-1 hover:text-foreground transition-colors cursor-pointer line-clamp-2"
                   onClick={() => setIsEditingDescription(true)}
                 >
                   {project.description || "Clique para adicionar descrição..."}
@@ -373,18 +374,21 @@ export default function ProjectDetail() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               onClick={() => setShowMembers(!showMembers)}
-              className="gap-2"
+              className="gap-2 flex-1 sm:flex-initial text-xs sm:text-sm"
+              size="sm"
             >
-              <Users size={16} />
-              Membros
+              <Users size={14} className="sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Membros</span>
+              <span className="sm:hidden">Membros</span>
             </Button>
-            <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-              <Plus size={20} />
-              Nova Tarefa
+            <Button onClick={() => setIsCreateOpen(true)} className="gap-2 flex-1 sm:flex-initial text-xs sm:text-sm" size="sm">
+              <Plus size={14} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Nova Tarefa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
           </div>
         </div>

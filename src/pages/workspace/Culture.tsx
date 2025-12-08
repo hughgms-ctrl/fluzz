@@ -73,24 +73,25 @@ export default function Culture() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Cultura da Empresa</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Cultura da Empresa</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Conheça os valores e a cultura que nos guiam
             </p>
           </div>
           {(isAdmin || isGestor) && !isEditing && (
-            <Button onClick={() => setIsEditing(true)} className="gap-2">
-              <Edit size={16} />
+            <Button onClick={() => setIsEditing(true)} className="gap-2 w-full sm:w-auto" size="sm">
+              <Edit size={14} />
               Editar
             </Button>
           )}
           {(isAdmin || isGestor) && isEditing && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => {
                   setIsEditing(false);
                   if (cultureData) {
@@ -98,17 +99,18 @@ export default function Culture() {
                     setContent(cultureData.content);
                   }
                 }}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial"
               >
-                <X size={16} />
+                <X size={14} />
                 Cancelar
               </Button>
               <Button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending}
-                className="gap-2"
+                className="gap-2 flex-1 sm:flex-initial"
+                size="sm"
               >
-                <Save size={16} />
+                <Save size={14} />
                 Salvar
               </Button>
             </div>

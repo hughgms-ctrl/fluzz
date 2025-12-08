@@ -121,18 +121,19 @@ export default function TeamManagement() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Gestão de Equipe</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestão de Equipe</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1 sm:mt-2">
               Clique em um membro para gerenciar suas permissões
             </p>
           </div>
           {isAdmin && (
-            <Button onClick={() => setIsInviteDialogOpen(true)} size="lg">
-              <UserPlus className="mr-2 h-5 w-5" />
-              Adicionar Membro
+            <Button onClick={() => setIsInviteDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+              <UserPlus className="mr-1 sm:mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Adicionar Membro</span>
+              <span className="sm:hidden">Adicionar</span>
             </Button>
           )}
         </div>
