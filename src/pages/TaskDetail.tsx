@@ -454,14 +454,14 @@ export default function TaskDetail() {
                       <Button variant="outline" className="w-full justify-between mt-2" type="button">
                         <span className="flex items-center gap-2">
                           <Briefcase size={16} />
-                          {editedTask.setor && sectors?.find(s => s.id === editedTask.setor)?.name || "Selecione um setor"}
+                          {editedTask.setor ? (sectors?.find(s => s.id === editedTask.setor || s.name === editedTask.setor)?.name || editedTask.setor) : "Selecione um setor"}
                         </span>
                         <ChevronRight size={16} />
                       </Button>
                     </SectorDrawer>
                   ) : (
                     <p className="text-muted-foreground mt-2">
-                      {task.setor && sectors?.find(s => s.id === task.setor)?.name || "Sem setor definido"}
+                      {task.setor ? (sectors?.find(s => s.id === task.setor || s.name === task.setor)?.name || task.setor) : "Sem setor definido"}
                     </p>
                   )}
                 </div>
