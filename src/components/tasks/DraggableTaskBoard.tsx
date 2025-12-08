@@ -156,7 +156,6 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    console.log("Drag end:", event);
     const { active, over } = event;
     
     setActiveTask(null);
@@ -166,14 +165,22 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropped on a column
+    const draggedTask = tasks.find((t) => t.id === activeId);
+    if (!draggedTask) return;
+
+    // Check if dropped on a column directly
     const overColumn = columns.find((c) => c.id === overId);
     if (overColumn) {
-      const draggedTask = tasks.find((t) => t.id === activeId);
-      if (draggedTask && draggedTask.status !== overColumn.id) {
-        console.log("Final update to:", overColumn.id);
+      if (draggedTask.status !== overColumn.id) {
         onUpdateStatus(draggedTask.id, overColumn.id);
       }
+      return;
+    }
+
+    // Check if dropped on another task - use that task's status
+    const overTask = tasks.find((t) => t.id === overId);
+    if (overTask && draggedTask.status !== overTask.status) {
+      onUpdateStatus(draggedTask.id, overTask.status);
     }
   };
 
