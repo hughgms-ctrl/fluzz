@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { renderDocumentation } from "@/lib/linkify";
+import { formatDateBR } from "@/lib/utils";
 
 interface ProjectNotesProps {
   projectId: string;
@@ -120,7 +121,7 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
                   {task.due_date && (
                     <div className="flex items-center gap-1">
                       <Calendar size={12} />
-                      <span>{new Date(task.due_date).toLocaleDateString('pt-BR')}</span>
+                      <span>{formatDateBR(task.due_date)}</span>
                     </div>
                   )}
                   {task.setor && (

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { formatDateBR } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -261,7 +262,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                     <p className="text-xs text-muted-foreground">
                       Vencimento:{" "}
                       {task.due_date
-                        ? new Date(task.due_date).toLocaleDateString("pt-BR")
+                        ? formatDateBR(task.due_date)
                         : "Sem prazo"}
                     </p>
                   </div>

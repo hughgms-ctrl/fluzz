@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { FileText, Calendar, MapPin, DollarSign, Trash2 } from "lucide-react";
+import { formatDateBR } from "@/lib/utils";
 
 export default function BriefingRepository() {
   const navigate = useNavigate();
@@ -80,10 +81,6 @@ export default function BriefingRepository() {
     return `${symbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
-  };
-
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -115,7 +112,7 @@ export default function BriefingRepository() {
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>{formatDate(briefing.data)}</span>
+                    <span>{formatDateBR(briefing.data)}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <MapPin className="h-4 w-4 text-muted-foreground" />

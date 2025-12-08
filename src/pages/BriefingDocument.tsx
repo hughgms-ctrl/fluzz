@@ -7,6 +7,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 import BriefingView from "@/components/briefing/BriefingView";
 import DebriefingResults from "@/components/briefing/DebriefingResults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateWithOptions } from "@/lib/utils";
 
 export default function BriefingDocument() {
   const { briefingId } = useParams();
@@ -43,7 +44,7 @@ export default function BriefingDocument() {
   const isLoading = briefingLoading || debriefingLoading;
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR", {
+    return formatDateWithOptions(date, {
       day: "2-digit",
       month: "long",
       year: "numeric",

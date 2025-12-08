@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, MapPin, DollarSign, Users } from "lucide-react";
+import { formatDateBR } from "@/lib/utils";
 
 interface BriefingViewProps {
   briefing: any;
@@ -11,10 +12,6 @@ export default function BriefingView({ briefing }: BriefingViewProps) {
 
   const formatCurrency = (value: number) => {
     return `${currencySymbol} ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR");
   };
 
   return (
@@ -29,7 +26,7 @@ export default function BriefingView({ briefing }: BriefingViewProps) {
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">Data do Evento</p>
-                <p className="font-semibold">{formatDate(briefing.data)}</p>
+                <p className="font-semibold">{formatDateBR(briefing.data)}</p>
               </div>
             </div>
 
