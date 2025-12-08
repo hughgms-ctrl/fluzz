@@ -137,7 +137,7 @@ export default function ProcessForm() {
         },
       }),
       Placeholder.configure({
-        placeholder: "Escreva o conteúdo do processo...",
+        placeholder: "Escreva o conteúdo do processo... (Cole imagens com Ctrl+V)",
       }),
     ],
     content: "",
@@ -162,6 +162,63 @@ export default function ProcessForm() {
           }
         }
         setSelectedImage(null);
+        return false;
+      },
+      handlePaste: (view, event) => {
+        const items = event.clipboardData?.items;
+        if (!items) return false;
+
+        // Check for pasted images
+        for (const item of Array.from(items)) {
+          if (item.type.startsWith('image/')) {
+            event.preventDefault();
+            const file = item.getAsFile();
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                const base64 = e.target?.result as string;
+                view.dispatch(view.state.tr.replaceSelectionWith(
+                  view.state.schema.nodes.image.create({ src: base64 })
+                ));
+              };
+              reader.readAsDataURL(file);
+            }
+            return true;
+          }
+        }
+
+        // Check for pasted text that might be a URL (for auto-embed)
+        const text = event.clipboardData?.getData('text/plain');
+        if (text) {
+          // YouTube URL patterns
+          const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/;
+          const youtubeMatch = text.match(youtubeRegex);
+          
+          if (youtubeMatch) {
+            event.preventDefault();
+            const videoId = youtubeMatch[1];
+            const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            view.dispatch(view.state.tr.replaceSelectionWith(
+              view.state.schema.nodes.youtube.create({ src: embedUrl })
+            ));
+            return true;
+          }
+
+          // Vimeo URL patterns
+          const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/)(\d+)/;
+          const vimeoMatch = text.match(vimeoRegex);
+          
+          if (vimeoMatch) {
+            event.preventDefault();
+            const videoId = vimeoMatch[1];
+            const embedUrl = `https://player.vimeo.com/video/${videoId}`;
+            view.dispatch(view.state.tr.replaceSelectionWith(
+              view.state.schema.nodes.youtube.create({ src: embedUrl })
+            ));
+            return true;
+          }
+        }
+
         return false;
       },
     },
