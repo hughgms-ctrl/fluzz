@@ -89,8 +89,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <img src={logoFluzz} alt="Fluzz" className="h-8 w-8" />
-              <span className="text-xl font-bold text-foreground">Fluzz</span>
+              <img src={logoFluzz} alt="Fluzz" className="h-10 w-10 object-contain" />
+              <span className="text-xl font-bold text-primary">Fluzz</span>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/auth">
@@ -259,8 +259,8 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-2">
-              <img src={logoFluzz} alt="Fluzz" className="h-8 w-8" />
-              <span className="text-xl font-bold text-foreground">Fluzz</span>
+              <img src={logoFluzz} alt="Fluzz" className="h-10 w-10 object-contain" />
+              <span className="text-xl font-bold text-primary">Fluzz</span>
             </div>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Fluzz. Todos os direitos reservados.
