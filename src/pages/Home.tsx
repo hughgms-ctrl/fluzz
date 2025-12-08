@@ -8,19 +8,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { FileText, ListTodo, FolderKanban, UserPlus, Plus, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { CreateUnifiedTaskDialog } from "@/components/tasks/CreateUnifiedTaskDialog";
 import { toast } from "sonner";
+
 export default function Home() {
   const navigate = useNavigate();
   const {
     workspace,
-    canCreateTasks
+    canCreateTasks,
+    permissions,
+    isAdmin,
+    isGestor
   } = useWorkspace();
   const {
     user
   } = useAuth();
   const [showCreateTask, setShowCreateTask] = useState(false);
+  
   const checkDeadlinesMutation = useMutation({
     mutationFn: async () => {
       const {
@@ -42,6 +47,7 @@ export default function Home() {
       toast.error(error.message || "Erro ao verificar prazos das tarefas");
     }
   });
+
   const {
     data: projects,
     isLoading: projectsLoading
@@ -60,6 +66,13 @@ export default function Home() {
     },
     enabled: !!workspace
   });
+
+  // Filter only active (non-archived) projects
+  const activeProjectsList = useMemo(() => 
+    projects?.filter(p => !p.archived) || [], 
+    [projects]
+  );
+
   const {
     data: tasks,
     isLoading: tasksLoading
@@ -67,9 +80,15 @@ export default function Home() {
     queryKey: ["home-tasks", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
+      // Only get tasks from active (non-archived) projects
       const {
         data: projectsData
-      } = await supabase.from("projects").select("id").eq("workspace_id", workspace.id);
+      } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", workspace.id)
+        .eq("archived", false);
+      
       if (!projectsData || projectsData.length === 0) return [];
       const {
         data,
@@ -82,10 +101,43 @@ export default function Home() {
     },
     enabled: !!workspace
   });
-  const activeProjects = projects?.filter(p => p.status === "active" && !p.archived).length || 0;
+
+  const activeProjects = activeProjectsList.filter(p => p.status === "active").length;
   const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
   const pendingTasks = tasks?.filter(t => t.status !== "completed").length || 0;
   const overdueTasks = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed").length || 0;
+
+  // Quick access items with permission checks
+  const quickAccessItems = useMemo(() => {
+    const items = [
+      {
+        label: "Minhas Tarefas",
+        icon: ListTodo,
+        path: "/my-tasks",
+        show: isAdmin || isGestor || permissions.can_view_tasks
+      },
+      {
+        label: "Ver Todos os Projetos",
+        icon: FolderKanban,
+        path: "/projects",
+        show: isAdmin || isGestor || permissions.can_view_projects
+      },
+      {
+        label: "Setores",
+        icon: UserPlus,
+        path: "/positions",
+        show: isAdmin || isGestor || permissions.can_view_positions
+      },
+      {
+        label: "Workspace",
+        icon: FileText,
+        path: "/workspace",
+        show: true // Always visible
+      }
+    ];
+    return items.filter(item => item.show);
+  }, [isAdmin, isGestor, permissions]);
+
   if (projectsLoading || tasksLoading) {
     return <AppLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -96,6 +148,7 @@ export default function Home() {
         </div>
       </AppLayout>;
   }
+
   return <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
@@ -193,13 +246,13 @@ export default function Home() {
               <CardDescription className="text-xs sm:text-sm">Seus projetos mais recentes</CardDescription>
             </CardHeader>
             <CardContent>
-              {!projects || projects.length === 0 ? <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">Nenhum projeto ainda</p>
+              {activeProjectsList.length === 0 ? <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">Nenhum projeto ativo</p>
                   <Button onClick={() => navigate("/projects")}>
                     Criar Primeiro Projeto
                   </Button>
                 </div> : <div className="space-y-3">
-                  {projects.slice(0, 5).map(project => <div key={project.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                  {activeProjectsList.slice(0, 5).map(project => <div key={project.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground truncate">
                           {project.name}
@@ -212,8 +265,8 @@ export default function Home() {
                         {project.status === "completed" ? "Concluído" : project.status === "active" ? "Ativo" : "Pausado"}
                       </Badge>
                     </div>)}
-                  {projects.length > 5 && <Button variant="outline" className="w-full mt-2" onClick={() => navigate("/projects")}>
-                      Ver Todos os Projetos ({projects.length})
+                  {activeProjectsList.length > 5 && <Button variant="outline" className="w-full mt-2" onClick={() => navigate("/projects")}>
+                      Ver Todos os Projetos ({activeProjectsList.length})
                     </Button>}
                 </div>}
             </CardContent>
@@ -229,22 +282,17 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/my-tasks")}>
-                  <ListTodo className="mr-2 h-4 w-4" />
-                  Minhas Tarefas
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/projects")}>
-                  <FolderKanban className="mr-2 h-4 w-4" />
-                  Ver Todos os Projetos
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/positions")}>
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Setores
-                </Button>
-                <Button variant="outline" className="w-full justify-start" onClick={() => navigate("/workspace")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Workspace
-                </Button>
+                {quickAccessItems.map(item => (
+                  <Button 
+                    key={item.path}
+                    variant="outline" 
+                    className="w-full justify-start" 
+                    onClick={() => navigate(item.path)}
+                  >
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {item.label}
+                  </Button>
+                ))}
               </div>
             </CardContent>
           </Card>
