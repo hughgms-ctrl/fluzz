@@ -29,6 +29,8 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   const { workspace } = useWorkspace();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [taskTitle, setTaskTitle] = useState(task.title);
+  const [isDragging, setIsDragging] = useState(false);
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
 
   const { data: subtasks } = useQuery({
     queryKey: ["subtasks", task.id],
@@ -166,11 +168,6 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Se é draggable, não navegar ao clicar - apenas com double click
-    if (isDraggable) {
-      return;
-    }
-    
     const target = e.target as HTMLElement;
     
     // Não navegar se clicou em elementos interativos
@@ -184,30 +181,46 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
       e.stopPropagation();
       return;
     }
-    
-    navigate(`/tasks/${task.id}`);
-  };
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    
-    if (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'BUTTON' ||
-      target.closest('[role="menu"]') ||
-      target.closest('button')
-    ) {
+    // Se está arrastando, não navegar
+    if (isDragging) {
       return;
     }
     
     navigate(`/tasks/${task.id}`);
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isDraggable) {
+      setMouseDownPos({ x: e.clientX, y: e.clientY });
+      setIsDragging(false);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDraggable && mouseDownPos) {
+      const dx = Math.abs(e.clientX - mouseDownPos.x);
+      const dy = Math.abs(e.clientY - mouseDownPos.y);
+      if (dx > 5 || dy > 5) {
+        setIsDragging(true);
+      }
+    }
+  };
+
+  const handleMouseUp = () => {
+    setMouseDownPos(null);
+    // Reset isDragging after a short delay to allow click to process
+    setTimeout(() => setIsDragging(false), 100);
+  };
+
   return (
     <Card 
       className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} group`}
       onClick={handleCardClick}
-      onDoubleClick={isDraggable ? handleDoubleClick : undefined}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">
