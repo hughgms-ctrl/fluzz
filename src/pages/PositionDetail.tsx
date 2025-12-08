@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Repeat, Users } from "lucide-react";
+import { ArrowLeft, Plus, Repeat, Users, Pencil } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ import { CreateRoutineDialog } from "@/components/positions/CreateRoutineDialog"
 import { RoutineCard } from "@/components/positions/RoutineCard";
 import { AssignUserDialog } from "@/components/positions/AssignUserDialog";
 import { AssignedUsersList } from "@/components/positions/AssignedUsersList";
+import { EditPositionDialog } from "@/components/positions/EditPositionDialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function PositionDetail() {
@@ -20,6 +21,7 @@ export default function PositionDetail() {
   const { isAdmin, isGestor, workspace } = useWorkspace();
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [assignUserDialogOpen, setAssignUserDialogOpen] = useState(false);
+  const [editPositionDialogOpen, setEditPositionDialogOpen] = useState(false);
 
   const { data: position, isLoading: positionLoading } = useQuery({
     queryKey: ["position", id, workspace?.id],
@@ -117,7 +119,18 @@ export default function PositionDetail() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-foreground">{position.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground">{position.name}</h1>
+              {(isAdmin || isGestor) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => setEditPositionDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
             {position.description && (
               <p className="text-muted-foreground mt-1">{position.description}</p>
             )}
@@ -199,6 +212,12 @@ export default function PositionDetail() {
           positionId={id!}
           open={assignUserDialogOpen}
           onOpenChange={setAssignUserDialogOpen}
+        />
+
+        <EditPositionDialog
+          open={editPositionDialogOpen}
+          onOpenChange={setEditPositionDialogOpen}
+          position={position}
         />
       </div>
     </AppLayout>
