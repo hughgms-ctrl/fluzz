@@ -152,6 +152,11 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
+    // Se é draggable, não navegar ao clicar - apenas com double click
+    if (isDraggable) {
+      return;
+    }
+    
     const target = e.target as HTMLElement;
     
     // Não navegar se clicou em elementos interativos
@@ -169,10 +174,26 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
     navigate(`/tasks/${task.id}`);
   };
 
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'BUTTON' ||
+      target.closest('[role="menu"]') ||
+      target.closest('button')
+    ) {
+      return;
+    }
+    
+    navigate(`/tasks/${task.id}`);
+  };
+
   return (
     <Card 
-      className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? '' : 'cursor-pointer'} group`}
+      className={`p-3 hover:shadow-md transition-shadow ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} group`}
       onClick={handleCardClick}
+      onDoubleClick={isDraggable ? handleDoubleClick : undefined}
     >
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-2">

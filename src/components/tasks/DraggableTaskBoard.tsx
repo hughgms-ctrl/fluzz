@@ -52,11 +52,11 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
     isDragging,
   } = useSortable({ id: task.id });
 
-  const style = {
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: transition || 'transform 200ms ease',
-    opacity: isDragging ? 0.3 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
+    opacity: isDragging ? 0.5 : 1,
+    touchAction: 'none',
   };
 
   return (
@@ -65,7 +65,7 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative ${isDragging ? 'z-50 scale-105' : ''} transition-all`}
+      className={`relative ${isDragging ? 'z-50 scale-[1.02] shadow-lg' : ''} transition-all touch-none`}
     >
       <TaskCard
         task={task}
