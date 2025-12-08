@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 
 export default function MyTasks() {
@@ -28,6 +30,7 @@ export default function MyTasks() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(true);
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -140,6 +143,9 @@ export default function MyTasks() {
       const taskType = getTaskType(task);
       const matchesType = typeFilter === "all" || taskType === typeFilter;
 
+      // Hide completed tasks if toggle is off
+      const matchesCompletedFilter = showCompleted || task.status !== "completed";
+
       let matchesDueDate = true;
       if (dueDateFilter !== "all" && task.due_date) {
         const dueDate = new Date(task.due_date);
@@ -161,9 +167,9 @@ export default function MyTasks() {
         }
       }
 
-      return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject && matchesType;
+      return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesProject && matchesType && matchesCompletedFilter;
     });
-  }, [tasks, searchTerm, priorityFilter, statusFilter, dueDateFilter, projectFilter, typeFilter]);
+  }, [tasks, searchTerm, priorityFilter, statusFilter, dueDateFilter, projectFilter, typeFilter, showCompleted]);
 
   // Computed values based on filtered tasks
   const todoTasks = useMemo(() => filteredTasks.filter((t) => t.status === "todo"), [filteredTasks]);
@@ -383,6 +389,18 @@ export default function MyTasks() {
           onTypeChange={setTypeFilter}
           onClearAll={clearAllFilters}
         />
+        </div>
+
+        {/* Toggle show completed */}
+        <div className="flex items-center justify-end gap-2">
+          <Switch
+            id="show-completed"
+            checked={showCompleted}
+            onCheckedChange={setShowCompleted}
+          />
+          <Label htmlFor="show-completed" className="text-xs sm:text-sm text-muted-foreground cursor-pointer">
+            Exibir concluídas
+          </Label>
         </div>
 
         <Tabs defaultValue="all" className="w-full">

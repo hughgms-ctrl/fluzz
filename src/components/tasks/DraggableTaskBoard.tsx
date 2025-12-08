@@ -47,17 +47,17 @@ function DroppableColumn({ column, children, taskCount }: { column: any; childre
   return (
     <Card 
       ref={setNodeRef} 
-      className={`${column.color} transition-all duration-200 ${isOver ? 'ring-2 ring-primary ring-offset-2 bg-accent/50' : ''}`}
+      className={`${column.color} transition-all duration-200 min-w-[120px] ${isOver ? 'ring-2 ring-primary ring-offset-2 bg-accent/50' : ''}`}
     >
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center justify-between">
-          {column.title}
-          <span className="text-sm font-normal text-muted-foreground">
+      <CardHeader className="p-2 md:p-4">
+        <CardTitle className="text-xs sm:text-sm md:text-lg flex items-center justify-between gap-1">
+          <span className="truncate">{column.title}</span>
+          <span className="text-xs font-normal text-muted-foreground flex-shrink-0">
             {taskCount}
           </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-3 space-y-2 min-h-[200px]">
+      <CardContent className="p-2 md:p-3 space-y-2 min-h-[150px] md:min-h-[200px]">
         {children}
       </CardContent>
     </Card>
@@ -117,13 +117,13 @@ export const DraggableTaskBoard = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 10,
+        distance: 8,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 350,
-        tolerance: 5,
+        delay: 500,
+        tolerance: 8,
       },
     })
   );
@@ -247,7 +247,8 @@ export const DraggableTaskBoard = ({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4 overflow-x-auto min-w-0">
+        {/* Note: On mobile, columns are side by side with horizontal scroll if needed */}
         {columns.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (
