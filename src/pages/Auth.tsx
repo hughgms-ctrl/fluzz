@@ -8,9 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-
 export default function Auth() {
-  const { user, loading, signUp, signIn } = useAuth();
+  const {
+    user,
+    loading,
+    signUp,
+    signIn
+  } = useAuth();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -34,18 +38,16 @@ export default function Auth() {
   const processInvite = async () => {
     try {
       const {
-        data: { user: currentUser },
+        data: {
+          user: currentUser
+        }
       } = await supabase.auth.getUser();
       if (!currentUser) return;
 
       // Verificar se já foi processado pelo trigger do backend
-      const { data: existingMember } = await supabase
-        .from("workspace_members")
-        .select("id")
-        .eq("workspace_id", inviteData.workspace_id)
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
-
+      const {
+        data: existingMember
+      } = await supabase.from("workspace_members").select("id").eq("workspace_id", inviteData.workspace_id).eq("user_id", currentUser.id).maybeSingle();
       if (existingMember) {
         console.log("Convite já foi processado pelo backend trigger");
         return; // Já foi processado
@@ -55,32 +57,36 @@ export default function Auth() {
       console.log("Processando convite manualmente (fallback)");
 
       // Add user to workspace
-      const { error: memberError } = await supabase.from("workspace_members").insert({
+      const {
+        error: memberError
+      } = await supabase.from("workspace_members").insert({
         workspace_id: inviteData.workspace_id,
         user_id: currentUser.id,
         role: inviteData.role,
-        invited_by: inviteData.invited_by,
+        invited_by: inviteData.invited_by
       });
-
       if (memberError && !memberError.message.includes("duplicate")) {
         throw memberError;
       }
 
       // Set permissions if not admin
       if (inviteData.role !== "admin" && inviteData.permissions) {
-        const { error: permError } = await supabase.from("user_permissions").insert({
+        const {
+          error: permError
+        } = await supabase.from("user_permissions").insert({
           workspace_id: inviteData.workspace_id,
           user_id: currentUser.id,
-          ...inviteData.permissions,
+          ...inviteData.permissions
         });
-
         if (permError && !permError.message.includes("duplicate")) {
           throw permError;
         }
       }
 
       // Mark invite as accepted
-      await supabase.from("workspace_invites").update({ accepted: true }).eq("token", inviteToken);
+      await supabase.from("workspace_invites").update({
+        accepted: true
+      }).eq("token", inviteToken);
 
       // Create welcome notification
       await supabase.from("notifications").insert({
@@ -88,13 +94,10 @@ export default function Auth() {
         workspace_id: inviteData.workspace_id,
         type: "workspace_invite",
         title: `Bem-vindo ao ${(inviteData.workspaces as any)?.name || "workspace"}!`,
-        message: `Você agora faz parte do workspace como ${
-          inviteData.role === "admin" ? "Administrador" : inviteData.role === "gestor" ? "Gestor" : "Membro"
-        }.`,
+        message: `Você agora faz parte do workspace como ${inviteData.role === "admin" ? "Administrador" : inviteData.role === "gestor" ? "Gestor" : "Membro"}.`,
         link: "/",
-        data: inviteData,
+        data: inviteData
       });
-
       toast.success("Bem-vindo ao workspace!");
     } catch (error) {
       console.error("Erro ao processar convite:", error);
@@ -111,10 +114,11 @@ export default function Auth() {
   useEffect(() => {
     const checkInvitedUser = async () => {
       const {
-        data: { user: currentUser },
+        data: {
+          user: currentUser
+        }
       } = await supabase.auth.getUser();
       const token = searchParams.get("invite");
-
       if (currentUser && token) {
         setIsInvitedUser(true);
         setInviteToken(token);
@@ -124,22 +128,15 @@ export default function Auth() {
         loadInviteData(token);
       }
     };
-
     checkInvitedUser();
   }, [searchParams]);
-
   const loadInviteData = async (token: string) => {
     try {
-      const { data, error } = await supabase
-        .from("workspace_invites")
-        .select("*, workspaces(name)")
-        .eq("token", token)
-        .eq("accepted", false)
-        .gt("expires_at", new Date().toISOString())
-        .single();
-
+      const {
+        data,
+        error
+      } = await supabase.from("workspace_invites").select("*, workspaces(name)").eq("token", token).eq("accepted", false).gt("expires_at", new Date().toISOString()).single();
       if (error) throw error;
-
       if (data) {
         setInviteData(data);
         setSignupEmail(data.email);
@@ -157,14 +154,12 @@ export default function Auth() {
   // LOADING SCREEN
   // ============================================================
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+    return <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // ============================================================
@@ -175,10 +170,11 @@ export default function Auth() {
       e.preventDefault();
       setIsLoading(true);
       try {
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword,
+        const {
+          error
+        } = await supabase.auth.updateUser({
+          password: newPassword
         });
-
         if (error) throw error;
 
         // Aguardar processamento do trigger do backend
@@ -186,17 +182,16 @@ export default function Auth() {
 
         // Chamar processInvite como fallback
         await processInvite();
-
         toast.success("Senha definida! Aguarde...");
-        
+
         // Aguardar mais tempo para garantir workspace_members
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         // Limpar o estado de convite antes de redirecionar
         setIsInvitedUser(false);
         setInviteToken(null);
         setInviteData(null);
-        
+
         // Fazer reload completo da página na home
         window.location.href = "/";
       } catch (error: any) {
@@ -206,31 +201,19 @@ export default function Auth() {
         setIsLoading(false);
       }
     };
-
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+    return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
         <Card className="w-full max-w-md shadow-lg animate-fade-in">
           <CardHeader className="space-y-1 text-center">
             <CardTitle className="text-3xl font-bold text-primary">Defina sua Senha</CardTitle>
             <CardDescription>
-              {inviteData
-                ? `Convite para ${(inviteData.workspaces as any)?.name}`
-                : "Crie uma senha para acessar sua conta"}
+              {inviteData ? `Convite para ${(inviteData.workspaces as any)?.name}` : "Crie uma senha para acessar sua conta"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSetPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="new-password">Nova Senha</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
+                <Input id="new-password" type="password" placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} />
                 <p className="text-xs text-muted-foreground">Mínimo de 6 caracteres</p>
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
@@ -239,8 +222,7 @@ export default function Auth() {
             </form>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
 
   // ============================================================
@@ -273,7 +255,6 @@ export default function Auth() {
     setIsLoading(true);
     try {
       await signUp(signupEmail, signupPassword, signupFullName);
-
       if (inviteToken && inviteData) {
         setTimeout(async () => {
           await processInvite();
@@ -289,15 +270,12 @@ export default function Auth() {
   // ============================================================
   // AUTH PAGE UI
   // ============================================================
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
+  return <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background p-4">
       <Card className="w-full max-w-md shadow-lg animate-fade-in">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold text-primary">ProjectFlow</CardTitle>
+          <CardTitle className="text-3xl font-bold text-primary">Fluzz</CardTitle>
           <CardDescription>
-            {inviteData
-              ? `Você foi convidado para ${(inviteData.workspaces as any).name}`
-              : "Gerenciamento de projetos simplificado"}
+            {inviteData ? `Você foi convidado para ${(inviteData.workspaces as any).name}` : "Gerenciamento de projetos simplificado"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -312,25 +290,11 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    required
-                  />
+                  <Input id="login-email" type="email" placeholder="seu@email.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
+                  <Input id="login-password" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
@@ -350,41 +314,18 @@ export default function Auth() {
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nome completo</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="João Silva"
-                    value={signupFullName}
-                    onChange={(e) => setSignupFullName(e.target.value)}
-                    required
-                  />
+                  <Input id="signup-name" type="text" placeholder="João Silva" value={signupFullName} onChange={e => setSignupFullName(e.target.value)} required />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    disabled={!!inviteToken}
-                    required
-                  />
+                  <Input id="signup-email" type="email" placeholder="seu@email.com" value={signupEmail} onChange={e => setSignupEmail(e.target.value)} disabled={!!inviteToken} required />
                   {inviteToken && <p className="text-xs text-muted-foreground">Email pré-preenchido pelo convite</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
+                  <Input id="signup-password" type="password" placeholder="••••••••" value={signupPassword} onChange={e => setSignupPassword(e.target.value)} required minLength={6} />
                 </div>
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -395,6 +336,5 @@ export default function Auth() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
