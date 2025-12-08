@@ -128,11 +128,16 @@ export const DraggableTaskBoard = ({
     })
   );
 
+  // Natural sort function - recognizes numbers in strings
+  const naturalSort = (a: string, b: string) => {
+    return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  };
+
   const getTasksByStatus = (status: string) => {
     const filtered = tasks.filter((task) => task.status === status);
     
     if (sortMode === "az") {
-      return filtered.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+      return filtered.sort((a, b) => naturalSort(a.title, b.title));
     }
     
     // Manual order - sort by task_order

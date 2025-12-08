@@ -38,7 +38,18 @@ export default function ProjectDetail() {
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [sortMode, setSortMode] = useState<"manual" | "az">("manual");
+  
+  // Load sort mode from localStorage for this project
+  const [sortMode, setSortMode] = useState<"manual" | "az">(() => {
+    const saved = localStorage.getItem(`project-sort-mode-${id}`);
+    return (saved === "az" || saved === "manual") ? saved : "manual";
+  });
+
+  // Persist sort mode changes to localStorage
+  const handleSortModeChange = (mode: "manual" | "az") => {
+    setSortMode(mode);
+    localStorage.setItem(`project-sort-mode-${id}`, mode);
+  };
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", id],
@@ -496,7 +507,7 @@ export default function ProjectDetail() {
                       updateTaskOrderMutation.mutate({ taskId, newOrder, status })
                     }
                     sortMode={sortMode}
-                    onSortModeChange={setSortMode}
+                    onSortModeChange={handleSortModeChange}
                   />
                 ) : (
                   <TaskList
