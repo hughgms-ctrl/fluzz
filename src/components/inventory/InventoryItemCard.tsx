@@ -2,9 +2,23 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, History } from "lucide-react";
+import { ArrowUp, ArrowDown, History, Trash2 } from "lucide-react";
 import { RegisterMovementDialog } from "./RegisterMovementDialog";
 import { MovementHistoryDialog } from "./MovementHistoryDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface InventoryItemCardProps {
   item: any;
@@ -14,11 +28,29 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
   const [movementOpen, setMovementOpen] = useState(false);
   const [movementType, setMovementType] = useState<"entrada" | "saida">("entrada");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleMovement = (type: "entrada" | "saida") => {
     setMovementType(type);
     setMovementOpen(true);
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("inventory_items")
+        .delete()
+        .eq("id", item.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast.success("Item excluído com sucesso");
+    },
+    onError: () => {
+      toast.error("Erro ao excluir item");
+    },
+  });
 
   return (
     <>
@@ -67,6 +99,30 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
           >
             <History className="h-4 w-4" />
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="ghost">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir item</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir "{item.name}"? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => deleteMutation.mutate()}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardFooter>
       </Card>
 

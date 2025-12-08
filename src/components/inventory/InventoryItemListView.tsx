@@ -1,9 +1,23 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowDownToLine, ArrowUpFromLine, History } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, History, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { RegisterMovementDialog } from "./RegisterMovementDialog";
 import { MovementHistoryDialog } from "./MovementHistoryDialog";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface InventoryItemListViewProps {
   items: any[];
@@ -14,6 +28,7 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
   const [movementType, setMovementType] = useState<"entrada" | "saida">("entrada");
   const [movementDialogOpen, setMovementDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const handleMovement = (item: any, type: "entrada" | "saida") => {
     setSelectedItem(item);
@@ -25,6 +40,23 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
     setSelectedItem(item);
     setHistoryDialogOpen(true);
   };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase
+        .from("inventory_items")
+        .delete()
+        .eq("id", itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast.success("Item excluído com sucesso");
+    },
+    onError: () => {
+      toast.error("Erro ao excluir item");
+    },
+  });
 
   return (
     <>
@@ -84,6 +116,30 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
                   >
                     <History className="h-4 w-4" />
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" title="Excluir">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir item</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir "{item.name}"? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </TableCell>
             </TableRow>
