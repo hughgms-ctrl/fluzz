@@ -14,8 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateBR } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface TaskCardProps {
@@ -313,7 +312,7 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
           {task.due_date && (
             <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
               <Calendar size={10} />
-              {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+              {formatDateBR(task.due_date).slice(0, 5)}
             </div>
           )}
 

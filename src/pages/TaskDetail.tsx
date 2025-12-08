@@ -21,8 +21,7 @@ import {
   LinkIcon,
   Edit2
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateBR } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Select,
@@ -552,7 +551,7 @@ export default function TaskDetail() {
                       {task.due_date ? (
                         <Badge variant={isOverdue ? "destructive" : "secondary"}>
                           <Calendar size={12} className="mr-1" />
-                          {format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                          {formatDateBR(task.due_date)}
                         </Badge>
                       ) : (
                         <p className="text-muted-foreground">Sem prazo definido</p>
