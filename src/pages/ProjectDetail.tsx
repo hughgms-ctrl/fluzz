@@ -25,7 +25,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
   const [view, setView] = useState<"board" | "list">("board");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -396,13 +396,13 @@ export default function ProjectDetail() {
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "notes" | "briefing")}>
           <TabsList className="grid w-full max-w-3xl grid-cols-4">
-            <TabsTrigger value="dashboard" className="gap-2">
-              <BarChart3 size={16} />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
               <LayoutGrid size={16} />
               <span className="hidden sm:inline">Tarefas</span>
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 size={16} />
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="notes" className="gap-2">
               <FileText size={16} />
