@@ -169,13 +169,13 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto com status ativo e sem datas, incluindo workspace_id
+      // Criar novo projeto com status ativo, SEM copiar a descrição
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
           {
             name: `Cópia de ${project.name}`,
-            description: project.description,
+            description: null,
             status: 'active',
             user_id: user.id,
             workspace_id: project.workspace_id,

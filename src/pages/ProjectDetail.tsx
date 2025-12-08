@@ -33,7 +33,9 @@ export default function ProjectDetail() {
   const [dueDateFilter, setDueDateFilter] = useState("all");
   const [setorFilter, setSetorFilter] = useState("all");
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -46,27 +48,34 @@ export default function ProjectDetail() {
         .single();
       if (error) throw error;
       setProjectName(data.name);
+      setProjectDescription(data.description || "");
       return data;
     },
   });
 
-  const updateProjectNameMutation = useMutation({
-    mutationFn: async (newName: string) => {
+  const updateProjectMutation = useMutation({
+    mutationFn: async ({ name, description }: { name?: string; description?: string }) => {
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (description !== undefined) updates.description = description || null;
+      
       const { error } = await supabase
         .from("projects")
-        .update({ name: newName })
+        .update(updates)
         .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Nome do projeto atualizado!");
+      toast.success("Projeto atualizado!");
       setIsEditingName(false);
+      setIsEditingDescription(false);
     },
     onError: () => {
-      toast.error("Erro ao atualizar nome");
+      toast.error("Erro ao atualizar projeto");
       setProjectName(project?.name || "");
+      setProjectDescription(project?.description || "");
     },
   });
 
@@ -209,10 +218,19 @@ export default function ProjectDetail() {
 
   const handleNameBlur = () => {
     if (projectName.trim() && projectName !== project?.name) {
-      updateProjectNameMutation.mutate(projectName.trim());
+      updateProjectMutation.mutate({ name: projectName.trim() });
     } else {
       setIsEditingName(false);
       setProjectName(project?.name || "");
+    }
+  };
+
+  const handleDescriptionBlur = () => {
+    if (projectDescription !== (project?.description || "")) {
+      updateProjectMutation.mutate({ description: projectDescription.trim() });
+    } else {
+      setIsEditingDescription(false);
+      setProjectDescription(project?.description || "");
     }
   };
 
@@ -282,7 +300,30 @@ export default function ProjectDetail() {
                   {project.name}
                 </h1>
               )}
-              <p className="text-muted-foreground mt-1">{project.description}</p>
+              {isEditingDescription ? (
+                <Input
+                  value={projectDescription}
+                  onChange={(e) => setProjectDescription(e.target.value)}
+                  onBlur={handleDescriptionBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleDescriptionBlur();
+                    if (e.key === "Escape") {
+                      setProjectDescription(project?.description || "");
+                      setIsEditingDescription(false);
+                    }
+                  }}
+                  className="text-muted-foreground mt-1 max-w-2xl"
+                  placeholder="Adicione uma descrição..."
+                  autoFocus
+                />
+              ) : (
+                <p 
+                  className="text-muted-foreground mt-1 hover:text-foreground transition-colors cursor-pointer"
+                  onClick={() => setIsEditingDescription(true)}
+                >
+                  {project.description || "Clique para adicionar descrição..."}
+                </p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
