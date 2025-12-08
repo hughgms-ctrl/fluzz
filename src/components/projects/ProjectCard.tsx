@@ -30,9 +30,10 @@ interface ProjectCardProps {
   onDelete: () => void;
   onArchive: () => void;
   isArchived?: boolean;
+  canEdit?: boolean;
 }
 
-export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, canEdit = false }: ProjectCardProps) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditingName, setIsEditingName] = useState(false);
@@ -349,7 +350,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
       <CardContent className="p-4" onClick={() => navigate(`/projects/${project.id}`)}>
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-2">
-            {isEditingName ? (
+            {isEditingName && canEdit ? (
               <Input
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
@@ -368,74 +369,78 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
               />
             ) : (
               <h3 
-                className="font-semibold text-lg text-foreground line-clamp-1 hover:text-primary transition-colors flex-1"
+                className={`font-semibold text-lg text-foreground line-clamp-1 flex-1 ${canEdit ? 'hover:text-primary transition-colors cursor-text' : ''}`}
                 onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditingName(true);
+                  if (canEdit) {
+                    e.stopPropagation();
+                    setIsEditingName(true);
+                  }
                 }}
               >
                 {project.name}
               </h3>
             )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="z-50 bg-popover">
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    duplicateMutation.mutate();
-                  }}
-                  disabled={duplicateMutation.isPending}
-                >
-                  <Copy className="mr-2 h-4 w-4" />
-                  {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
-                </DropdownMenuItem>
-                {!project.is_template && (
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="z-50 bg-popover">
                   <DropdownMenuItem 
                     onClick={(e) => {
                       e.stopPropagation();
-                      saveAsTemplateMutation.mutate();
+                      duplicateMutation.mutate();
                     }}
-                    disabled={saveAsTemplateMutation.isPending}
+                    disabled={duplicateMutation.isPending}
                   >
-                    <Bookmark className="mr-2 h-4 w-4" />
-                    {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+                    <Copy className="mr-2 h-4 w-4" />
+                    {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onArchive();
-                  }}
-                >
-                  {isArchived ? (
-                    <>
-                      <ArchiveRestore className="mr-2 h-4 w-4" />
-                      Restaurar Projeto
-                    </>
-                  ) : (
-                    <>
-                      <Archive className="mr-2 h-4 w-4" />
-                      Arquivar Projeto
-                    </>
+                  {!project.is_template && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        saveAsTemplateMutation.mutate();
+                      }}
+                      disabled={saveAsTemplateMutation.isPending}
+                    >
+                      <Bookmark className="mr-2 h-4 w-4" />
+                      {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+                    </DropdownMenuItem>
                   )}
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowDeleteDialog(true);
-                  }}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Excluir Projeto
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive();
+                    }}
+                  >
+                    {isArchived ? (
+                      <>
+                        <ArchiveRestore className="mr-2 h-4 w-4" />
+                        Restaurar Projeto
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Arquivar Projeto
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDeleteDialog(true);
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir Projeto
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           
           <div className="flex items-center justify-between gap-2">

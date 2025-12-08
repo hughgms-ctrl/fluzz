@@ -199,6 +199,7 @@ export default function Projects() {
                     project={project}
                     onDelete={() => deleteMutation.mutate(project.id)}
                     onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
+                    canEdit={isAdmin || isGestor}
                   />
                 ))}
               </div>
@@ -228,6 +229,7 @@ export default function Projects() {
                     onDelete={() => deleteMutation.mutate(project.id)}
                     onArchive={() => archiveMutation.mutate({ id: project.id, archived: false })}
                     isArchived={true}
+                    canEdit={isAdmin || isGestor}
                   />
                 ))}
               </div>
