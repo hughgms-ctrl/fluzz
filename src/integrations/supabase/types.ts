@@ -712,6 +712,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_template: boolean
           name: string
           status: string | null
           updated_at: string | null
@@ -723,6 +724,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_template?: boolean
           name: string
           status?: string | null
           updated_at?: string | null
@@ -734,6 +736,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_template?: boolean
           name?: string
           status?: string | null
           updated_at?: string | null
