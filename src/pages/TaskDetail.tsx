@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { renderDocumentation } from "@/lib/linkify";
 import { 
   ArrowLeft, 
   Calendar, 
@@ -574,9 +575,9 @@ export default function TaskDetail() {
                     />
                   ) : (
                     task.documentation ? (
-                      <p className="text-sm text-muted-foreground p-3 bg-muted/50 rounded mt-2">
-                        {task.documentation}
-                      </p>
+                      <div className="text-sm text-foreground p-3 bg-muted/50 rounded mt-2 whitespace-pre-wrap">
+                        {renderDocumentation(task.documentation)}
+                      </div>
                     ) : (
                       <p className="text-muted-foreground mt-2">Sem documentação</p>
                     )
