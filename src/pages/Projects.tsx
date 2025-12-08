@@ -20,7 +20,7 @@ import { formatDateBR } from "@/lib/utils";
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();

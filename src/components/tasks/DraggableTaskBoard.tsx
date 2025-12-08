@@ -117,13 +117,13 @@ export const DraggableTaskBoard = ({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 10,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
-        tolerance: 8,
+        delay: 350,
+        tolerance: 5,
       },
     })
   );
