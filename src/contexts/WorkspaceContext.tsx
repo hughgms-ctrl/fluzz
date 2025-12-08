@@ -29,6 +29,7 @@ interface UserPermissions {
   can_view_culture: boolean;
   can_view_vision: boolean;
   can_view_processes: boolean;
+  can_view_inventory: boolean;
 }
 
 interface WorkspaceContextType {
@@ -63,6 +64,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     can_view_culture: true,
     can_view_vision: true,
     can_view_processes: true,
+    can_view_inventory: false,
   });
 
   const fetchWorkspace = async (preferredWorkspaceId?: string) => {
@@ -185,6 +187,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             can_view_culture: permissionsData.can_view_culture,
             can_view_vision: permissionsData.can_view_vision,
             can_view_processes: permissionsData.can_view_processes,
+            can_view_inventory: permissionsData.can_view_inventory ?? false,
           });
         }
       }

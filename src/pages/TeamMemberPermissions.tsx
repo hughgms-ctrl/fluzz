@@ -49,6 +49,7 @@ interface UserPermissions {
   can_view_culture: boolean;
   can_view_vision: boolean;
   can_view_processes: boolean;
+  can_view_inventory: boolean;
   can_edit_projects: boolean;
   can_edit_tasks: boolean;
   can_edit_positions: boolean;
@@ -57,6 +58,7 @@ interface UserPermissions {
   can_edit_culture: boolean;
   can_edit_vision: boolean;
   can_edit_processes: boolean;
+  can_edit_inventory: boolean;
 }
 
 type PermissionKey = keyof Omit<UserPermissions, "id" | "user_id" | "workspace_id" | "created_at" | "updated_at">;
@@ -77,6 +79,7 @@ const permissionConfigs: PermissionConfig[] = [
   { key: "culture", label: "Cultura", viewKey: "can_view_culture", editKey: "can_edit_culture" },
   { key: "vision", label: "Visão", viewKey: "can_view_vision", editKey: "can_edit_vision" },
   { key: "processes", label: "Processos", viewKey: "can_view_processes", editKey: "can_edit_processes" },
+  { key: "inventory", label: "Inventário", viewKey: "can_view_inventory", editKey: "can_edit_inventory" },
 ];
 
 export default function TeamMemberPermissions() {

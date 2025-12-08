@@ -35,7 +35,7 @@ const workspaceItems: MenuItem[] = [
   { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
   { title: "Equipe", url: "/team", icon: Users, adminOnly: true },
   { title: "Setores", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
-  { title: "Inventário", url: "/inventory", icon: Package },
+  { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },
 ];
 
 export function AppSidebar() {
@@ -55,6 +55,8 @@ export function AppSidebar() {
   const canViewItem = (item: MenuItem) => {
     if (item.adminOnly && !isAdmin && !isGestor) return false;
     if (!item.permission) return true;
+    // Admins and gestors always have full access
+    if (isAdmin || isGestor) return true;
     return permissions[item.permission as keyof typeof permissions];
   };
 
