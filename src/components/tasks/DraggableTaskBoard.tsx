@@ -1,8 +1,25 @@
 import React, { useState } from "react";
 import { TaskCard } from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors, closestCenter, useDroppable, PointerSensor } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay, 
+  DragStartEvent, 
+  PointerSensor, 
+  TouchSensor,
+  useSensor, 
+  useSensors, 
+  closestCorners,
+  DragOverEvent,
+  useDroppable
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  useSortable,
+  arrayMove 
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 interface DraggableTaskBoardProps {
@@ -25,7 +42,7 @@ function DroppableColumn({ column, children, taskCount }: { column: any; childre
   return (
     <Card 
       ref={setNodeRef} 
-      className={`${column.color} transition-all duration-200 ${isOver ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+      className={`${column.color} transition-all duration-200 ${isOver ? 'ring-2 ring-primary ring-offset-2 bg-accent/50' : ''}`}
     >
       <CardHeader>
         <CardTitle className="text-lg flex items-center justify-between">
@@ -42,7 +59,7 @@ function DroppableColumn({ column, children, taskCount }: { column: any; childre
   );
 }
 
-function SortableTask({ task, onDelete, onStatusChange }: any) {
+function SortableTask({ task, onDelete }: { task: any; onDelete: () => void }) {
   const {
     attributes,
     listeners,
@@ -50,11 +67,17 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ 
+    id: task.id,
+    data: {
+      type: 'task',
+      task,
+    }
+  });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms ease',
+    transition,
     opacity: isDragging ? 0.5 : 1,
     touchAction: 'none',
   };
@@ -65,7 +88,7 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`relative ${isDragging ? 'z-50 scale-[1.02] shadow-lg' : ''} transition-all touch-none`}
+      className={`${isDragging ? 'z-50' : ''} touch-none`}
     >
       <TaskCard
         task={task}
@@ -77,18 +100,18 @@ function SortableTask({ task, onDelete, onStatusChange }: any) {
 }
 
 export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: DraggableTaskBoardProps) => {
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeTask, setActiveTask] = useState<any>(null);
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: 5,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 100,
-        tolerance: 3,
+        delay: 150,
+        tolerance: 5,
       },
     })
   );
@@ -98,44 +121,79 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
+    const { active } = event;
+    const task = tasks.find((t) => t.id === active.id);
+    setActiveTask(task);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    // Find the active task
+    const activeTask = tasks.find((t) => t.id === activeId);
+    if (!activeTask) return;
+
+    // Check if we're over a column
+    const overColumn = columns.find((c) => c.id === overId);
+    
+    if (overColumn) {
+      // Moving directly over a column
+      if (activeTask.status !== overColumn.id) {
+        onUpdateStatus(activeTask.id, overColumn.id);
+      }
+      return;
+    }
+
+    // Check if we're over another task
+    const overTask = tasks.find((t) => t.id === overId);
+    if (overTask && activeTask.status !== overTask.status) {
+      // Moving to a different column via task
+      onUpdateStatus(activeTask.id, overTask.status);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    if (!over) {
-      setActiveId(null);
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const activeId = active.id;
+    const overId = over.id;
+
+    // Check if dropped on a column
+    const overColumn = columns.find((c) => c.id === overId);
+    if (overColumn) {
+      const activeTask = tasks.find((t) => t.id === activeId);
+      if (activeTask && activeTask.status !== overColumn.id) {
+        onUpdateStatus(activeTask.id, overColumn.id);
+      }
       return;
     }
 
-    const activeTask = tasks.find((t) => t.id === active.id);
-    
-    // Check if dropped on a column
-    const overColumn = columns.find((c) => c.id === over.id);
-    
-    // Check if dropped on another task
-    const overTask = tasks.find((t) => t.id === over.id);
-    const targetStatus = overTask?.status || overColumn?.id;
+    // If we dropped on the same item, do nothing
+    if (activeId === overId) return;
 
-    if (activeTask && targetStatus && activeTask.status !== targetStatus) {
-      onUpdateStatus(activeTask.id, targetStatus);
-    }
-
-    setActiveId(null);
+    // If we dropped on another task in the same column, we're just reordering
+    // Note: For now, we don't persist order in the database, so this is visual only
   };
 
   const handleDragCancel = () => {
-    setActiveId(null);
+    setActiveTask(null);
   };
-
-  const activeTask = activeId ? tasks.find((t) => t.id === activeId) : null;
 
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -143,12 +201,11 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
         {columns.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
           return (
-            <SortableContext
-              key={column.id}
-              items={columnTasks.map((t) => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <DroppableColumn column={column} taskCount={columnTasks.length}>
+            <DroppableColumn key={column.id} column={column} taskCount={columnTasks.length}>
+              <SortableContext
+                items={columnTasks.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
                 {columnTasks.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
                     Arraste tarefas aqui
@@ -159,18 +216,20 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
                       key={task.id}
                       task={task}
                       onDelete={() => onDeleteTask(task.id)}
-                      onStatusChange={(newStatus: string) => onUpdateStatus(task.id, newStatus)}
                     />
                   ))
                 )}
-              </DroppableColumn>
-            </SortableContext>
+              </SortableContext>
+            </DroppableColumn>
           );
         })}
       </div>
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+      }}>
         {activeTask ? (
-          <div className="opacity-70 rotate-1 shadow-2xl scale-105 cursor-grabbing">
+          <div className="rotate-2 shadow-2xl scale-105">
             <TaskCard
               task={activeTask}
               onDelete={() => {}}
