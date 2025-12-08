@@ -75,10 +75,14 @@ interface SortableSubtaskProps {
   subtask: any;
   onToggle: (subtaskId: string, completed: boolean) => void;
   onDelete: (subtask: { id: string; title: string }) => void;
+  onUpdate: (subtaskId: string, title: string) => void;
   isPending: boolean;
 }
 
-const SortableSubtask = ({ subtask, onToggle, onDelete, isPending }: SortableSubtaskProps) => {
+const SortableSubtask = ({ subtask, onToggle, onDelete, onUpdate, isPending }: SortableSubtaskProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(subtask.title);
+  
   const {
     attributes,
     listeners,
@@ -92,6 +96,22 @@ const SortableSubtask = ({ subtask, onToggle, onDelete, isPending }: SortableSub
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleSave = () => {
+    if (editTitle.trim() && editTitle !== subtask.title) {
+      onUpdate(subtask.id, editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      setEditTitle(subtask.title);
+      setIsEditing(false);
+    }
   };
 
   return (
@@ -112,9 +132,27 @@ const SortableSubtask = ({ subtask, onToggle, onDelete, isPending }: SortableSub
         onCheckedChange={(checked) => onToggle(subtask.id, !!checked)}
         disabled={isPending}
       />
-      <span className={`flex-1 ${subtask.completed ? "line-through text-muted-foreground" : ""}`}>
-        {subtask.title}
-      </span>
+      {isEditing ? (
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className="flex-1 bg-transparent border-b border-primary outline-none px-1"
+        />
+      ) : (
+        <span 
+          className={`flex-1 cursor-pointer ${subtask.completed ? "line-through text-muted-foreground" : ""}`}
+          onDoubleClick={() => {
+            setEditTitle(subtask.title);
+            setIsEditing(true);
+          }}
+        >
+          {subtask.title}
+        </span>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -293,6 +331,20 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task", id] });
+    },
+  });
+
+  const updateSubtaskMutation = useMutation({
+    mutationFn: async ({ subtaskId, title }: { subtaskId: string; title: string }) => {
+      const { error } = await supabase
+        .from("subtasks")
+        .update({ title })
+        .eq("id", subtaskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      toast.success("Subtarefa atualizada!");
     },
   });
 
@@ -720,6 +772,9 @@ export default function TaskDetail() {
                         subtask={subtask}
                         onToggle={(subtaskId, completed) =>
                           toggleSubtaskMutation.mutate({ subtaskId, completed })
+                        }
+                        onUpdate={(subtaskId, title) =>
+                          updateSubtaskMutation.mutate({ subtaskId, title })
                         }
                         onDelete={setSubtaskToDelete}
                         isPending={toggleSubtaskMutation.isPending}
