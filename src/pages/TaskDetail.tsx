@@ -552,93 +552,96 @@ export default function TaskDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft size={20} />
-          </Button>
-          <div className="flex-1">
-            {isEditing ? (
-              <Input
-                value={editedTask.title}
-                onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-                className="text-3xl font-bold h-auto py-2"
-              />
-            ) : isEditingTitle ? (
-              <Input
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onBlur={() => {
-                  if (editTitle.trim() && editTitle !== task.title) {
-                    inlineUpdateMutation.mutate({ title: editTitle.trim() });
-                  }
-                  setIsEditingTitle(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0 mt-1">
+              <ArrowLeft size={20} />
+            </Button>
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <Input
+                  value={editedTask.title}
+                  onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                  className="text-xl sm:text-2xl md:text-3xl font-bold h-auto py-2"
+                />
+              ) : isEditingTitle ? (
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={() => {
                     if (editTitle.trim() && editTitle !== task.title) {
                       inlineUpdateMutation.mutate({ title: editTitle.trim() });
                     }
                     setIsEditingTitle(false);
-                  } else if (e.key === "Escape") {
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (editTitle.trim() && editTitle !== task.title) {
+                        inlineUpdateMutation.mutate({ title: editTitle.trim() });
+                      }
+                      setIsEditingTitle(false);
+                    } else if (e.key === "Escape") {
+                      setEditTitle(task.title);
+                      setIsEditingTitle(false);
+                    }
+                  }}
+                  autoFocus
+                  className="text-xl sm:text-2xl md:text-3xl font-bold h-auto py-2"
+                />
+              ) : (
+                <h1 
+                  className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 break-words"
+                  onDoubleClick={() => {
                     setEditTitle(task.title);
-                    setIsEditingTitle(false);
-                  }
-                }}
-                autoFocus
-                className="text-3xl font-bold h-auto py-2"
-              />
-            ) : (
-              <h1 
-                className="text-3xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
-                onDoubleClick={() => {
-                  setEditTitle(task.title);
-                  setIsEditingTitle(true);
-                }}
-              >
-                {task.title}
-              </h1>
-            )}
-            {isEditingProject ? (
-              <Select
-                value={task.project_id || "none"}
-                onValueChange={(value) => {
-                  const projectId = value === "none" ? null : value;
-                  inlineUpdateMutation.mutate({ project_id: projectId });
-                  setIsEditingProject(false);
-                }}
-                open={isEditingProject}
-                onOpenChange={setIsEditingProject}
-              >
-                <SelectTrigger className="w-auto h-auto py-1 text-sm text-muted-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem projeto</SelectItem>
-                  {workspaceProjects?.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <p 
-                className="text-muted-foreground mt-1 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
-                onDoubleClick={() => setIsEditingProject(true)}
-              >
-                Projeto: {task.projects?.name || "Sem projeto"}
-              </p>
-            )}
+                    setIsEditingTitle(true);
+                  }}
+                >
+                  {task.title}
+                </h1>
+              )}
+              {isEditingProject ? (
+                <Select
+                  value={task.project_id || "none"}
+                  onValueChange={(value) => {
+                    const projectId = value === "none" ? null : value;
+                    inlineUpdateMutation.mutate({ project_id: projectId });
+                    setIsEditingProject(false);
+                  }}
+                  open={isEditingProject}
+                  onOpenChange={setIsEditingProject}
+                >
+                  <SelectTrigger className="w-auto h-auto py-1 text-xs sm:text-sm text-muted-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem projeto</SelectItem>
+                    {workspaceProjects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p 
+                  className="text-xs sm:text-sm text-muted-foreground mt-1 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
+                  onDoubleClick={() => setIsEditingProject(true)}
+                >
+                  Projeto: {task.projects?.name || "Sem projeto"}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {isEditing ? (
               <>
-                <Button onClick={handleSave} disabled={updateTaskMutation.isPending}>
-                  <Save size={16} className="mr-2" />
-                  Salvar
+                <Button onClick={handleSave} disabled={updateTaskMutation.isPending} size="sm" className="flex-1 sm:flex-initial">
+                  <Save size={14} className="mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Salvar</span>
+                  <span className="sm:hidden">Salvar</span>
                 </Button>
-                <Button variant="outline" onClick={() => {
+                <Button variant="outline" size="sm" className="flex-1 sm:flex-initial" onClick={() => {
                   setIsEditing(false);
                   setEditedTask({
                     title: task.title || "",
@@ -656,12 +659,13 @@ export default function TaskDetail() {
               </>
             ) : (
               <>
-                <Button onClick={() => setIsEditing(true)}>
-                  <Edit2 size={16} className="mr-2" />
-                  Editar
+                <Button onClick={() => setIsEditing(true)} size="sm" className="flex-1 sm:flex-initial">
+                  <Edit2 size={14} className="mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Editar</span>
+                  <span className="sm:hidden">Editar</span>
                 </Button>
-                <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)}>
-                  <Trash2 size={16} />
+                <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} className="h-8 w-8 sm:h-9 sm:w-9">
+                  <Trash2 size={14} />
                 </Button>
               </>
             )}

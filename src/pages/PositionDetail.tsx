@@ -113,48 +113,53 @@ export default function PositionDetail() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/positions")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-foreground">{position.name}</h1>
-              {(isAdmin || isGestor) && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => setEditPositionDialogOpen(true)}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/positions")} className="flex-shrink-0 mt-1">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground break-words">{position.name}</h1>
+                {(isAdmin || isGestor) && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => setEditPositionDialogOpen(true)}
+                    className="h-8 w-8"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {position.description && (
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{position.description}</p>
               )}
             </div>
-            {position.description && (
-              <p className="text-muted-foreground mt-1">{position.description}</p>
-            )}
           </div>
         </div>
 
         <Tabs defaultValue="routines" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="routines" className="flex items-center gap-2">
-              <Repeat className="h-4 w-4" />
+          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+            <TabsTrigger value="routines" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Repeat className="h-3 w-3 sm:h-4 sm:w-4" />
               Rotinas
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Usuários Atribuídos
+            <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Usuários Atribuídos</span>
+              <span className="sm:hidden">Usuários</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="routines" className="space-y-4">
             {(isAdmin || isGestor) && (
               <div className="flex justify-end">
-                <Button onClick={() => setCreateTaskDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Rotina
+                <Button onClick={() => setCreateTaskDialogOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Nova Rotina</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </div>
             )}
@@ -191,9 +196,10 @@ export default function PositionDetail() {
           <TabsContent value="users" className="space-y-4">
             {(isAdmin || isGestor) && (
               <div className="flex justify-end">
-                <Button onClick={() => setAssignUserDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Atribuir Usuário
+                <Button onClick={() => setAssignUserDialogOpen(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Atribuir Usuário</span>
+                  <span className="sm:hidden">Atribuir</span>
                 </Button>
               </div>
             )}

@@ -83,10 +83,10 @@ export default function BriefingRepository() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Repositório de Briefings & Debriefings</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Repositório de Briefings & Debriefings</h1>
+          <p className="text-xs sm:text-sm md:text-base text-muted-foreground mt-1 sm:mt-2">
             Visualize todos os briefings e debriefings de todos os projetos em um só lugar
           </p>
         </div>

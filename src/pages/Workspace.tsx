@@ -15,10 +15,10 @@ export default function Workspace() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Workspace</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workspace</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Centro de informações e recursos da empresa
           </p>
         </div>

@@ -129,10 +129,10 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-2xl">
+      <div className="space-y-4 sm:space-y-6 max-w-2xl">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Perfil</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Perfil</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Gerencie suas informações pessoais
           </p>
         </div>

@@ -42,20 +42,20 @@ export default function Positions() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Setores</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Setores</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gerencie setores e suas rotinas
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex items-center border rounded-md">
               <Button
                 variant={viewMode === "grid" ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("grid")}
-                className="rounded-r-none"
+                className="rounded-r-none h-8 w-8 sm:h-9 sm:w-9"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -63,15 +63,16 @@ export default function Positions() {
                 variant={viewMode === "list" ? "secondary" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("list")}
-                className="rounded-l-none"
+                className="rounded-l-none h-8 w-8 sm:h-9 sm:w-9"
               >
                 <List className="h-4 w-4" />
               </Button>
             </div>
             {(isAdmin || isGestor) && (
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Setor
+              <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-initial" size="sm">
+                <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Novo Setor</span>
+                <span className="sm:hidden">Novo</span>
               </Button>
             )}
           </div>
