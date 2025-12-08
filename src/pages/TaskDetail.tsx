@@ -175,6 +175,13 @@ export default function TaskDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [subtaskToDelete, setSubtaskToDelete] = useState<{ id: string; title: string } | null>(null);
+  
+  // Inline editing states
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editDescription, setEditDescription] = useState("");
+  
   const [editedTask, setEditedTask] = useState({
     title: "",
     description: "",
@@ -427,6 +434,23 @@ export default function TaskDetail() {
     }
   });
 
+  const inlineUpdateMutation = useMutation({
+    mutationFn: async (updates: { title?: string; description?: string }) => {
+      const { error } = await supabase
+        .from("tasks")
+        .update(updates)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      toast.success("Atualizado!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar");
+    }
+  });
+
   const deleteTaskMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -523,8 +547,40 @@ export default function TaskDetail() {
                 onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
                 className="text-3xl font-bold h-auto py-2"
               />
+            ) : isEditingTitle ? (
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onBlur={() => {
+                  if (editTitle.trim() && editTitle !== task.title) {
+                    inlineUpdateMutation.mutate({ title: editTitle.trim() });
+                  }
+                  setIsEditingTitle(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    if (editTitle.trim() && editTitle !== task.title) {
+                      inlineUpdateMutation.mutate({ title: editTitle.trim() });
+                    }
+                    setIsEditingTitle(false);
+                  } else if (e.key === "Escape") {
+                    setEditTitle(task.title);
+                    setIsEditingTitle(false);
+                  }
+                }}
+                autoFocus
+                className="text-3xl font-bold h-auto py-2"
+              />
             ) : (
-              <h1 className="text-3xl font-bold text-foreground">{task.title}</h1>
+              <h1 
+                className="text-3xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
+                onDoubleClick={() => {
+                  setEditTitle(task.title);
+                  setIsEditingTitle(true);
+                }}
+              >
+                {task.title}
+              </h1>
             )}
             <p className="text-muted-foreground mt-1">
               Projeto: {task.projects?.name || "Sem projeto"}
@@ -583,9 +639,35 @@ export default function TaskDetail() {
                       placeholder="Adicione uma descrição..."
                       className="mt-2"
                     />
+                  ) : isEditingDescription ? (
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      onBlur={() => {
+                        if (editDescription !== task.description) {
+                          inlineUpdateMutation.mutate({ description: editDescription });
+                        }
+                        setIsEditingDescription(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setEditDescription(task.description || "");
+                          setIsEditingDescription(false);
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Adicione uma descrição..."
+                      className="mt-2"
+                    />
                   ) : (
-                    <p className="text-muted-foreground mt-2">
-                      {task.description || "Sem descrição"}
+                    <p 
+                      className="text-muted-foreground mt-2 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 py-1"
+                      onDoubleClick={() => {
+                        setEditDescription(task.description || "");
+                        setIsEditingDescription(true);
+                      }}
+                    >
+                      {task.description || "Sem descrição (duplo clique para editar)"}
                     </p>
                   )}
                 </div>
