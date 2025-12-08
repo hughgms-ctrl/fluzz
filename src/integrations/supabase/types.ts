@@ -706,6 +706,44 @@ export type Database = {
           },
         ]
       }
+      project_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           archived: boolean
@@ -1189,6 +1227,128 @@ export type Database = {
             columns: ["routine_id"]
             isOneToOne: false
             referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_subtasks: {
+        Row: {
+          created_at: string
+          id: string
+          task_order: number | null
+          template_task_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          task_order?: number | null
+          template_task_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          task_order?: number | null
+          template_task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_subtasks_template_task_id_fkey"
+            columns: ["template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_task_processes: {
+        Row: {
+          created_at: string
+          id: string
+          process_id: string
+          template_task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          process_id: string
+          template_task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          process_id?: string
+          template_task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_task_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_task_processes_template_task_id_fkey"
+            columns: ["template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_tasks: {
+        Row: {
+          created_at: string
+          description: string | null
+          documentation: string | null
+          id: string
+          priority: string | null
+          process_id: string | null
+          setor: string | null
+          task_order: number | null
+          template_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          documentation?: string | null
+          id?: string
+          priority?: string | null
+          process_id?: string | null
+          setor?: string | null
+          task_order?: number | null
+          template_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          documentation?: string | null
+          id?: string
+          priority?: string | null
+          process_id?: string | null
+          setor?: string | null
+          task_order?: number | null
+          template_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_tasks_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "process_documentation"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "project_templates"
             referencedColumns: ["id"]
           },
         ]
