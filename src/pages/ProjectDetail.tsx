@@ -513,6 +513,8 @@ export default function ProjectDetail() {
                   <TaskList
                     tasks={filteredTasks || []}
                     onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                    sortMode={sortMode}
+                    onSortModeChange={handleSortModeChange}
                   />
                 )}
               </>

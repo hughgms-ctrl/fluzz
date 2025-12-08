@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateStandaloneTaskDialog } from "@/components/tasks/CreateStandaloneTaskDialog";
+import { ProjectTaskGroup } from "@/components/tasks/ProjectTaskGroup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -205,6 +206,47 @@ export default function MyTasks() {
     );
   };
 
+  // Natural sort function
+  const naturalSort = (a: string, b: string) => {
+    return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+  };
+
+  // Group tasks by project with natural sort
+  const groupedTasks = useMemo(() => {
+    const groups: { [key: string]: { name: string; tasks: any[]; type: "project" | "standalone" | "routine" } } = {};
+    
+    filteredTasks.forEach((task) => {
+      const taskType = getTaskType(task);
+      
+      if (taskType === "standalone") {
+        if (!groups["standalone"]) {
+          groups["standalone"] = { name: "Tarefas Avulsas", tasks: [], type: "standalone" };
+        }
+        groups["standalone"].tasks.push(task);
+      } else if (taskType === "routine") {
+        if (!groups["routine"]) {
+          groups["routine"] = { name: "Tarefas de Rotina", tasks: [], type: "routine" };
+        }
+        groups["routine"].tasks.push(task);
+      } else if (task.project_id) {
+        const projectKey = task.project_id;
+        if (!groups[projectKey]) {
+          groups[projectKey] = { 
+            name: task.projects?.name || "Projeto", 
+            tasks: [], 
+            type: "project" 
+          };
+        }
+        groups[projectKey].tasks.push(task);
+      }
+    });
+    
+    // Sort groups by name using natural sort
+    return Object.entries(groups)
+      .sort(([, a], [, b]) => naturalSort(a.name, b.name))
+      .map(([id, group]) => ({ id, ...group }));
+  }, [filteredTasks]);
+
   const renderTaskList = (taskList: any[], emptyMessage: string) => (
     taskList.length > 0 ? (
       <div className="space-y-3">
@@ -224,6 +266,64 @@ export default function MyTasks() {
       </p>
     )
   );
+
+  const renderGroupedTasks = (taskList: any[], emptyMessage: string) => {
+    if (taskList.length === 0) {
+      return (
+        <p className="text-center text-muted-foreground py-8">
+          {emptyMessage}
+        </p>
+      );
+    }
+
+    // Group the specific task list
+    const groups: { [key: string]: { name: string; tasks: any[]; type: "project" | "standalone" | "routine" } } = {};
+    
+    taskList.forEach((task) => {
+      const taskType = getTaskType(task);
+      
+      if (taskType === "standalone") {
+        if (!groups["standalone"]) {
+          groups["standalone"] = { name: "Tarefas Avulsas", tasks: [], type: "standalone" };
+        }
+        groups["standalone"].tasks.push(task);
+      } else if (taskType === "routine") {
+        if (!groups["routine"]) {
+          groups["routine"] = { name: "Tarefas de Rotina", tasks: [], type: "routine" };
+        }
+        groups["routine"].tasks.push(task);
+      } else if (task.project_id) {
+        const projectKey = task.project_id;
+        if (!groups[projectKey]) {
+          groups[projectKey] = { 
+            name: task.projects?.name || "Projeto", 
+            tasks: [], 
+            type: "project" 
+          };
+        }
+        groups[projectKey].tasks.push(task);
+      }
+    });
+    
+    const sortedGroups = Object.entries(groups)
+      .sort(([, a], [, b]) => naturalSort(a.name, b.name))
+      .map(([id, group]) => ({ id, ...group }));
+
+    return (
+      <div className="space-y-4">
+        {sortedGroups.map((group) => (
+          <ProjectTaskGroup
+            key={group.id}
+            projectId={group.id === "standalone" || group.id === "routine" ? null : group.id}
+            projectName={group.name}
+            tasks={group.tasks}
+            type={group.type}
+            onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <AppLayout>
@@ -345,44 +445,19 @@ export default function MyTasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <Card>
-              <CardContent className="pt-6">
-                {renderTaskList(filteredTasks, "Nenhuma tarefa atribuída a você ainda")}
-              </CardContent>
-            </Card>
+            {renderGroupedTasks(filteredTasks, "Nenhuma tarefa atribuída a você ainda")}
           </TabsContent>
 
           <TabsContent value="todo" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>A Fazer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderTaskList(todoTasks, "Nenhuma tarefa para fazer")}
-              </CardContent>
-            </Card>
+            {renderGroupedTasks(todoTasks, "Nenhuma tarefa para fazer")}
           </TabsContent>
 
           <TabsContent value="in_progress" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Em Progresso</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderTaskList(inProgressTasks, "Nenhuma tarefa em progresso")}
-              </CardContent>
-            </Card>
+            {renderGroupedTasks(inProgressTasks, "Nenhuma tarefa em progresso")}
           </TabsContent>
 
           <TabsContent value="completed" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Concluídas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderTaskList(completedTasks, "Nenhuma tarefa concluída")}
-              </CardContent>
-            </Card>
+            {renderGroupedTasks(completedTasks, "Nenhuma tarefa concluída")}
           </TabsContent>
         </Tabs>
       </div>
