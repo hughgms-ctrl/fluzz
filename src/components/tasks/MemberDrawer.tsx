@@ -25,8 +25,17 @@ interface MemberDrawerProps {
 export const MemberDrawer = ({ value, onValueChange, children, positionId }: MemberDrawerProps) => {
   const { workspace } = useWorkspace();
 
+  // Validate if positionId is a valid UUID
+  const isValidUUID = (id?: string) => {
+    if (!id) return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
+  const validPositionId = isValidUUID(positionId) ? positionId : undefined;
+
   const { data: workspaceMembers, isLoading } = useQuery({
-    queryKey: ["workspace-members-drawer", workspace?.id, positionId],
+    queryKey: ["workspace-members-drawer", workspace?.id, validPositionId],
     queryFn: async () => {
       if (!workspace?.id) return [];
       
@@ -41,12 +50,12 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
 
       let userIds = members.map(m => m.user_id);
 
-      // If positionId is provided, filter by users assigned to that position
-      if (positionId) {
+      // If positionId is provided and valid, filter by users assigned to that position
+      if (validPositionId) {
         const { data: userPositions, error: positionsError } = await supabase
           .from("user_positions")
           .select("user_id")
-          .eq("position_id", positionId);
+          .eq("position_id", validPositionId);
         
         if (positionsError) throw positionsError;
         
@@ -156,7 +165,7 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
               <div className="text-center py-8 text-muted-foreground">
                 <User size={48} className="mx-auto mb-4 opacity-20" />
                 <p>
-                  {positionId 
+                  {validPositionId 
                     ? "Nenhum membro atribuído a este setor"
                     : "Nenhum membro na equipe"
                   }
