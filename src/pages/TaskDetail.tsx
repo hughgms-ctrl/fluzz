@@ -298,7 +298,13 @@ export default function TaskDetail() {
   });
 
   const handleSave = () => {
-    updateTaskMutation.mutate(editedTask);
+    const updates = {
+      ...editedTask,
+      due_date: editedTask.due_date || null,
+      setor: editedTask.setor || null,
+      assigned_to: editedTask.assigned_to || null,
+    };
+    updateTaskMutation.mutate(updates);
   };
 
   const handleDelete = () => {
