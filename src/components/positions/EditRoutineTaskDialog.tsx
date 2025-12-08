@@ -23,7 +23,8 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { MemberDrawer } from "../tasks/MemberDrawer";
-import { UserCircle, ChevronRight } from "lucide-react";
+import { SectorDrawer } from "../tasks/SectorDrawer";
+import { UserCircle, ChevronRight, Briefcase } from "lucide-react";
 
 interface EditRoutineTaskDialogProps {
   task: {
@@ -96,6 +97,51 @@ export function EditRoutineTaskDialog({
       return data;
     },
     enabled: open && !!workspace,
+  });
+
+  const { data: positions } = useQuery({
+    queryKey: ["positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!workspace,
+  });
+
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+    },
+    enabled: !!workspace && open,
   });
 
   useEffect(() => {
@@ -209,13 +255,19 @@ export function EditRoutineTaskDialog({
           </div>
 
           <div>
-            <Label htmlFor="setor">Setor</Label>
-            <Input
-              id="setor"
-              value={setor}
-              onChange={(e) => setSetor(e.target.value)}
-              placeholder="Ex: Marketing, Vendas, TI..."
-            />
+            <Label>Setor</Label>
+            <SectorDrawer value={setor} onValueChange={(value) => {
+              setSetor(value);
+              setAssignedTo("");
+            }}>
+              <Button variant="outline" className="w-full justify-between" type="button">
+                <span className="flex items-center gap-2">
+                  <Briefcase size={16} />
+                  {setor && positions?.find(s => s.id === setor)?.name || "Selecione um setor"}
+                </span>
+                <ChevronRight size={16} />
+              </Button>
+            </SectorDrawer>
           </div>
 
           <div>
@@ -223,11 +275,12 @@ export function EditRoutineTaskDialog({
             <MemberDrawer 
               value={assignedTo} 
               onValueChange={setAssignedTo}
+              positionId={setor || undefined}
             >
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <UserCircle size={16} />
-                  {assignedTo ? "Responsável selecionado" : "Selecione um responsável"}
+                  {assignedTo && workspaceMembers?.find(m => m.user_id === assignedTo)?.profiles?.full_name || "Selecione um responsável"}
                 </span>
                 <ChevronRight size={16} />
               </Button>
