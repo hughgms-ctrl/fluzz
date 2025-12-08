@@ -12,15 +12,15 @@ import {
   TouchSensor,
   useSensor, 
   useSensors, 
-  closestCorners,
-  DragOverEvent,
-  useDroppable
+  rectIntersection,
+  useDroppable,
+  Active,
+  Over
 } from "@dnd-kit/core";
 import { 
   SortableContext, 
   verticalListSortingStrategy, 
-  useSortable,
-  arrayMove
+  useSortable
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -150,34 +150,19 @@ export const DraggableTaskBoard = ({
     setActiveTask(task);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
+  // Find which column an item belongs to
+  const findColumn = (id: string | undefined): string | null => {
+    if (!id) return null;
     
-    if (!over) return;
-
-    const activeId = active.id as string;
-    const overId = over.id as string;
-
-    console.log("Drag over:", { activeId, overId });
-
-    // Find the active task
-    const draggedTask = tasks.find((t) => t.id === activeId);
-    if (!draggedTask) return;
-
-    // Check if we're over a column directly
-    const overColumn = columns.find((c) => c.id === overId);
-    if (overColumn && draggedTask.status !== overColumn.id) {
-      console.log("Updating status to:", overColumn.id);
-      onUpdateStatus(draggedTask.id, overColumn.id);
-      return;
-    }
-
-    // Check if we're over another task
-    const overTask = tasks.find((t) => t.id === overId);
-    if (overTask && draggedTask.status !== overTask.status) {
-      console.log("Updating status via task to:", overTask.status);
-      onUpdateStatus(draggedTask.id, overTask.status);
-    }
+    // Check if it's a column ID
+    const isColumn = columns.find((c) => c.id === id);
+    if (isColumn) return id;
+    
+    // Check if it's a task ID
+    const task = tasks.find((t) => t.id === id);
+    if (task) return task.status;
+    
+    return null;
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -257,9 +242,8 @@ export const DraggableTaskBoard = ({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={rectIntersection}
         onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
