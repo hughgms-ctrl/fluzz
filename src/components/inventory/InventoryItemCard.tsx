@@ -73,8 +73,8 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
             </p>
           )}
         </CardContent>
-        <CardFooter className="flex flex-wrap gap-2">
-          <div className="flex gap-2 flex-1 min-w-0">
+        <CardFooter className="flex flex-col gap-2">
+          <div className="flex gap-2 w-full">
             <Button
               size="sm"
               variant="outline"
@@ -94,18 +94,20 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               Saída
             </Button>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-2 w-full justify-end">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setHistoryOpen(true)}
             >
-              <History className="h-4 w-4" />
+              <History className="h-4 w-4 mr-1" />
+              Histórico
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button size="sm" variant="ghost">
-                  <Trash2 className="h-4 w-4 text-destructive" />
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Excluir
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
