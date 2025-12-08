@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore, Bookmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProjectCardProps {
@@ -55,6 +55,23 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
     onError: () => {
       toast.error("Erro ao atualizar nome");
       setProjectName(project.name);
+    },
+  });
+
+  const saveAsTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("projects")
+        .update({ is_template: true })
+        .eq("id", project.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Projeto salvo como modelo!");
+    },
+    onError: () => {
+      toast.error("Erro ao salvar como modelo");
     },
   });
 
@@ -288,6 +305,18 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
                   <Copy className="mr-2 h-4 w-4" />
                   {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
                 </DropdownMenuItem>
+                {!project.is_template && (
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveAsTemplateMutation.mutate();
+                    }}
+                    disabled={saveAsTemplateMutation.isPending}
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   onClick={(e) => {
                     e.stopPropagation();
