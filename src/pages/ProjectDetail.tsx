@@ -472,13 +472,13 @@ export default function ProjectDetail() {
             <div className="flex justify-end">
               <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
                 <TabsList>
-                  <TabsTrigger value="board" className="gap-2">
-                    <LayoutGrid size={16} />
-                    <span className="hidden sm:inline">Kanban</span>
-                  </TabsTrigger>
                   <TabsTrigger value="list" className="gap-2">
                     <List size={16} />
                     <span className="hidden sm:inline">Lista</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="board" className="gap-2">
+                    <LayoutGrid size={16} />
+                    <span className="hidden sm:inline">Kanban</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
