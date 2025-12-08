@@ -1041,6 +1041,7 @@ export type Database = {
           completed: boolean | null
           created_at: string | null
           id: string
+          subtask_order: number | null
           task_id: string
           title: string
           updated_at: string | null
@@ -1049,6 +1050,7 @@ export type Database = {
           completed?: boolean | null
           created_at?: string | null
           id?: string
+          subtask_order?: number | null
           task_id: string
           title: string
           updated_at?: string | null
@@ -1057,6 +1059,7 @@ export type Database = {
           completed?: boolean | null
           created_at?: string | null
           id?: string
+          subtask_order?: number | null
           task_id?: string
           title?: string
           updated_at?: string | null

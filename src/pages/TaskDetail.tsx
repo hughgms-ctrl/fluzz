@@ -19,8 +19,26 @@ import {
   Trash2,
   Save,
   LinkIcon,
-  Edit2
+  Edit2,
+  GripVertical
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { formatDateBR } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -52,6 +70,62 @@ import { SectorDrawer } from "@/components/tasks/SectorDrawer";
 import { MemberDrawer } from "@/components/tasks/MemberDrawer";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
+
+interface SortableSubtaskProps {
+  subtask: any;
+  onToggle: (subtaskId: string, completed: boolean) => void;
+  onDelete: (subtask: { id: string; title: string }) => void;
+  isPending: boolean;
+}
+
+const SortableSubtask = ({ subtask, onToggle, onDelete, isPending }: SortableSubtaskProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: subtask.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 rounded hover:bg-muted/50 ${isDragging ? 'bg-muted/50' : ''}`}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical size={16} className="text-muted-foreground" />
+      </button>
+      <Checkbox
+        checked={subtask.completed}
+        onCheckedChange={(checked) => onToggle(subtask.id, !!checked)}
+        disabled={isPending}
+      />
+      <span className={`flex-1 ${subtask.completed ? "line-through text-muted-foreground" : ""}`}>
+        {subtask.title}
+      </span>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onDelete({ id: subtask.id, title: subtask.title })}
+      >
+        <Trash2 size={14} />
+      </Button>
+    </div>
+  );
+};
 
 export default function TaskDetail() {
   const { id } = useParams();
@@ -174,17 +248,38 @@ export default function TaskDetail() {
     enabled: !!workspace,
   });
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const addSubtaskMutation = useMutation({
     mutationFn: async (title: string) => {
+      const maxOrder = task?.subtasks?.reduce((max: number, s: any) => 
+        Math.max(max, s.subtask_order || 0), 0) || 0;
       const { error } = await supabase
         .from("subtasks")
-        .insert([{ task_id: id!, title }]);
+        .insert([{ task_id: id!, title, subtask_order: maxOrder + 1 }]);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task", id] });
       setNewSubtask("");
       toast.success("Subtarefa adicionada!");
+    },
+  });
+
+  const reorderSubtasksMutation = useMutation({
+    mutationFn: async (reorderedSubtasks: { id: string; subtask_order: number }[]) => {
+      const updates = reorderedSubtasks.map((s) =>
+        supabase.from("subtasks").update({ subtask_order: s.subtask_order }).eq("id", s.id)
+      );
+      await Promise.all(updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
     },
   });
 
@@ -595,27 +690,43 @@ export default function TaskDetail() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {task.subtasks?.map((subtask: any) => (
-                  <div key={subtask.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/50">
-                    <Checkbox
-                      checked={subtask.completed}
-                      onCheckedChange={(checked) =>
-                        toggleSubtaskMutation.mutate({ subtaskId: subtask.id, completed: !!checked })
-                      }
-                    />
-                    <span className={`flex-1 ${subtask.completed ? "line-through text-muted-foreground" : ""}`}>
-                      {subtask.title}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setSubtaskToDelete({ id: subtask.id, title: subtask.title })}
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                ))}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event: DragEndEvent) => {
+                    const { active, over } = event;
+                    if (over && active.id !== over.id) {
+                      const sortedSubtasks = [...(task.subtasks || [])].sort(
+                        (a: any, b: any) => (a.subtask_order || 0) - (b.subtask_order || 0)
+                      );
+                      const oldIndex = sortedSubtasks.findIndex((s: any) => s.id === active.id);
+                      const newIndex = sortedSubtasks.findIndex((s: any) => s.id === over.id);
+                      const newOrder = arrayMove(sortedSubtasks, oldIndex, newIndex);
+                      const updates = newOrder.map((s: any, index: number) => ({
+                        id: s.id,
+                        subtask_order: index + 1,
+                      }));
+                      reorderSubtasksMutation.mutate(updates);
+                    }
+                  }}
+                >
+                  <SortableContext
+                    items={[...(task.subtasks || [])].sort((a: any, b: any) => (a.subtask_order || 0) - (b.subtask_order || 0)).map((s: any) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {[...(task.subtasks || [])].sort((a: any, b: any) => (a.subtask_order || 0) - (b.subtask_order || 0)).map((subtask: any) => (
+                      <SortableSubtask
+                        key={subtask.id}
+                        subtask={subtask}
+                        onToggle={(subtaskId, completed) =>
+                          toggleSubtaskMutation.mutate({ subtaskId, completed })
+                        }
+                        onDelete={setSubtaskToDelete}
+                        isPending={toggleSubtaskMutation.isPending}
+                      />
+                    ))}
+                  </SortableContext>
+                </DndContext>
 
                 <div className="flex gap-2 pt-2">
                   <Input
