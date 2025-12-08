@@ -257,8 +257,9 @@ export default function TaskDetail() {
       setIsEditing(false);
       toast.success("Tarefa atualizada!");
     },
-    onError: () => {
-      toast.error("Erro ao atualizar tarefa");
+    onError: (error: any) => {
+      console.error("Error updating task:", error);
+      toast.error("Erro ao atualizar tarefa: " + (error?.message || "Erro desconhecido"));
     }
   });
 
