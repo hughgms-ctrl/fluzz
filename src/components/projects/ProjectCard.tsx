@@ -60,14 +60,108 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false }
 
   const saveAsTemplateMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // Create a copy of the project as a template
+      const { data: newProject, error: projectError } = await supabase
         .from("projects")
-        .update({ is_template: true })
-        .eq("id", project.id);
-      if (error) throw error;
+        .insert([
+          {
+            name: `[Modelo] ${project.name}`,
+            description: project.description,
+            status: 'active',
+            user_id: user.id,
+            workspace_id: project.workspace_id,
+            is_template: true,
+          },
+        ])
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+
+      // Copy tasks with subtasks
+      const { data: tasks, error: tasksError } = await supabase
+        .from("tasks")
+        .select("*, subtasks(*)")
+        .eq("project_id", project.id);
+
+      if (tasksError) throw tasksError;
+
+      // Fetch task_processes
+      const { data: taskProcesses } = await supabase
+        .from("task_processes")
+        .select("*")
+        .in("task_id", tasks?.map(t => t.id) || []);
+
+      if (tasks && tasks.length > 0) {
+        const taskIdToIndex: Record<string, number> = {};
+        tasks.forEach((task, index) => {
+          taskIdToIndex[task.id] = index;
+        });
+
+        const newTasks = tasks.map((task) => ({
+          title: task.title,
+          description: task.description,
+          status: 'todo',
+          priority: task.priority,
+          assigned_to: task.assigned_to,
+          setor: task.setor,
+          documentation: task.documentation,
+          process_id: task.process_id,
+          completed_verified: false,
+          project_id: newProject.id,
+        }));
+
+        const { data: insertedTasks, error: insertError } = await supabase
+          .from("tasks")
+          .insert(newTasks)
+          .select();
+
+        if (insertError) throw insertError;
+
+        if (insertedTasks && insertedTasks.length > 0) {
+          // Copy subtasks
+          const allSubtasks: any[] = [];
+          for (let i = 0; i < tasks.length; i++) {
+            const originalTask = tasks[i];
+            const newTask = insertedTasks[i];
+            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
+              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
+                title: subtask.title,
+                completed: false,
+                task_id: newTask.id,
+              }));
+              allSubtasks.push(...subtasksForTask);
+            }
+          }
+
+          if (allSubtasks.length > 0) {
+            await supabase.from("subtasks").insert(allSubtasks);
+          }
+
+          // Copy task_processes
+          if (taskProcesses && taskProcesses.length > 0) {
+            const newTaskProcesses = taskProcesses
+              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
+              .map(tp => ({
+                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
+                process_id: tp.process_id,
+              }));
+
+            if (newTaskProcesses.length > 0) {
+              await supabase.from("task_processes").insert(newTaskProcesses);
+            }
+          }
+        }
+      }
+
+      return newProject;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
       toast.success("Projeto salvo como modelo!");
     },
     onError: () => {

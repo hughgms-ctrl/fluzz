@@ -52,11 +52,12 @@ export default function MyTasks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, projects(id, name)")
+        .select("*, projects(id, name, archived)")
         .eq("assigned_to", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      // Filter out tasks from archived projects
+      return data?.filter(task => !task.projects?.archived) || [];
     },
     enabled: !!user,
   });
