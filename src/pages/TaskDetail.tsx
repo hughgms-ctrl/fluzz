@@ -181,6 +181,7 @@ export default function TaskDetail() {
   const [editTitle, setEditTitle] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editDescription, setEditDescription] = useState("");
+  const [isEditingProject, setIsEditingProject] = useState(false);
   
   const [editedTask, setEditedTask] = useState({
     title: "",
@@ -289,6 +290,22 @@ export default function TaskDetail() {
         role: member.role,
         profiles: profiles?.find(p => p.id === member.user_id)
       }));
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: workspaceProjects } = useQuery({
+    queryKey: ["workspace-projects", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name")
+        .eq("workspace_id", workspace.id)
+        .eq("archived", false)
+        .order("name");
+      if (error) throw error;
+      return data;
     },
     enabled: !!workspace,
   });
@@ -435,7 +452,7 @@ export default function TaskDetail() {
   });
 
   const inlineUpdateMutation = useMutation({
-    mutationFn: async (updates: { title?: string; description?: string }) => {
+    mutationFn: async (updates: { title?: string; description?: string; project_id?: string | null }) => {
       const { error } = await supabase
         .from("tasks")
         .update(updates)
@@ -582,9 +599,37 @@ export default function TaskDetail() {
                 {task.title}
               </h1>
             )}
-            <p className="text-muted-foreground mt-1">
-              Projeto: {task.projects?.name || "Sem projeto"}
-            </p>
+            {isEditingProject ? (
+              <Select
+                value={task.project_id || "none"}
+                onValueChange={(value) => {
+                  const projectId = value === "none" ? null : value;
+                  inlineUpdateMutation.mutate({ project_id: projectId });
+                  setIsEditingProject(false);
+                }}
+                open={isEditingProject}
+                onOpenChange={setIsEditingProject}
+              >
+                <SelectTrigger className="w-auto h-auto py-1 text-sm text-muted-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem projeto</SelectItem>
+                  {workspaceProjects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p 
+                className="text-muted-foreground mt-1 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1"
+                onDoubleClick={() => setIsEditingProject(true)}
+              >
+                Projeto: {task.projects?.name || "Sem projeto"}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             {isEditing ? (
