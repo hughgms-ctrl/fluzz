@@ -103,7 +103,7 @@ export default function TeamManagement() {
 
 
   if (!isAdmin && !isGestor) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/my-tasks" replace />;
   }
 
   if (membersLoading || invitesLoading) {

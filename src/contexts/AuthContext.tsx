@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       toast.success("Conta criada com sucesso!");
-      navigate("/home");
+      navigate("/my-tasks");
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar conta");
       throw error;
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (error) throw error;
       
       toast.success("Login realizado com sucesso!");
-      navigate("/home");
+      navigate("/my-tasks");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer login");
       throw error;

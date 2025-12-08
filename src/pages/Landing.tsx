@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import logoFluzz from "@/assets/logo-fluzz.png";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   CheckCircle2, 
   Users, 
@@ -74,6 +75,13 @@ const benefits = [
 ];
 
 export default function Landing() {
+  const { user, loading } = useAuth();
+
+  // Redirect authenticated users to my-tasks
+  if (!loading && user) {
+    return <Navigate to="/my-tasks" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
