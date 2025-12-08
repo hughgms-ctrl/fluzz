@@ -1355,6 +1355,15 @@ export type Database = {
       }
       user_permissions: {
         Row: {
+          can_edit_analytics: boolean | null
+          can_edit_briefings: boolean | null
+          can_edit_culture: boolean | null
+          can_edit_inventory: boolean | null
+          can_edit_positions: boolean | null
+          can_edit_processes: boolean | null
+          can_edit_projects: boolean | null
+          can_edit_tasks: boolean | null
+          can_edit_vision: boolean | null
           can_view_analytics: boolean
           can_view_briefings: boolean
           can_view_culture: boolean
@@ -1371,6 +1380,15 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          can_edit_analytics?: boolean | null
+          can_edit_briefings?: boolean | null
+          can_edit_culture?: boolean | null
+          can_edit_inventory?: boolean | null
+          can_edit_positions?: boolean | null
+          can_edit_processes?: boolean | null
+          can_edit_projects?: boolean | null
+          can_edit_tasks?: boolean | null
+          can_edit_vision?: boolean | null
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
@@ -1387,6 +1405,15 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          can_edit_analytics?: boolean | null
+          can_edit_briefings?: boolean | null
+          can_edit_culture?: boolean | null
+          can_edit_inventory?: boolean | null
+          can_edit_positions?: boolean | null
+          can_edit_processes?: boolean | null
+          can_edit_projects?: boolean | null
+          can_edit_tasks?: boolean | null
+          can_edit_vision?: boolean | null
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
