@@ -38,6 +38,7 @@ export default function ProjectDetail() {
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<"manual" | "az">("manual");
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", id],
@@ -159,6 +160,40 @@ export default function ProjectDetail() {
     onError: (error) => {
       console.error("ProjectDetail - onError:", error);
       toast.error("Erro ao atualizar status");
+    },
+  });
+
+  const updateTaskOrderMutation = useMutation({
+    mutationFn: async ({ taskId, newOrder, status }: { taskId: string; newOrder: number; status: string }) => {
+      // Get all tasks with same status and update their orders
+      const tasksToUpdate = tasks?.filter(t => t.status === status) || [];
+      const oldIndex = tasksToUpdate.findIndex(t => t.id === taskId);
+      
+      if (oldIndex === -1) return;
+      
+      // Reorder tasks
+      const reordered = [...tasksToUpdate].sort((a, b) => (a.task_order || 0) - (b.task_order || 0));
+      const movedTask = reordered.find(t => t.id === taskId);
+      if (!movedTask) return;
+      
+      const movedIndex = reordered.indexOf(movedTask);
+      reordered.splice(movedIndex, 1);
+      reordered.splice(newOrder, 0, movedTask);
+      
+      // Update all task orders
+      for (let i = 0; i < reordered.length; i++) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ task_order: i })
+          .eq("id", reordered[i].id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao reordenar tarefa");
     },
   });
 
@@ -457,6 +492,11 @@ export default function ProjectDetail() {
                     onUpdateStatus={(taskId, status) =>
                       updateTaskStatusMutation.mutate({ taskId, status })
                     }
+                    onUpdateOrder={(taskId, newOrder, status) =>
+                      updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                    }
+                    sortMode={sortMode}
+                    onSortModeChange={setSortMode}
                   />
                 ) : (
                   <TaskList

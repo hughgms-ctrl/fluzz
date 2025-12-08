@@ -1161,6 +1161,7 @@ export type Database = {
           routine_id: string | null
           setor: string | null
           status: string | null
+          task_order: number | null
           title: string
           updated_at: string | null
         }
@@ -1179,6 +1180,7 @@ export type Database = {
           routine_id?: string | null
           setor?: string | null
           status?: string | null
+          task_order?: number | null
           title: string
           updated_at?: string | null
         }
@@ -1197,6 +1199,7 @@ export type Database = {
           routine_id?: string | null
           setor?: string | null
           status?: string | null
+          task_order?: number | null
           title?: string
           updated_at?: string | null
         }

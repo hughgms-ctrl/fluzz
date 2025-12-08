@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { TaskCard } from "./TaskCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowDownAZ, GripVertical } from "lucide-react";
 import { 
   DndContext, 
   DragEndEvent, 
@@ -17,7 +19,8 @@ import {
 import { 
   SortableContext, 
   verticalListSortingStrategy, 
-  useSortable 
+  useSortable,
+  arrayMove
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -25,6 +28,9 @@ interface DraggableTaskBoardProps {
   tasks: any[];
   onDeleteTask: (taskId: string) => void;
   onUpdateStatus: (taskId: string, status: string) => void;
+  onUpdateOrder?: (taskId: string, newOrder: number, status: string) => void;
+  sortMode: "manual" | "az";
+  onSortModeChange: (mode: "manual" | "az") => void;
 }
 
 const columns = [
@@ -98,7 +104,14 @@ function SortableTask({ task, onDelete }: { task: any; onDelete: () => void }) {
   );
 }
 
-export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: DraggableTaskBoardProps) => {
+export const DraggableTaskBoard = ({ 
+  tasks, 
+  onDeleteTask, 
+  onUpdateStatus, 
+  onUpdateOrder,
+  sortMode,
+  onSortModeChange 
+}: DraggableTaskBoardProps) => {
   const [activeTask, setActiveTask] = useState<any>(null);
   
   const sensors = useSensors(
@@ -116,7 +129,14 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
   );
 
   const getTasksByStatus = (status: string) => {
-    return tasks.filter((task) => task.status === status);
+    const filtered = tasks.filter((task) => task.status === status);
+    
+    if (sortMode === "az") {
+      return filtered.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+    }
+    
+    // Manual order - sort by task_order
+    return filtered.sort((a, b) => (a.task_order || 0) - (b.task_order || 0));
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -177,27 +197,67 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
       return;
     }
 
-    // Check if dropped on another task - use that task's status
+    // Check if dropped on another task
     const overTask = tasks.find((t) => t.id === overId);
-    if (overTask && draggedTask.status !== overTask.status) {
+    if (!overTask) return;
+
+    // If different status, move to new column
+    if (draggedTask.status !== overTask.status) {
       onUpdateStatus(draggedTask.id, overTask.status);
+      return;
+    }
+
+    // Same column reordering
+    if (sortMode === "manual" && onUpdateOrder) {
+      const columnTasks = tasks
+        .filter(t => t.status === draggedTask.status)
+        .sort((a, b) => (a.task_order || 0) - (b.task_order || 0));
+      
+      const oldIndex = columnTasks.findIndex(t => t.id === activeId);
+      const newIndex = columnTasks.findIndex(t => t.id === overId);
+      
+      if (oldIndex !== newIndex) {
+        onUpdateOrder(draggedTask.id, newIndex, draggedTask.status);
+      }
     }
   };
 
   const handleDragCancel = () => {
-    console.log("Drag cancelled");
     setActiveTask(null);
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
+    <div className="space-y-4">
+      {/* Sort Toggle */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onSortModeChange(sortMode === "manual" ? "az" : "manual")}
+          className="gap-2"
+        >
+          {sortMode === "az" ? (
+            <>
+              <ArrowDownAZ size={16} />
+              A-Z
+            </>
+          ) : (
+            <>
+              <GripVertical size={16} />
+              Manual
+            </>
+          )}
+        </Button>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {columns.map((column) => {
           const columnTasks = getTasksByStatus(column.id);
@@ -240,5 +300,6 @@ export const DraggableTaskBoard = ({ tasks, onDeleteTask, onUpdateStatus }: Drag
         ) : null}
       </DragOverlay>
     </DndContext>
+    </div>
   );
 };
