@@ -52,7 +52,7 @@ export const AppLayout = ({
           <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <SidebarTrigger />
-              <h1 className="text-base sm:text-xl font-semibold text-foreground truncate">Fluzz</h1>
+              <h1 className="text-base sm:text-xl font-semibold text-primary truncate">Fluzz</h1>
               {workspaceMember && workspaces.length > 0 && <Select value={workspace?.id} onValueChange={value => {
               void changeWorkspace(value);
             }}>
