@@ -13,7 +13,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 export default function Positions() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const {
     isAdmin,
     isGestor,
