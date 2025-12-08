@@ -3,13 +3,14 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Package, Calendar } from "lucide-react";
+import { Plus, Package, Calendar, LayoutGrid, List } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { CreateInventoryItemDialog } from "@/components/inventory/CreateInventoryItemDialog";
 import { CreateInventoryEventDialog } from "@/components/inventory/CreateInventoryEventDialog";
 import { InventoryItemCard } from "@/components/inventory/InventoryItemCard";
+import { InventoryItemListView } from "@/components/inventory/InventoryItemListView";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateBR } from "@/lib/utils";
@@ -20,6 +21,7 @@ export default function Inventory() {
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
   const [createItemOpen, setCreateItemOpen] = useState(false);
   const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const { data: events, isLoading: eventsLoading } = useQuery({
     queryKey: ["inventory-events", workspace?.id],
@@ -104,10 +106,28 @@ export default function Inventory() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => setCreateItemOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Material
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex border rounded-md">
+                  <Button
+                    variant={viewMode === "grid" ? "secondary" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "secondary" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button onClick={() => setCreateItemOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Material
+                </Button>
+              </div>
             </div>
 
             {itemsLoading ? (
@@ -121,12 +141,14 @@ export default function Inventory() {
                 <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
                 <p>Nenhum material cadastrado</p>
               </div>
-            ) : (
+            ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((item) => (
                   <InventoryItemCard key={item.id} item={item} />
                 ))}
               </div>
+            ) : (
+              <InventoryItemListView items={items} />
             )}
           </TabsContent>
 
