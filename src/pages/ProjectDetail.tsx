@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3 } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { TaskList } from "@/components/tasks/TaskList";
@@ -14,6 +14,7 @@ import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
 import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
+import { ProjectNotes } from "@/components/projects/ProjectNotes";
 import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -24,7 +25,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "briefing">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("dashboard");
   const [view, setView] = useState<"board" | "list">("board");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -347,19 +348,23 @@ export default function ProjectDetail() {
         )}
 
         {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "briefing")}>
-          <TabsList className="grid w-full max-w-2xl grid-cols-3">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "notes" | "briefing")}>
+          <TabsList className="grid w-full max-w-3xl grid-cols-4">
             <TabsTrigger value="dashboard" className="gap-2">
               <BarChart3 size={16} />
-              Dashboard
+              <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
               <LayoutGrid size={16} />
-              Tarefas
+              <span className="hidden sm:inline">Tarefas</span>
+            </TabsTrigger>
+            <TabsTrigger value="notes" className="gap-2">
+              <FileText size={16} />
+              <span className="hidden sm:inline">Notas</span>
             </TabsTrigger>
             <TabsTrigger value="briefing" className="gap-2">
               <LayoutGrid size={16} />
-              Briefing & Debriefing
+              <span className="hidden sm:inline">Briefing</span>
             </TabsTrigger>
           </TabsList>
 
@@ -461,6 +466,10 @@ export default function ProjectDetail() {
                 )}
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="notes" className="mt-6">
+            <ProjectNotes projectId={id!} tasks={tasks || []} />
           </TabsContent>
 
           <TabsContent value="briefing" className="mt-6">
