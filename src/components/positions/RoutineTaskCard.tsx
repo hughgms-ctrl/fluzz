@@ -7,6 +7,7 @@ import { EditRoutineTaskDialog } from "./EditRoutineTaskDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,6 +64,8 @@ const statusColors: Record<string, string> = {
 export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
+  const canEdit = isAdmin || isGestor;
 
   const handleDelete = async () => {
     try {
@@ -141,36 +144,38 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
             </div>
           </div>
 
-          <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditDialogOpen(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Trash2 className="h-4 w-4 text-destructive" />
+          {canEdit && (
+            <div className="flex gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Tem certeza que deseja remover esta tarefa da rotina?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>
-                  Remover
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          </div>
+              <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja remover esta tarefa da rotina?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Remover
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            </div>
+          )}
         </div>
 
         <EditRoutineTaskDialog

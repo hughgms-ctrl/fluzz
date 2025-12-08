@@ -9,6 +9,7 @@ import { RoutineTasksList } from "./RoutineTasksList";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,8 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
   const [editRoutineDialogOpen, setEditRoutineDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
+  const canEdit = isAdmin || isGestor;
 
   const handleDelete = async () => {
     try {
@@ -80,35 +83,41 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
             <Badge variant="secondary">
               {recurrenceLabels[routine.recurrence_type]}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setEditRoutineDialogOpen(true)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+            {canEdit && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setEditRoutineDialogOpen(true)}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="flex justify-end">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setCreateTaskDialogOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Tarefa
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCreateTaskDialogOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Tarefa
+            </Button>
+          </div>
+        )}
 
         <RoutineTasksList routineId={routine.id} />
 

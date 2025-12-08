@@ -6,6 +6,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatDateBR } from "@/lib/utils";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface AssignedUsersListProps {
   positionId: string;
@@ -23,6 +25,8 @@ interface AssignmentWithProfile {
 
 export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
   const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
+  const canEdit = isAdmin || isGestor;
 
   const { data: assignedUsers, isLoading } = useQuery<AssignmentWithProfile[]>({
     queryKey: ["assigned-users", positionId],
@@ -112,17 +116,19 @@ export function AssignedUsersList({ positionId }: AssignedUsersListProps) {
                   {assignment.profile?.full_name || "Usuário sem nome"}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Atribuído em {new Date(assignment.assigned_at).toLocaleDateString()}
+                  Atribuído em {formatDateBR(assignment.assigned_at)}
                 </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleUnassign(assignment.id)}
-            >
-              <UserMinus className="h-4 w-4" />
-            </Button>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleUnassign(assignment.id)}
+              >
+                <UserMinus className="h-4 w-4" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       ))}

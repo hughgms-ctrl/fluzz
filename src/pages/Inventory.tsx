@@ -12,6 +12,7 @@ import { CreateInventoryEventDialog } from "@/components/inventory/CreateInvento
 import { InventoryItemCard } from "@/components/inventory/InventoryItemCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateBR } from "@/lib/utils";
 
 export default function Inventory() {
   const { workspace } = useWorkspace();
@@ -165,7 +166,7 @@ export default function Inventory() {
                         )}
                         {event.date && (
                           <p className="text-sm text-muted-foreground mt-2">
-                            Data: {new Date(event.date).toLocaleDateString()}
+                            Data: {formatDateBR(event.date)}
                           </p>
                         )}
                       </div>

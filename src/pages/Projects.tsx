@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { formatDateBR } from "@/lib/utils";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -285,7 +286,7 @@ export default function Projects() {
                       </div>
                       {task.due_date && (
                         <p className="text-xs text-muted-foreground mt-2">
-                          Vencimento: {new Date(task.due_date).toLocaleDateString("pt-BR")}
+                          Vencimento: {formatDateBR(task.due_date)}
                         </p>
                       )}
                     </CardContent>

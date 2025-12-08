@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import BriefingForm from "./BriefingForm";
+import { formatDateBR } from "@/lib/utils";
 import BriefingView from "./BriefingView";
 import DebriefingForm from "./DebriefingForm";
 import { FileText, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
@@ -184,7 +185,7 @@ export default function BriefingDebriefingTab({ projectId }: BriefingDebriefingT
                   <SelectContent>
                     {briefings.map((briefing) => (
                       <SelectItem key={briefing.id} value={briefing.id}>
-                        {new Date(briefing.data).toLocaleDateString("pt-BR")} - {briefing.local}
+                        {formatDateBR(briefing.data)} - {briefing.local}
                       </SelectItem>
                     ))}
                   </SelectContent>
