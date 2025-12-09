@@ -78,6 +78,8 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
 
       toast.success("Tarefa removida da rotina!");
       queryClient.invalidateQueries({ queryKey: ["routine-tasks", task.routine_id] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
     } catch (error) {
       console.error("Error deleting routine task:", error);
       toast.error("Erro ao remover tarefa");
