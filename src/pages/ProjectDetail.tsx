@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
+import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { TaskList } from "@/components/tasks/TaskList";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
@@ -24,6 +26,7 @@ export default function ProjectDetail() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
   const [view, setView] = useState<"board" | "list">("board");
@@ -501,18 +504,33 @@ export default function ProjectDetail() {
             ) : (
               <>
                 {view === "board" ? (
-                  <DraggableTaskBoard
-                    tasks={filteredTasks || []}
-                    onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-                    onUpdateStatus={(taskId, status) =>
-                      updateTaskStatusMutation.mutate({ taskId, status })
-                    }
-                    onUpdateOrder={(taskId, newOrder, status) =>
-                      updateTaskOrderMutation.mutate({ taskId, newOrder, status })
-                    }
-                    sortMode={sortMode}
-                    onSortModeChange={handleSortModeChange}
-                  />
+                  isMobile ? (
+                    <MobileKanbanBoard
+                      tasks={filteredTasks || []}
+                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                      onUpdateStatus={(taskId, status) =>
+                        updateTaskStatusMutation.mutate({ taskId, status })
+                      }
+                      onUpdateOrder={(taskId, newOrder, status) =>
+                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                      }
+                      sortMode={sortMode}
+                      onSortModeChange={handleSortModeChange}
+                    />
+                  ) : (
+                    <DraggableTaskBoard
+                      tasks={filteredTasks || []}
+                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                      onUpdateStatus={(taskId, status) =>
+                        updateTaskStatusMutation.mutate({ taskId, status })
+                      }
+                      onUpdateOrder={(taskId, newOrder, status) =>
+                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                      }
+                      sortMode={sortMode}
+                      onSortModeChange={handleSortModeChange}
+                    />
+                  )
                 ) : (
                   <TaskList
                     tasks={filteredTasks || []}
