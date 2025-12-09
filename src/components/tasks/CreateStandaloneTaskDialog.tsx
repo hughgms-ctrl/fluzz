@@ -104,26 +104,42 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      console.log("Creating standalone task...");
+      console.log("User ID:", user?.id);
+      console.log("Assigned to:", assignedTo || user?.id);
+      
+      if (!user?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+      
+      const taskData = {
+        title,
+        description: description || null,
+        priority,
+        status: "todo" as const,
+        due_date: dueDate || null,
+        assigned_to: assignedTo || user.id,
+        setor: sectorId || null,
+        project_id: null,
+      };
+      
+      console.log("Task data:", taskData);
+      
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
-        .insert([
-          {
-            title,
-            description: description || null,
-            priority,
-            status: "todo",
-            due_date: dueDate || null,
-            assigned_to: assignedTo || user!.id,
-            setor: sectorId || null,
-            project_id: null,
-          },
-        ])
+        .insert([taskData])
         .select()
         .single();
-      if (taskError) throw taskError;
+      
+      console.log("Insert result:", { newTask, taskError });
+      
+      if (taskError) {
+        console.error("Task insert error:", taskError);
+        throw taskError;
+      }
 
       // Link selected processes
-      if (selectedProcesses.length > 0) {
+      if (selectedProcesses.length > 0 && newTask) {
         const { error: processError } = await supabase
           .from("task_processes")
           .insert(
@@ -132,8 +148,13 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
               process_id: processId,
             }))
           );
-        if (processError) throw processError;
+        if (processError) {
+          console.error("Process link error:", processError);
+          throw processError;
+        }
       }
+      
+      return newTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
@@ -141,9 +162,9 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
       resetForm();
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating task:", error);
-      toast.error("Erro ao criar tarefa");
+      toast.error(`Erro ao criar tarefa: ${error.message || 'Erro desconhecido'}`);
     },
   });
 
