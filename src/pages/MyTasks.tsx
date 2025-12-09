@@ -6,7 +6,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
-import { CreateStandaloneTaskDialog } from "@/components/tasks/CreateStandaloneTaskDialog";
+import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
 import { ProjectTaskGroup } from "@/components/tasks/ProjectTaskGroup";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -446,7 +446,7 @@ export default function MyTasks() {
         </Tabs>
       </div>
 
-      <CreateStandaloneTaskDialog
+      <CreateMyTaskDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
