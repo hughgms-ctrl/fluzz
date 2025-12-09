@@ -9,7 +9,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { FileText, ListTodo, FolderKanban, UserPlus, Plus, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState, useMemo } from "react";
-import { CreateUnifiedTaskDialog } from "@/components/tasks/CreateUnifiedTaskDialog";
+import { CreateStandaloneTaskDialog } from "@/components/tasks/CreateStandaloneTaskDialog";
 import { toast } from "sonner";
 
 export default function Home() {
@@ -164,11 +164,13 @@ export default function Home() {
               <span className="hidden sm:inline">{checkDeadlinesMutation.isPending ? "Verificando..." : "Verificar Prazos"}</span>
               <span className="sm:hidden">Verificar</span>
             </Button>
-            <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
-              <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="hidden sm:inline">Criar Tarefa</span>
-              <span className="sm:hidden">Criar</span>
-            </Button>
+            {(isAdmin || isGestor) && (
+              <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
+                <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Criar Tarefa Avulsa</span>
+                <span className="sm:hidden">Criar</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -299,6 +301,6 @@ export default function Home() {
         </div>
       </div>
 
-      <CreateUnifiedTaskDialog open={showCreateTask} onOpenChange={setShowCreateTask} />
+      <CreateStandaloneTaskDialog open={showCreateTask} onOpenChange={setShowCreateTask} />
     </AppLayout>;
 }
