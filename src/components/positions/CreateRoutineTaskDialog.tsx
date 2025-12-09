@@ -17,6 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +29,7 @@ import { SectorDrawer } from "../tasks/SectorDrawer";
 import { MemberDrawer } from "../tasks/MemberDrawer";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CreateRoutineTaskDialogProps {
   routineId: string;
@@ -46,6 +51,7 @@ export function CreateRoutineTaskDialog({
   const [documentation, setDocumentation] = useState("");
   const [projectId, setProjectId] = useState<string>("none");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
   const { workspace } = useWorkspace();
@@ -145,6 +151,7 @@ export function CreateRoutineTaskDialog({
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
           assigned_to: assignedTo || null,
+          start_date: format(startDate, "yyyy-MM-dd"),
         })
         .select()
         .single();
@@ -186,11 +193,12 @@ export function CreateRoutineTaskDialog({
     setDocumentation("");
     setProjectId("none");
     setSelectedProcesses([]);
+    setStartDate(new Date());
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar Tarefa à Rotina</DialogTitle>
           <DialogDescription>
@@ -219,6 +227,34 @@ export function CreateRoutineTaskDialog({
               placeholder="Descreva os detalhes da tarefa"
               rows={3}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="start-date">Data de Início *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !startDate && "text-muted-foreground"
+                  )}
+                  type="button"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? format(startDate, "PPP") : <span>Selecione uma data</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={(date) => date && setStartDate(date)}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
