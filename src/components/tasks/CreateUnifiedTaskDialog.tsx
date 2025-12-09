@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -24,7 +24,7 @@ import {
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SectorDrawer } from "./SectorDrawer";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CreateUnifiedTaskDialogProps {
   open: boolean;
@@ -36,8 +36,10 @@ export const CreateUnifiedTaskDialog = ({
   onOpenChange 
 }: CreateUnifiedTaskDialogProps) => {
   const { user } = useAuth();
-  const { workspace, canCreateTasks } = useWorkspace();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
   const queryClient = useQueryClient();
+  
+  const canAssignToOthers = isAdmin || isGestor;
   
   // Task type: "standalone", "project", "routine"
   const [taskType, setTaskType] = useState<"standalone" | "project" | "routine">("standalone");
@@ -46,19 +48,63 @@ export const CreateUnifiedTaskDialog = ({
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
   const [dueDate, setDueDate] = useState("");
+  const [setor, setSetor] = useState("");
   const [assignedTo, setAssignedTo] = useState<string>(user?.id || "");
   const [documentation, setDocumentation] = useState("");
-  const [setor, setSetor] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedRoutineId, setSelectedRoutineId] = useState("");
 
+  // Fetch positions (setores)
+  const { data: positions } = useQuery({
+    queryKey: ["positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace && canAssignToOthers,
+  });
+
+  // Fetch user_positions (to get users linked to a sector)
+  const { data: userPositions } = useQuery({
+    queryKey: ["user-positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      // Get all position IDs in this workspace first
+      const { data: workspacePositions, error: positionsError } = await supabase
+        .from("positions")
+        .select("id")
+        .eq("workspace_id", workspace.id);
+      
+      if (positionsError) throw positionsError;
+      if (!workspacePositions || workspacePositions.length === 0) return [];
+      
+      const positionIds = workspacePositions.map(p => p.id);
+      
+      const { data, error } = await supabase
+        .from("user_positions")
+        .select("user_id, position_id")
+        .in("position_id", positionIds);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace && canAssignToOthers,
+  });
+
+  // Fetch all workspace members
   const { data: workspaceMembers } = useQuery({
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
       
-      // First fetch workspace members
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
         .select("user_id, role")
@@ -67,7 +113,6 @@ export const CreateUnifiedTaskDialog = ({
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
 
-      // Then fetch profiles for those users
       const userIds = members.map(m => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
@@ -76,15 +121,53 @@ export const CreateUnifiedTaskDialog = ({
       
       if (profilesError) throw profilesError;
 
-      // Combine the data
       return members.map(member => ({
         user_id: member.user_id,
         role: member.role,
-        profiles: profiles?.find(p => p.id === member.user_id)
+        full_name: profiles?.find(p => p.id === member.user_id)?.full_name || "Sem nome"
       }));
     },
     enabled: !!workspace,
   });
+
+  // Filter members by selected sector
+  const filteredMembers = useMemo(() => {
+    if (!canAssignToOthers) {
+      // Regular members can only see themselves
+      const currentUser = workspaceMembers?.find(m => m.user_id === user?.id);
+      return currentUser ? [currentUser] : [];
+    }
+    
+    if (!setor) {
+      // No sector selected, show all workspace members
+      return workspaceMembers || [];
+    }
+    
+    // Filter by users linked to the selected sector
+    const userIdsInSector = userPositions
+      ?.filter(up => up.position_id === setor)
+      .map(up => up.user_id) || [];
+    
+    if (userIdsInSector.length === 0) {
+      // No users linked to this sector, show all as fallback
+      return workspaceMembers || [];
+    }
+    
+    return workspaceMembers?.filter(m => userIdsInSector.includes(m.user_id)) || [];
+  }, [canAssignToOthers, setor, userPositions, workspaceMembers, user?.id]);
+
+  // Reset assignedTo when sector changes
+  useEffect(() => {
+    if (setor && canAssignToOthers) {
+      // Check if current assignee is in the filtered list
+      const isCurrentAssigneeValid = filteredMembers.some(m => m.user_id === assignedTo);
+      if (!isCurrentAssigneeValid && filteredMembers.length > 0) {
+        // Reset to first available or user's own ID
+        const selfInList = filteredMembers.find(m => m.user_id === user?.id);
+        setAssignedTo(selfInList?.user_id || filteredMembers[0]?.user_id || user?.id || "");
+      }
+    }
+  }, [setor, filteredMembers, assignedTo, canAssignToOthers, user?.id]);
 
   const { data: projects } = useQuery({
     queryKey: ["projects", workspace?.id],
@@ -132,30 +215,17 @@ export const CreateUnifiedTaskDialog = ({
     enabled: !!workspace,
   });
 
-  const { data: positions } = useQuery({
-    queryKey: ["positions", workspace?.id],
-    queryFn: async () => {
-      if (!workspace) return [];
-      const { data, error } = await supabase
-        .from("positions")
-        .select("id, name")
-        .eq("workspace_id", workspace.id)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!workspace,
-  });
-
   const createMutation = useMutation({
     mutationFn: async () => {
+      const finalAssignedTo = assignedTo || user?.id;
+      
       const taskData: any = {
         title,
         description,
         priority,
         status,
         due_date: dueDate || null,
-        assigned_to: assignedTo || user?.id,
+        assigned_to: finalAssignedTo,
         documentation: documentation || null,
         setor: setor || null,
         project_id: null,
@@ -164,14 +234,12 @@ export const CreateUnifiedTaskDialog = ({
 
       if (taskType === "project") {
         if (!selectedProjectId) {
-          toast.error("Selecione um projeto");
-          return;
+          throw new Error("Selecione um projeto");
         }
         taskData.project_id = selectedProjectId;
       } else if (taskType === "routine") {
         if (!selectedRoutineId) {
-          toast.error("Selecione uma rotina");
-          return;
+          throw new Error("Selecione uma rotina");
         }
         taskData.routine_id = selectedRoutineId;
       }
@@ -181,6 +249,7 @@ export const CreateUnifiedTaskDialog = ({
         .insert([taskData])
         .select()
         .single();
+      
       if (taskError) throw taskError;
 
       // Link selected processes
@@ -195,17 +264,20 @@ export const CreateUnifiedTaskDialog = ({
           );
         if (processError) throw processError;
       }
+
+      return newTask;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["home-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
       toast.success("Tarefa criada com sucesso!");
       resetForm();
       onOpenChange(false);
     },
     onError: (error: any) => {
       console.error("Erro ao criar tarefa:", error);
-      toast.error("Erro ao criar tarefa");
+      toast.error(error.message || "Erro ao criar tarefa");
     },
   });
 
@@ -215,9 +287,9 @@ export const CreateUnifiedTaskDialog = ({
     setPriority("medium");
     setStatus("todo");
     setDueDate("");
+    setSetor("");
     setAssignedTo(user?.id || "");
     setDocumentation("");
-    setSetor("");
     setSelectedProcesses([]);
     setSelectedProjectId("");
     setSelectedRoutineId("");
@@ -232,10 +304,6 @@ export const CreateUnifiedTaskDialog = ({
     }
     createMutation.mutate();
   };
-
-  if (!canCreateTasks) {
-    return null;
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -295,26 +363,6 @@ export const CreateUnifiedTaskDialog = ({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="assigned_to">Responsável</Label>
-            <Select value={assignedTo} onValueChange={setAssignedTo}>
-              <SelectTrigger>
-                <SelectValue placeholder="Eu mesmo" />
-              </SelectTrigger>
-              <SelectContent>
-                {workspaceMembers?.map((member: any) => (
-                  <SelectItem key={member.user_id} value={member.user_id}>
-                    {member.profiles?.full_name || "Sem nome"}
-                    {member.user_id === user?.id ? " (Você)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Deixe em branco ou selecione você mesmo para atribuir a tarefa a você
-            </p>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="title">Título *</Label>
             <Input
               id="title"
@@ -334,6 +382,60 @@ export const CreateUnifiedTaskDialog = ({
               placeholder="Descreva os detalhes da tarefa..."
               rows={3}
             />
+          </div>
+
+          {/* Sector selection - only for admin/gestor */}
+          {canAssignToOthers && (
+            <div className="space-y-2">
+              <Label>Setor</Label>
+              <Select value={setor} onValueChange={setSetor}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um setor (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Sem setor específico</SelectItem>
+                  {positions?.map((position) => (
+                    <SelectItem key={position.id} value={position.id}>
+                      {position.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecionar um setor filtra os responsáveis vinculados
+              </p>
+            </div>
+          )}
+
+          {/* Responsible selection */}
+          <div className="space-y-2">
+            <Label htmlFor="assigned_to">Responsável</Label>
+            {canAssignToOthers ? (
+              <Select value={assignedTo} onValueChange={setAssignedTo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredMembers?.map((member) => (
+                    <SelectItem key={member.user_id} value={member.user_id}>
+                      {member.full_name}
+                      {member.user_id === user?.id ? " (Você)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="flex items-center h-10 px-3 bg-muted/50 rounded-md border">
+                <span className="text-sm">
+                  {workspaceMembers?.find(m => m.user_id === user?.id)?.full_name || "Você"}
+                </span>
+              </div>
+            )}
+            {!canAssignToOthers && (
+              <p className="text-xs text-muted-foreground">
+                A tarefa será atribuída a você
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -366,21 +468,6 @@ export const CreateUnifiedTaskDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Setor</Label>
-            <SectorDrawer value={setor} onValueChange={setSetor}>
-              <Button variant="outline" className="w-full justify-start">
-                {setor ? (
-                  <span className="truncate">
-                    {positions?.find(p => p.id === setor)?.name || "Setor selecionado"}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Selecione um setor</span>
-                )}
-              </Button>
-            </SectorDrawer>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="due_date">Data de Vencimento</Label>
             <Input
               id="due_date"
@@ -401,29 +488,33 @@ export const CreateUnifiedTaskDialog = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Processos Vinculados</Label>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {processes?.map((process) => (
-                <div key={process.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`process-${process.id}`}
-                    checked={selectedProcesses.includes(process.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedProcesses([...selectedProcesses, process.id]);
-                      } else {
-                        setSelectedProcesses(selectedProcesses.filter((id) => id !== process.id));
-                      }
-                    }}
-                  />
-                  <Label htmlFor={`process-${process.id}`} className="text-sm font-normal cursor-pointer flex-1">
-                    {process.title} <span className="text-muted-foreground">({process.area})</span>
-                  </Label>
+          {processes && processes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Processos Vinculados</Label>
+              <ScrollArea className="h-32 border rounded-md p-2">
+                <div className="space-y-2">
+                  {processes.map((process) => (
+                    <div key={process.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`process-${process.id}`}
+                        checked={selectedProcesses.includes(process.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedProcesses([...selectedProcesses, process.id]);
+                          } else {
+                            setSelectedProcesses(selectedProcesses.filter((id) => id !== process.id));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`process-${process.id}`} className="text-sm font-normal cursor-pointer flex-1">
+                        {process.title} <span className="text-muted-foreground">({process.area})</span>
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </ScrollArea>
             </div>
-          </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button
