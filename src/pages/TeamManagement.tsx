@@ -3,7 +3,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -19,6 +19,7 @@ interface WorkspaceMemberWithProfile {
   invited_by: string | null;
   profiles: {
     full_name: string | null;
+    avatar_url: string | null;
   } | null;
   inviter_profile?: {
     full_name: string | null;
@@ -46,7 +47,7 @@ export default function TeamManagement() {
       const userIds = membersData?.map(m => m.user_id) || [];
       const { data: profilesData } = await supabase
         .from("profiles")
-        .select("id, full_name")
+        .select("id, full_name, avatar_url")
         .in("id", userIds);
 
       // Fetch profiles for inviters
@@ -218,6 +219,10 @@ export default function TeamManagement() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 flex-1">
                         <Avatar>
+                          <AvatarImage 
+                            src={member.profiles?.avatar_url || ""} 
+                            className="object-cover"
+                          />
                           <AvatarFallback>{initials}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">

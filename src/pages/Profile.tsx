@@ -148,7 +148,10 @@ export default function Profile() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex items-center gap-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={avatarPreview || profile?.avatar_url || ""} />
+                  <AvatarImage 
+                    src={avatarPreview || profile?.avatar_url || ""} 
+                    className="object-cover"
+                  />
                   <AvatarFallback>
                     <UserIcon className="h-12 w-12" />
                   </AvatarFallback>

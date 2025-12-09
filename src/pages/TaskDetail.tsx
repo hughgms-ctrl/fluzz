@@ -20,7 +20,8 @@ import {
   Save,
   LinkIcon,
   Edit2,
-  GripVertical
+  GripVertical,
+  Paperclip
 } from "lucide-react";
 import {
   DndContext,
@@ -70,6 +71,7 @@ import { SectorDrawer } from "@/components/tasks/SectorDrawer";
 import { MemberDrawer } from "@/components/tasks/MemberDrawer";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
+import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 
 interface SortableSubtaskProps {
   subtask: any;
@@ -859,6 +861,16 @@ export default function TaskDetail() {
                       <p className="text-muted-foreground mt-2">Sem documentação</p>
                     )
                   )}
+                </div>
+
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Paperclip size={16} />
+                    Arquivos Anexados
+                  </Label>
+                  <div className="mt-2">
+                    <TaskAttachments taskId={id!} isEditing={isEditing} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
