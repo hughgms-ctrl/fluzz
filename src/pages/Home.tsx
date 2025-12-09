@@ -164,11 +164,11 @@ export default function Home() {
               <span className="hidden sm:inline">{checkDeadlinesMutation.isPending ? "Verificando..." : "Verificar Prazos"}</span>
               <span className="sm:hidden">Verificar</span>
             </Button>
-            {canCreateTasks && <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
-                <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">Criar Tarefa</span>
-                <span className="sm:hidden">Criar</span>
-              </Button>}
+            <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
+              <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="hidden sm:inline">Criar Tarefa</span>
+              <span className="sm:hidden">Criar</span>
+            </Button>
           </div>
         </div>
 
