@@ -29,7 +29,7 @@ export default function ProjectDetail() {
   const isMobile = useIsMobile();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list">(isMobile ? "list" : "board");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -472,20 +472,23 @@ export default function ProjectDetail() {
             </div>
 
             {/* View Toggle */}
-            <div className="flex justify-end">
-              <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
-                <TabsList>
-                  <TabsTrigger value="list" className="gap-2">
-                    <List size={16} />
-                    <span className="hidden sm:inline">Lista</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="board" className="gap-2">
-                    <LayoutGrid size={16} />
-                    <span className="hidden sm:inline">Kanban</span>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
+            {/* View toggle - only show on desktop */}
+            {!isMobile && (
+              <div className="flex justify-end">
+                <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
+                  <TabsList>
+                    <TabsTrigger value="list" className="gap-2">
+                      <List size={16} />
+                      <span className="hidden sm:inline">Lista</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="board" className="gap-2">
+                      <LayoutGrid size={16} />
+                      <span className="hidden sm:inline">Kanban</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
 
             {filteredTasks && filteredTasks.length === 0 ? (
               <div className="text-center py-16">
@@ -503,34 +506,19 @@ export default function ProjectDetail() {
               </div>
             ) : (
               <>
-                {view === "board" ? (
-                  isMobile ? (
-                    <MobileKanbanBoard
-                      tasks={filteredTasks || []}
-                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-                      onUpdateStatus={(taskId, status) =>
-                        updateTaskStatusMutation.mutate({ taskId, status })
-                      }
-                      onUpdateOrder={(taskId, newOrder, status) =>
-                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
-                      }
-                      sortMode={sortMode}
-                      onSortModeChange={handleSortModeChange}
-                    />
-                  ) : (
-                    <DraggableTaskBoard
-                      tasks={filteredTasks || []}
-                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-                      onUpdateStatus={(taskId, status) =>
-                        updateTaskStatusMutation.mutate({ taskId, status })
-                      }
-                      onUpdateOrder={(taskId, newOrder, status) =>
-                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
-                      }
-                      sortMode={sortMode}
-                      onSortModeChange={handleSortModeChange}
-                    />
-                  )
+                {view === "board" && !isMobile ? (
+                  <DraggableTaskBoard
+                    tasks={filteredTasks || []}
+                    onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                    onUpdateStatus={(taskId, status) =>
+                      updateTaskStatusMutation.mutate({ taskId, status })
+                    }
+                    onUpdateOrder={(taskId, newOrder, status) =>
+                      updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                    }
+                    sortMode={sortMode}
+                    onSortModeChange={handleSortModeChange}
+                  />
                 ) : (
                   <TaskList
                     tasks={filteredTasks || []}
