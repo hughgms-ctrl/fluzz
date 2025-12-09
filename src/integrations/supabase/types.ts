@@ -880,6 +880,7 @@ export type Database = {
           project_id: string | null
           routine_id: string
           setor: string | null
+          start_date: string | null
           status: string | null
           task_order: number
           title: string
@@ -896,6 +897,7 @@ export type Database = {
           project_id?: string | null
           routine_id: string
           setor?: string | null
+          start_date?: string | null
           status?: string | null
           task_order?: number
           title: string
@@ -912,6 +914,7 @@ export type Database = {
           project_id?: string | null
           routine_id?: string
           setor?: string | null
+          start_date?: string | null
           status?: string | null
           task_order?: number
           title?: string
