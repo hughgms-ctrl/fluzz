@@ -37,20 +37,33 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase
+      console.log("Creating task with user:", user?.id);
+      
+      if (!user?.id) {
+        throw new Error("User not authenticated");
+      }
+      
+      const taskData = {
+        title,
+        description: description || null,
+        priority,
+        status: "todo",
+        due_date: dueDate || null,
+        assigned_to: user.id,
+        project_id: null,
+      };
+      
+      console.log("Task data:", taskData);
+      
+      const { data, error } = await supabase
         .from("tasks")
-        .insert([
-          {
-            title,
-            description: description || null,
-            priority,
-            status: "todo",
-            due_date: dueDate || null,
-            assigned_to: user!.id,
-            project_id: null,
-          },
-        ]);
+        .insert([taskData])
+        .select();
+        
+      console.log("Insert result:", { data, error });
+      
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
@@ -58,9 +71,9 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
       resetForm();
       onOpenChange(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Error creating task:", error);
-      toast.error("Erro ao criar tarefa");
+      toast.error(`Erro ao criar tarefa: ${error.message || 'Erro desconhecido'}`);
     },
   });
 
