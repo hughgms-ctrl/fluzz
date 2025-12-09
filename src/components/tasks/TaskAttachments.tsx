@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { toast } from "sonner";
 import { 
   Upload, 
@@ -18,7 +19,9 @@ import {
   FileVideo,
   FileAudio,
   FileText,
-  Archive
+  Archive,
+  X,
+  ZoomIn
 } from "lucide-react";
 import {
   AlertDialog,
@@ -64,14 +67,20 @@ const formatFileSize = (bytes: number | null) => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const isImageFile = (fileType: string | null) => {
+  return fileType?.startsWith("image/") || false;
+};
+
 export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsProps) {
   const { user } = useAuth();
+  const { isAdmin } = useWorkspace();
   const queryClient = useQueryClient();
   const [isUploading, setIsUploading] = useState(false);
   const [attachmentToDelete, setAttachmentToDelete] = useState<{ id: string; name: string } | null>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
 
   const { data: attachments, isLoading } = useQuery({
     queryKey: ["task-attachments", taskId],
@@ -86,6 +95,11 @@ export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsPr
       return data;
     },
   });
+
+  const canDelete = (uploadedBy: string | null) => {
+    if (isAdmin) return true;
+    return uploadedBy === user?.id;
+  };
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -271,13 +285,28 @@ export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsPr
               key={attachment.id}
               className="flex items-center gap-3 p-2 rounded bg-muted/50 hover:bg-muted group"
             >
-              <div className="flex-shrink-0 text-muted-foreground">
-                {attachment.file_type === "link" ? (
-                  <LinkIcon size={16} />
-                ) : (
-                  getFileIcon(attachment.file_type)
-                )}
-              </div>
+              {/* Image Preview Thumbnail */}
+              {isImageFile(attachment.file_type) ? (
+                <button
+                  onClick={() => setPreviewImage({ url: attachment.file_url, name: attachment.name })}
+                  className="flex-shrink-0 w-10 h-10 rounded overflow-hidden border border-border hover:border-primary transition-colors cursor-pointer"
+                >
+                  <img 
+                    src={attachment.file_url} 
+                    alt={attachment.name}
+                    className="w-full h-full object-cover"
+                  />
+                </button>
+              ) : (
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {attachment.file_type === "link" ? (
+                    <LinkIcon size={16} />
+                  ) : (
+                    getFileIcon(attachment.file_type)
+                  )}
+                </div>
+              )}
+              
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{attachment.name}</p>
                 {attachment.file_size && (
@@ -286,7 +315,18 @@ export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsPr
                   </p>
                 )}
               </div>
+              
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {isImageFile(attachment.file_type) && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setPreviewImage({ url: attachment.file_url, name: attachment.name })}
+                  >
+                    <ZoomIn size={14} />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
@@ -306,7 +346,7 @@ export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsPr
                     )}
                   </a>
                 </Button>
-                {isEditing && (
+                {canDelete(attachment.uploaded_by) && (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -325,6 +365,49 @@ export function TaskAttachments({ taskId, isEditing = false }: TaskAttachmentsPr
           {isEditing ? "Nenhum arquivo anexado. Use os botões acima para adicionar." : "Nenhum arquivo anexado."}
         </p>
       )}
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 z-10 bg-background/80 hover:bg-background"
+              onClick={() => setPreviewImage(null)}
+            >
+              <X size={20} />
+            </Button>
+            {previewImage && (
+              <div className="flex flex-col">
+                <div className="p-4 border-b">
+                  <h3 className="font-medium truncate">{previewImage.name}</h3>
+                </div>
+                <div className="flex items-center justify-center p-4 bg-muted/30 max-h-[70vh] overflow-auto">
+                  <img 
+                    src={previewImage.url} 
+                    alt={previewImage.name}
+                    className="max-w-full max-h-[65vh] object-contain"
+                  />
+                </div>
+                <div className="p-4 border-t flex justify-end">
+                  <Button asChild>
+                    <a
+                      href={previewImage.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download
+                    >
+                      <Download size={16} className="mr-2" />
+                      Baixar
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!attachmentToDelete} onOpenChange={(open) => !open && setAttachmentToDelete(null)}>
         <AlertDialogContent>
