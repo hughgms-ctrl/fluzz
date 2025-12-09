@@ -388,12 +388,12 @@ export const CreateUnifiedTaskDialog = ({
           {canAssignToOthers && (
             <div className="space-y-2">
               <Label>Setor</Label>
-              <Select value={setor} onValueChange={setSetor}>
+              <Select value={setor || "none"} onValueChange={(val) => setSetor(val === "none" ? "" : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um setor (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem setor específico</SelectItem>
+                  <SelectItem value="none">Sem setor específico</SelectItem>
                   {positions?.map((position) => (
                     <SelectItem key={position.id} value={position.id}>
                       {position.name}
