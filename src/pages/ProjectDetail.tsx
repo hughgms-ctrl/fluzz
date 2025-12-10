@@ -29,7 +29,7 @@ export default function ProjectDetail() {
   const isMobile = useIsMobile();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
-  const [view, setView] = useState<"board" | "list">(isMobile ? "list" : "board");
+  const [view, setView] = useState<"board" | "list">("list");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -246,7 +246,30 @@ export default function ProjectDetail() {
     return matchesSearch && matchesPriority && matchesStatus && matchesDueDate && matchesSetor;
   }) || [];
 
-  const uniqueSetores = Array.from(new Set(tasks?.filter(t => t.setor).map(t => t.setor))) as string[];
+  // Fetch positions to get sector names
+  const { data: positions } = useQuery({
+    queryKey: ["positions-for-filter"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Map sector IDs to names
+  const getSetorName = (setorId: string) => {
+    const position = positions?.find(p => p.id === setorId);
+    return position?.name || setorId;
+  };
+
+  // Get unique sectors with their names
+  const uniqueSetoresIds = Array.from(new Set(tasks?.filter(t => t.setor).map(t => t.setor))) as string[];
+  const setoresWithNames = uniqueSetoresIds.map(id => ({
+    id,
+    name: getSetorName(id)
+  }));
 
   const isOwner = project?.user_id === user?.id;
 
@@ -397,7 +420,7 @@ export default function ProjectDetail() {
         </div>
 
         {showMembers && (
-          <ProjectMembers projectId={id!} isOwner={isOwner} />
+          <ProjectMembers projectId={id!} />
         )}
 
         {/* Main Content Tabs */}
@@ -448,7 +471,7 @@ export default function ProjectDetail() {
                 onDueDateChange={setDueDateFilter}
                 setorFilter={setorFilter}
                 onSetorChange={setSetorFilter}
-                setores={uniqueSetores}
+                setores={setoresWithNames}
                 onClearAll={handleClearAllFilters}
               />
             </MobileFilterDrawer>
@@ -466,7 +489,7 @@ export default function ProjectDetail() {
                 onDueDateChange={setDueDateFilter}
                 setorFilter={setorFilter}
                 onSetorChange={setSetorFilter}
-                setores={uniqueSetores}
+                setores={setoresWithNames}
                 onClearAll={handleClearAllFilters}
               />
             </div>
