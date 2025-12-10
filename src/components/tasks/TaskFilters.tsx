@@ -24,7 +24,7 @@ interface TaskFiltersProps {
   projectFilter?: string;
   onProjectChange?: (value: string) => void;
   projects?: Array<{ id: string; name: string }>;
-  setores?: string[];
+  setores?: Array<{ id: string; name: string }>;
   typeFilter?: string;
   onTypeChange?: (value: string) => void;
   onClearAll?: () => void;
@@ -134,8 +134,8 @@ export const TaskFilters = ({
               <SelectContent>
                 <SelectItem value="all">Todos os setores</SelectItem>
                 {setores?.map((setor) => (
-                  <SelectItem key={setor} value={setor}>
-                    {setor}
+                  <SelectItem key={setor.id} value={setor.id}>
+                    {setor.name}
                   </SelectItem>
                 ))}
               </SelectContent>
