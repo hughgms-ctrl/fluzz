@@ -1,65 +1,64 @@
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Edit, Save, X } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function Vision() {
   const queryClient = useQueryClient();
-  const { isAdmin, isGestor } = useWorkspace();
-  const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const navigate = useNavigate();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
 
   const { data: visionData, isLoading } = useQuery({
-    queryKey: ["company-info", "vision"],
+    queryKey: ["company-info", "vision", workspace?.id],
     queryFn: async () => {
+      if (!workspace) return null;
       const { data, error } = await supabase
         .from("company_info")
         .select("*")
         .eq("section", "vision")
+        .eq("workspace_id", workspace.id)
         .maybeSingle();
       if (error) throw error;
-      
-      if (data) {
-        setTitle(data.title);
-        setContent(data.content);
-      }
       return data;
     },
+    enabled: !!workspace,
   });
 
-  const saveMutation = useMutation({
+  const deleteMutation = useMutation({
     mutationFn: async () => {
-      if (visionData) {
-        const { error } = await supabase
-          .from("company_info")
-          .update({ title, content })
-          .eq("id", visionData.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("company_info")
-          .insert([{ section: "vision", title, content }]);
-        if (error) throw error;
-      }
+      if (!visionData) return;
+      const { error } = await supabase
+        .from("company_info")
+        .delete()
+        .eq("id", visionData.id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-info", "vision"] });
-      toast.success("Visão, missão e valores atualizados!");
-      setIsEditing(false);
+      toast.success("Conteúdo excluído com sucesso!");
     },
     onError: () => {
-      toast.error("Erro ao salvar");
+      toast.error("Erro ao excluir");
     },
   });
+
+  const canEdit = isAdmin || isGestor;
 
   if (isLoading) {
     return (
@@ -81,82 +80,64 @@ export default function Vision() {
               Os princípios fundamentais que guiam nossa empresa
             </p>
           </div>
-          {(isAdmin || isGestor) && !isEditing && (
-            <Button onClick={() => setIsEditing(true)} className="gap-2 w-full sm:w-auto" size="sm">
+          {canEdit && (
+            <Button onClick={() => navigate("/workspace/vision/edit")} className="gap-2 w-full sm:w-auto" size="sm">
               <Edit size={14} />
-              Editar
+              {visionData ? "Editar" : "Criar"}
             </Button>
-          )}
-          {(isAdmin || isGestor) && isEditing && (
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsEditing(false);
-                  if (visionData) {
-                    setTitle(visionData.title);
-                    setContent(visionData.content);
-                  }
-                }}
-                className="gap-2 flex-1 sm:flex-initial"
-              >
-                <X size={14} />
-                Cancelar
-              </Button>
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-                className="gap-2 flex-1 sm:flex-initial"
-                size="sm"
-              >
-                <Save size={14} />
-                Salvar
-              </Button>
-            </div>
           )}
         </div>
 
-        <Card>
-          <CardHeader>
-            {isEditing ? (
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Nossa Visão, Missão e Valores"
-                />
-              </div>
-            ) : (
-              <CardTitle>{title || "Visão, Missão e Valores"}</CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            {isEditing ? (
-              <div className="space-y-2">
-                <Label>Conteúdo</Label>
-                <Textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Descreva a visão, missão e valores da empresa..."
-                  rows={15}
-                  className="font-mono"
-                />
-              </div>
-            ) : (
-              <div className="prose prose-sm max-w-none">
-                {content ? (
-                  <p className="whitespace-pre-wrap text-foreground">{content}</p>
-                ) : (
-                  <p className="text-muted-foreground italic">
-                    Nenhuma informação cadastrada ainda. Clique em "Editar" para adicionar.
-                  </p>
+        {visionData ? (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>{visionData.title || "Visão, Missão e Valores"}</CardTitle>
+                {canEdit && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                        <Trash2 size={16} />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Visão, Missão e Valores?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteMutation.mutate()}>
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
+            </CardHeader>
+            <CardContent>
+              <div 
+                className="prose prose-sm max-w-none dark:prose-invert"
+                dangerouslySetInnerHTML={{ __html: visionData.content || "" }}
+              />
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="text-center py-12 border-2 border-dashed rounded-lg">
+            <p className="text-muted-foreground mb-4">
+              Nenhuma informação cadastrada ainda.
+            </p>
+            {canEdit && (
+              <Button onClick={() => navigate("/workspace/vision/edit")}>
+                <Edit className="h-4 w-4 mr-2" />
+                Criar Visão, Missão e Valores
+              </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
     </AppLayout>
   );

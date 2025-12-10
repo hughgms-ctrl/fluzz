@@ -18,10 +18,14 @@ import Profile from "./pages/Profile";
 import Analytics from "./pages/Analytics";
 import Workspace from "./pages/Workspace";
 import Culture from "./pages/workspace/Culture";
+import CultureForm from "./pages/workspace/CultureForm";
 import Vision from "./pages/workspace/Vision";
+import VisionForm from "./pages/workspace/VisionForm";
 import Processes from "./pages/workspace/Processes";
 import ProcessForm from "./pages/workspace/ProcessForm";
 import GettingStarted from "./pages/workspace/GettingStarted";
+import GettingStartedForm from "./pages/workspace/GettingStartedForm";
+import GettingStartedDetail from "./pages/workspace/GettingStartedDetail";
 import Positions from "./pages/Positions";
 import Inventory from "./pages/Inventory";
 import PositionDetail from "./pages/PositionDetail";
@@ -58,11 +62,16 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/workspace/culture" element={<Culture />} />
+            <Route path="/workspace/culture/edit" element={<CultureForm />} />
             <Route path="/workspace/vision" element={<Vision />} />
+            <Route path="/workspace/vision/edit" element={<VisionForm />} />
             <Route path="/workspace/processes" element={<Processes />} />
             <Route path="/workspace/processes/new" element={<ProcessForm />} />
             <Route path="/workspace/processes/:id/edit" element={<ProcessForm />} />
             <Route path="/workspace/getting-started" element={<GettingStarted />} />
+            <Route path="/workspace/getting-started/new" element={<GettingStartedForm />} />
+            <Route path="/workspace/getting-started/:id" element={<GettingStartedDetail />} />
+            <Route path="/workspace/getting-started/:id/edit" element={<GettingStartedForm />} />
             <Route path="/positions" element={<Positions />} />
             <Route path="/positions/:id" element={<PositionDetail />} />
             <Route path="/inventory" element={<Inventory />} />
