@@ -8,11 +8,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { renderDocumentation } from "@/lib/linkify";
 import { formatDateBR } from "@/lib/utils";
+import { useMemo } from "react";
 
 interface ProjectNotesProps {
   projectId: string;
   tasks: any[];
 }
+
+// Natural sort function - recognizes numbers in strings (1, 2, 10, 11 not 1, 10, 11, 2)
+const naturalSort = (a: string, b: string) => {
+  return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+};
 
 const getFileIcon = (fileType: string | null) => {
   if (!fileType) return <FileIcon size={14} />;
@@ -53,6 +59,28 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
     enabled: !!tasks && tasks.length > 0,
   });
 
+  // Fetch positions/sectors to get names
+  const { data: positions } = useQuery({
+    queryKey: ["positions-for-notes", projectId],
+    queryFn: async () => {
+      const sectorIds = [...new Set(tasks?.filter(t => t.setor).map(t => t.setor))];
+      if (sectorIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .in("id", sectorIds);
+      
+      if (error) throw error;
+      
+      return data?.reduce((acc, position) => {
+        acc[position.id] = position.name;
+        return acc;
+      }, {} as Record<string, string>) || {};
+    },
+    enabled: !!tasks && tasks.length > 0,
+  });
+
   // Fetch attachments for all tasks
   const taskIds = tasks?.map(t => t.id) || [];
   const { data: attachments } = useQuery({
@@ -79,12 +107,17 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
     enabled: taskIds.length > 0,
   });
 
-  // Filter tasks that have documentation OR attachments
-  const tasksWithNotes = tasks?.filter(task => {
-    const hasDocumentation = task.documentation && task.documentation.trim() !== "";
-    const hasAttachments = attachments?.[task.id]?.length > 0;
-    return hasDocumentation || hasAttachments;
-  }) || [];
+  // Filter tasks that have documentation OR attachments and sort alphabetically
+  const tasksWithNotes = useMemo(() => {
+    const filtered = tasks?.filter(task => {
+      const hasDocumentation = task.documentation && task.documentation.trim() !== "";
+      const hasAttachments = attachments?.[task.id]?.length > 0;
+      return hasDocumentation || hasAttachments;
+    }) || [];
+    
+    // Sort by title using natural sort
+    return filtered.sort((a, b) => naturalSort(a.title, b.title));
+  }, [tasks, attachments]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -113,6 +146,11 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
       case "low": return "text-green-500";
       default: return "text-muted-foreground";
     }
+  };
+
+  // Get sector name from ID
+  const getSectorName = (sectorId: string) => {
+    return positions?.[sectorId] || sectorId;
   };
 
   if (tasksWithNotes.length === 0) {
@@ -174,7 +212,7 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
                     )}
                     {task.setor && (
                       <Badge variant="outline" className="text-xs">
-                        {task.setor}
+                        {getSectorName(task.setor)}
                       </Badge>
                     )}
                     {task.priority && (

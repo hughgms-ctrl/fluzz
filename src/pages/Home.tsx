@@ -67,20 +67,22 @@ export default function Home() {
     enabled: !!workspace
   });
 
-  // Filter only active (non-archived) projects
+  // Filter only active (non-archived) projects that are NOT standalone folders
   const activeProjectsList = useMemo(() => 
-    projects?.filter(p => !p.archived) || [], 
+    projects?.filter(p => !p.archived && !p.is_standalone_folder) || [], 
     [projects]
   );
 
+  // Fetch ALL tasks for admin/gestor, or only user's tasks for members
   const {
     data: tasks,
     isLoading: tasksLoading
   } = useQuery({
-    queryKey: ["home-tasks", workspace?.id],
+    queryKey: ["home-tasks", workspace?.id, user?.id, isAdmin, isGestor],
     queryFn: async () => {
       if (!workspace) return [];
-      // Only get tasks from active (non-archived) projects
+      
+      // Get active projects (non-archived)
       const {
         data: projectsData
       } = await supabase
@@ -90,22 +92,88 @@ export default function Home() {
         .eq("archived", false);
       
       if (!projectsData || projectsData.length === 0) return [];
-      const {
-        data,
-        error
-      } = await supabase.from("tasks").select("*, projects(name)").in("project_id", projectsData.map(p => p.id)).order("created_at", {
-        ascending: false
-      });
+
+      // Build query for tasks
+      let query = supabase.from("tasks").select("*, projects(name)");
+
+      if (isAdmin || isGestor) {
+        // Admin/Gestor: get ALL tasks from active projects
+        query = query.in("project_id", projectsData.map(p => p.id));
+      } else {
+        // Member: get only tasks assigned to them from active projects
+        query = query
+          .in("project_id", projectsData.map(p => p.id))
+          .eq("assigned_to", user?.id);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+      
       if (error) throw error;
       return data;
     },
-    enabled: !!workspace
+    enabled: !!workspace && !!user
   });
 
-  const activeProjects = activeProjectsList.filter(p => p.status === "active").length;
-  const completedTasks = tasks?.filter(t => t.status === "completed").length || 0;
-  const pendingTasks = tasks?.filter(t => t.status !== "completed").length || 0;
-  const overdueTasks = tasks?.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed").length || 0;
+  // Also fetch standalone and routine tasks for members
+  const { data: memberExtraTasks } = useQuery({
+    queryKey: ["home-extra-tasks", workspace?.id, user?.id, isAdmin, isGestor],
+    queryFn: async () => {
+      if (!workspace || !user || isAdmin || isGestor) return [];
+      
+      // Get standalone tasks assigned to user
+      const { data: standaloneTasks } = await supabase
+        .from("tasks")
+        .select("*")
+        .is("project_id", null)
+        .eq("assigned_to", user.id);
+      
+      // Get routine tasks assigned to user
+      const { data: routineTasks } = await supabase
+        .from("tasks")
+        .select("*")
+        .not("routine_id", "is", null)
+        .eq("assigned_to", user.id);
+      
+      return [...(standaloneTasks || []), ...(routineTasks || [])];
+    },
+    enabled: !!workspace && !!user && !isAdmin && !isGestor
+  });
+
+  // Combine all tasks for counting
+  const allTasks = useMemo(() => {
+    const projectTasks = tasks || [];
+    const extraTasks = memberExtraTasks || [];
+    return [...projectTasks, ...extraTasks];
+  }, [tasks, memberExtraTasks]);
+
+  const activeProjects = activeProjectsList.length;
+  const completedTasks = allTasks.filter(t => t.status === "completed").length;
+  const pendingTasks = allTasks.filter(t => t.status !== "completed").length;
+  const overdueTasks = allTasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed").length;
+
+  // Handle card clicks based on role
+  const handleCardClick = (type: "projects" | "completed" | "pending" | "overdue") => {
+    if (isAdmin || isGestor) {
+      // Navigate to Analytics with appropriate filter
+      navigate(`/analytics?filter=${type}`);
+    } else {
+      // Navigate to My Tasks with appropriate filter
+      switch (type) {
+        case "projects":
+          navigate("/my-tasks");
+          break;
+        case "completed":
+          navigate("/my-tasks?status=completed");
+          break;
+        case "pending":
+          navigate("/my-tasks?status=pending");
+          break;
+        case "overdue":
+          navigate("/my-tasks?status=overdue");
+          break;
+      }
+    }
+  };
 
   // Quick access items with permission checks
   const quickAccessItems = useMemo(() => {
@@ -155,7 +223,9 @@ export default function Home() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Home</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1 sm:mt-2">
-              Visão geral dos seus projetos e tarefas
+              {isAdmin || isGestor 
+                ? "Visão geral de todos os projetos e tarefas do workspace"
+                : "Visão geral dos seus projetos e tarefas"}
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
@@ -175,7 +245,10 @@ export default function Home() {
         </div>
 
         <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary" onClick={() => navigate("/projects")}>
+          <Card 
+            className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary" 
+            onClick={() => handleCardClick("projects")}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Projetos Ativos
@@ -190,7 +263,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all border-l-4 border-l-primary">
+          <Card 
+            className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary"
+            onClick={() => handleCardClick("completed")}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Tarefas Concluídas
@@ -205,7 +281,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary" onClick={() => navigate("/my-tasks")}>
+          <Card 
+            className="hover:shadow-lg transition-all cursor-pointer border-l-4 border-l-primary" 
+            onClick={() => handleCardClick("pending")}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Tarefas Pendentes
@@ -215,12 +294,15 @@ export default function Home() {
             <CardContent>
               <div className="text-2xl sm:text-3xl font-bold text-foreground">{pendingTasks}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                Clique para ver suas tarefas
+                Clique para ver {isAdmin || isGestor ? "todas" : "suas tarefas"}
               </p>
             </CardContent>
           </Card>
 
-          <Card className={`hover:shadow-lg transition-all border-l-4 ${overdueTasks > 0 ? "border-l-destructive" : "border-l-primary"}`}>
+          <Card 
+            className={`hover:shadow-lg transition-all cursor-pointer border-l-4 ${overdueTasks > 0 ? "border-l-destructive" : "border-l-primary"}`}
+            onClick={() => handleCardClick("overdue")}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className={`text-xs sm:text-sm font-medium ${overdueTasks > 0 ? "text-destructive" : "text-muted-foreground"}`}>
                 Tarefas Atrasadas
