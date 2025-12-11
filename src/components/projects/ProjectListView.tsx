@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Folder } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Badge } from "@/components/ui/badge";
 
 interface ProjectListViewProps {
   projects: any[];
@@ -16,9 +17,10 @@ interface ProjectListViewProps {
   onArchive: (id: string) => void;
   navigate: (path: string) => void;
   isArchived?: boolean;
+  isStandaloneFolder?: boolean;
 }
 
-export function ProjectListView({ projects, onDelete, onArchive, navigate, isArchived }: ProjectListViewProps) {
+export function ProjectListView({ projects, onDelete, onArchive, navigate, isArchived, isStandaloneFolder }: ProjectListViewProps) {
   const { isAdmin, isGestor } = useWorkspace();
 
   const getProgress = (project: any) => {
@@ -37,7 +39,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">Projeto</TableHead>
+            <TableHead className="w-[40%]">{isStandaloneFolder ? "Pasta" : "Projeto"}</TableHead>
             <TableHead className="w-[40%]">Progresso</TableHead>
             <TableHead className="w-[20%] text-right">Tarefas</TableHead>
             {(isAdmin || isGestor) && <TableHead className="w-[50px]"></TableHead>}
@@ -52,7 +54,13 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                 className="cursor-pointer hover:bg-muted/50"
                 onClick={() => navigate(`/projects/${project.id}`)}
               >
-                <TableCell className="font-medium">{project.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
+                    {project.name}
+                    {isStandaloneFolder && <Badge variant="outline" className="text-xs">Avulso</Badge>}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Progress value={progress.percentage} className="h-2" />
                 </TableCell>
@@ -68,9 +76,11 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onArchive(project.id)}>
-                          {isArchived ? "Restaurar" : "Arquivar"}
-                        </DropdownMenuItem>
+                        {!isStandaloneFolder && (
+                          <DropdownMenuItem onClick={() => onArchive(project.id)}>
+                            {isArchived ? "Restaurar" : "Arquivar"}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => onDelete(project.id)}

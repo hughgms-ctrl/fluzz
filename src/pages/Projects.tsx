@@ -1,11 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid, List } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
+import { Plus, LayoutGrid, List, Folder } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
@@ -41,28 +39,13 @@ export default function Projects() {
     enabled: !!workspace?.id,
   });
 
-  const { data: standaloneTasks, isLoading: isLoadingStandalone } = useQuery({
-    queryKey: ["standalone-tasks"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tasks")
-        .select(`
-          *,
-          profiles:assigned_to (
-            id,
-            full_name
-          )
-        `)
-        .is("project_id", null)
-        .is("routine_id", null)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const activeProjects = projects?.filter(p => !p.archived) || [];
-  const archivedProjects = projects?.filter(p => p.archived) || [];
+  // Separate projects vs standalone folders
+  const { activeProjects, archivedProjects, standaloneFolders } = useMemo(() => {
+    const active = projects?.filter(p => !p.archived && !p.is_standalone_folder) || [];
+    const archived = projects?.filter(p => p.archived && !p.is_standalone_folder) || [];
+    const standalone = projects?.filter(p => p.is_standalone_folder) || [];
+    return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone };
+  }, [projects]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -98,7 +81,7 @@ export default function Projects() {
     },
   });
 
-  if (isLoading || isLoadingStandalone) {
+  if (isLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
@@ -175,9 +158,9 @@ export default function Projects() {
               ({archivedProjects.length})
             </TabsTrigger>
             <TabsTrigger value="standalone" className="text-xs sm:text-sm">
-              <span className="hidden sm:inline">Tarefas Avulsas</span>
-              <span className="sm:hidden">Avulsas</span>
-              ({standaloneTasks?.length || 0})
+              <span className="hidden sm:inline">Avulsos</span>
+              <span className="sm:hidden">Avulso</span>
+              ({standaloneFolders.length})
             </TabsTrigger>
           </TabsList>
 
@@ -246,53 +229,57 @@ export default function Projects() {
           </TabsContent>
 
           <TabsContent value="standalone" className="mt-6">
-            {!standaloneTasks || standaloneTasks.length === 0 ? (
+            {standaloneFolders.length === 0 ? (
               <div className="text-center py-16">
-                <p className="text-muted-foreground">
-                  Não há tarefas avulsas criadas.
+                <Folder className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  Você não tem pastas de tarefas avulsas.
                 </p>
+                {(isAdmin || isGestor) && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                    <Plus size={20} />
+                    Criar Pasta Avulsa
+                  </Button>
+                )}
               </div>
-            ) : (
+            ) : viewMode === "grid" ? (
               <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {standaloneTasks.map((task: any) => (
+                {standaloneFolders.map((folder: any) => (
                   <Card
-                    key={task.id}
+                    key={folder.id}
                     className="hover:shadow-lg transition-all cursor-pointer"
-                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    onClick={() => navigate(`/projects/${folder.id}`)}
                   >
-                    <CardHeader>
+                    <CardHeader className="pb-2">
                       <div className="flex items-start justify-between gap-2">
-                        <CardTitle className="text-lg line-clamp-2">{task.title}</CardTitle>
-                        <Badge variant={getPriorityVariant(task.priority)}>
-                          {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Folder className="h-5 w-5 text-primary" />
+                          <CardTitle className="text-lg line-clamp-2">{folder.name}</CardTitle>
+                        </div>
+                        <Badge variant="outline">Avulso</Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
-                      {task.description && (
+                      {folder.description && (
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {task.description}
+                          {folder.description}
                         </p>
                       )}
-                      <div className="flex items-center justify-between text-sm">
-                        <Badge variant="outline">
-                          {getStatusLabel(task.status)}
-                        </Badge>
-                        {task.profiles?.full_name && (
-                          <span className="text-muted-foreground">
-                            {task.profiles.full_name}
-                          </span>
-                        )}
-                      </div>
-                      {task.due_date && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Vencimento: {formatDateBR(task.due_date)}
-                        </p>
-                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {folder.tasks?.length || 0} tarefas
+                      </p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
+            ) : (
+              <ProjectListView
+                projects={standaloneFolders}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
+                navigate={navigate}
+                isStandaloneFolder
+              />
             )}
           </TabsContent>
         </Tabs>
