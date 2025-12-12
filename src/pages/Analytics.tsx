@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -20,8 +21,8 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Flag } from "lucide-react";
-import { useMemo, useState } from "react";
+import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Flag, Users } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -54,6 +55,14 @@ export default function Analytics() {
   };
   
   const [activeTab, setActiveTab] = useState(getInitialTab());
+  const [selectedMember, setSelectedMember] = useState<string>("all");
+  
+  // Update tab when URL filter changes
+  useEffect(() => {
+    if (urlFilter) {
+      setActiveTab(getInitialTab());
+    }
+  }, [urlFilter]);
 
   // Fetch all project tasks
   const { data: projectTasks, isLoading: tasksLoading } = useQuery({
@@ -153,6 +162,29 @@ export default function Analytics() {
     enabled: !!workspace?.id,
   });
 
+  // Fetch workspace members for filter dropdown
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["analytics-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace?.id) return [];
+      
+      const { data: members, error } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspace.id);
+      
+      if (error) throw error;
+      
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", members?.map(m => m.user_id) || []);
+      
+      return profilesData || [];
+    },
+    enabled: !!workspace?.id,
+  });
+
   const { data: projects, isLoading: projectsLoading } = useQuery({
     queryKey: ["workspace-projects", workspace?.id],
     queryFn: async () => {
@@ -172,9 +204,15 @@ export default function Analytics() {
   });
 
   // Combine all tasks
-  const allTasks = useMemo(() => {
+  const allTasksRaw = useMemo(() => {
     return [...(projectTasks || []), ...(standaloneTasks || []), ...(routineTasks || [])];
   }, [projectTasks, standaloneTasks, routineTasks]);
+
+  // Filter by selected member
+  const allTasks = useMemo(() => {
+    if (selectedMember === "all") return allTasksRaw;
+    return allTasksRaw.filter(t => t.assigned_to === selectedMember);
+  }, [allTasksRaw, selectedMember]);
 
   // Get profile name helper
   const getProfileName = (userId: string | null) => {
@@ -404,11 +442,31 @@ export default function Analytics() {
   return (
     <AppLayout>
       <div className="space-y-4 sm:space-y-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Analytics</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Visão geral de todas as tarefas e projetos do workspace
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Analytics</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Visão geral de todas as tarefas e projetos do workspace
+            </p>
+          </div>
+          
+          {/* Member Filter */}
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedMember} onValueChange={setSelectedMember}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os membros</SelectItem>
+                {workspaceMembers?.map(member => (
+                  <SelectItem key={member.id} value={member.id}>
+                    {member.full_name || "Usuário"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Summary Cards */}
