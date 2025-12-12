@@ -75,76 +75,94 @@ export default function Home() {
 
   // Fetch ALL tasks for admin/gestor, or only user's tasks for members
   const {
-    data: tasks,
+    data: allTasks,
     isLoading: tasksLoading
   } = useQuery({
     queryKey: ["home-tasks", workspace?.id, user?.id, isAdmin, isGestor],
     queryFn: async () => {
       if (!workspace) return [];
       
+      // Get workspace members for admin/gestor
+      const { data: members } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspace.id);
+      
+      if (!members || members.length === 0) return [];
+      const memberIds = members.map(m => m.user_id);
+
       // Get active projects (non-archived)
-      const {
-        data: projectsData
-      } = await supabase
+      const { data: projectsData } = await supabase
         .from("projects")
         .select("id")
         .eq("workspace_id", workspace.id)
         .eq("archived", false);
       
-      if (!projectsData || projectsData.length === 0) return [];
+      const projectIds = projectsData?.map(p => p.id) || [];
 
-      // Build query for tasks
-      let query = supabase.from("tasks").select("*, projects(name)");
+      let allTasksResult: any[] = [];
 
       if (isAdmin || isGestor) {
-        // Admin/Gestor: get ALL tasks from active projects
-        query = query.in("project_id", projectsData.map(p => p.id));
+        // 1. Project tasks from active projects
+        if (projectIds.length > 0) {
+          const { data: projectTasks } = await supabase
+            .from("tasks")
+            .select("*")
+            .in("project_id", projectIds);
+          allTasksResult = [...(projectTasks || [])];
+        }
+        
+        // 2. Standalone tasks (no project, no routine) from workspace members
+        const { data: standaloneTasks } = await supabase
+          .from("tasks")
+          .select("*")
+          .is("project_id", null)
+          .is("routine_id", null)
+          .in("assigned_to", memberIds);
+        allTasksResult = [...allTasksResult, ...(standaloneTasks || [])];
+        
+        // 3. Routine tasks from workspace members
+        const { data: routineTasks } = await supabase
+          .from("tasks")
+          .select("*")
+          .not("routine_id", "is", null)
+          .in("assigned_to", memberIds);
+        allTasksResult = [...allTasksResult, ...(routineTasks || [])];
+        
       } else {
-        // Member: get only tasks assigned to them from active projects
-        query = query
-          .in("project_id", projectsData.map(p => p.id))
+        // Member: get only tasks assigned to them
+        // 1. Project tasks
+        if (projectIds.length > 0) {
+          const { data: projectTasks } = await supabase
+            .from("tasks")
+            .select("*")
+            .in("project_id", projectIds)
+            .eq("assigned_to", user?.id);
+          allTasksResult = [...(projectTasks || [])];
+        }
+        
+        // 2. Standalone tasks
+        const { data: standaloneTasks } = await supabase
+          .from("tasks")
+          .select("*")
+          .is("project_id", null)
+          .is("routine_id", null)
           .eq("assigned_to", user?.id);
+        allTasksResult = [...allTasksResult, ...(standaloneTasks || [])];
+        
+        // 3. Routine tasks
+        const { data: routineTasks } = await supabase
+          .from("tasks")
+          .select("*")
+          .not("routine_id", "is", null)
+          .eq("assigned_to", user?.id);
+        allTasksResult = [...allTasksResult, ...(routineTasks || [])];
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
-      
-      if (error) throw error;
-      return data;
+      return allTasksResult;
     },
     enabled: !!workspace && !!user
   });
-
-  // Also fetch standalone and routine tasks for members
-  const { data: memberExtraTasks } = useQuery({
-    queryKey: ["home-extra-tasks", workspace?.id, user?.id, isAdmin, isGestor],
-    queryFn: async () => {
-      if (!workspace || !user || isAdmin || isGestor) return [];
-      
-      // Get standalone tasks assigned to user
-      const { data: standaloneTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .is("project_id", null)
-        .eq("assigned_to", user.id);
-      
-      // Get routine tasks assigned to user
-      const { data: routineTasks } = await supabase
-        .from("tasks")
-        .select("*")
-        .not("routine_id", "is", null)
-        .eq("assigned_to", user.id);
-      
-      return [...(standaloneTasks || []), ...(routineTasks || [])];
-    },
-    enabled: !!workspace && !!user && !isAdmin && !isGestor
-  });
-
-  // Combine all tasks for counting
-  const allTasks = useMemo(() => {
-    const projectTasks = tasks || [];
-    const extraTasks = memberExtraTasks || [];
-    return [...projectTasks, ...extraTasks];
-  }, [tasks, memberExtraTasks]);
 
   const activeProjects = activeProjectsList.length;
   const completedTasks = allTasks.filter(t => t.status === "completed").length;
