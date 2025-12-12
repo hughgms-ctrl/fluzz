@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -22,6 +23,7 @@ export default function MyTasks() {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -31,6 +33,26 @@ export default function MyTasks() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
+  
+  // Apply URL filter on mount
+  useEffect(() => {
+    const urlFilter = searchParams.get("filter");
+    if (urlFilter) {
+      if (urlFilter === "completed") {
+        setStatusFilter("completed");
+        setShowCompleted(true);
+      } else if (urlFilter === "pending") {
+        // pending = todo + in_progress
+        setStatusFilter("all");
+        setShowCompleted(false);
+      } else if (urlFilter === "overdue") {
+        setDueDateFilter("overdue");
+        setShowCompleted(false);
+      }
+      // Clear the URL param after applying
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const clearAllFilters = () => {
     setSearchTerm("");

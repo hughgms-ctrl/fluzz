@@ -163,13 +163,13 @@ export default function Home() {
           navigate("/my-tasks");
           break;
         case "completed":
-          navigate("/my-tasks?status=completed");
+          navigate("/my-tasks?filter=completed");
           break;
         case "pending":
-          navigate("/my-tasks?status=pending");
+          navigate("/my-tasks?filter=pending");
           break;
         case "overdue":
-          navigate("/my-tasks?status=overdue");
+          navigate("/my-tasks?filter=overdue");
           break;
       }
     }
