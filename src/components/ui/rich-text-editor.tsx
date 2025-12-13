@@ -52,12 +52,13 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
       }),
     ],
     content,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[200px] p-4",
+        class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4",
       },
     },
   });

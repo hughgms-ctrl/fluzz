@@ -96,12 +96,13 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
       }),
     ],
     content,
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[400px] p-4",
+        class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[400px] p-4",
       },
       handlePaste: (view, event) => {
         const items = event.clipboardData?.items;

@@ -165,9 +165,9 @@ export default function Home() {
   });
 
   const activeProjects = activeProjectsList.length;
-  const completedTasks = allTasks.filter(t => t.status === "completed").length;
-  const pendingTasks = allTasks.filter(t => t.status !== "completed").length;
-  const overdueTasks = allTasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed").length;
+  const completedTasks = (allTasks || []).filter(t => t.status === "completed").length;
+  const pendingTasks = (allTasks || []).filter(t => t.status !== "completed").length;
+  const overdueTasks = (allTasks || []).filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== "completed").length;
 
   // Handle card clicks based on role
   const handleCardClick = (type: "projects" | "completed" | "pending" | "overdue") => {

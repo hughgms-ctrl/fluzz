@@ -21,7 +21,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Flag, Users } from "lucide-react";
+import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -351,54 +351,69 @@ export default function Analytics() {
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const TaskItem = ({ task }: { task: any }) => {
-    const type = getTaskType(task);
     const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
     
     const priorityColors = {
-      high: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-      medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-      low: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+      high: "destructive",
+      medium: "default",
+      low: "secondary",
+    };
+    
+    const priorityLabels = {
+      high: "Alta",
+      medium: "Média",
+      low: "Baixa",
     };
     
     const statusLabels = {
       todo: "A Fazer",
-      in_progress: "Em Progresso",
-      completed: "Concluída"
+      in_progress: "Fazendo",
+      completed: "Concluído"
+    };
+    
+    const statusColors = {
+      todo: "bg-status-todo text-status-todo-foreground",
+      in_progress: "bg-status-in-progress text-status-in-progress-foreground",
+      completed: "bg-status-completed text-status-completed-foreground",
     };
     
     return (
-      <div 
-        className="p-3 sm:p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+      <Card 
+        className="p-3 hover:shadow-md transition-shadow cursor-pointer"
         onClick={() => navigate(`/tasks/${task.id}`)}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <p className={`font-medium truncate ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className={`font-medium text-sm flex-1 ${isOverdue ? "text-destructive" : "text-foreground"}`}>
               {task.title}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span className="text-xs text-muted-foreground">
-                {getProfileName(task.assigned_to)}
-              </span>
-              {task.due_date && (
-                <span className={`text-xs flex items-center gap-1 ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}
-                </span>
-              )}
-            </div>
+            </h3>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className={`text-xs ${priorityColors[task.priority as keyof typeof priorityColors] || ""}`}>
-              <Flag className="h-3 w-3 mr-1" />
-              {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+          
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <Badge 
+              variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+              className="text-xs px-2 py-0 h-5"
+            >
+              {priorityLabels[task.priority as keyof typeof priorityLabels]}
             </Badge>
-            <Badge variant={task.status === "completed" ? "default" : "secondary"} className="text-xs">
-              {statusLabels[task.status as keyof typeof statusLabels] || task.status}
+            
+            <Badge className={`text-xs px-2 py-0 h-5 ${statusColors[task.status as keyof typeof statusColors]}`}>
+              {statusLabels[task.status as keyof typeof statusLabels]}
             </Badge>
+            
+            {task.due_date && (
+              <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
+                <Calendar className="h-3 w-3" />
+                {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+              </div>
+            )}
+            
+            <span className="text-xs text-muted-foreground">
+              {getProfileName(task.assigned_to)}
+            </span>
           </div>
         </div>
-      </div>
+      </Card>
     );
   };
 
