@@ -76,14 +76,34 @@ export default function MyTasks() {
   const { data: tasks, isLoading } = useQuery({
     queryKey: ["my-tasks", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get tasks assigned to me
+      const { data: myTasks, error: myTasksError } = await supabase
         .from("tasks")
         .select("*, projects(id, name, archived)")
         .eq("assigned_to", user!.id)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (myTasksError) throw myTasksError;
+      
+      // Get tasks I need to review (where I'm the approval_reviewer_id)
+      const { data: reviewTasks, error: reviewError } = await supabase
+        .from("tasks")
+        .select("*, projects(id, name, archived)")
+        .eq("approval_reviewer_id", user!.id)
+        .eq("requires_approval", true)
+        .eq("approval_status", "pending")
+        .order("created_at", { ascending: false });
+      if (reviewError) throw reviewError;
+      
+      // Combine and deduplicate
+      const allTasks = [...(myTasks || [])];
+      reviewTasks?.forEach(task => {
+        if (!allTasks.find(t => t.id === task.id)) {
+          allTasks.push(task);
+        }
+      });
+      
       // Filter out tasks from archived projects
-      return data?.filter(task => !task.projects?.archived) || [];
+      return allTasks?.filter(task => !task.projects?.archived) || [];
     },
     enabled: !!user,
   });

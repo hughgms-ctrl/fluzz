@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { renderDocumentation } from "@/lib/linkify";
 import { 
   ArrowLeft, 
@@ -70,8 +71,9 @@ import { Input } from "@/components/ui/input";
 import { SectorDrawer } from "@/components/tasks/SectorDrawer";
 import { MemberDrawer } from "@/components/tasks/MemberDrawer";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
+import { Briefcase, UserCircle, ChevronRight, Shield, CheckCircle, XCircle } from "lucide-react";
 import { TaskAttachments } from "@/components/tasks/TaskAttachments";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface SortableSubtaskProps {
   subtask: any;
@@ -193,8 +195,13 @@ export default function TaskDetail() {
     setor: "",
     due_date: "",
     documentation: "",
-    assigned_to: ""
+    assigned_to: "",
+    requires_approval: false,
+    approval_reviewer_id: "" as string | null,
+    approval_status: null as string | null
   });
+  
+  const [showReviewerSheet, setShowReviewerSheet] = useState(false);
 
   const { data: task, isLoading } = useQuery({
     queryKey: ["task", id],
@@ -231,7 +238,10 @@ export default function TaskDetail() {
         setor: task.setor || "",
         due_date: task.due_date || "",
         documentation: task.documentation || "",
-        assigned_to: task.assigned_to || ""
+        assigned_to: task.assigned_to || "",
+        requires_approval: task.requires_approval || false,
+        approval_reviewer_id: task.approval_reviewer_id || null,
+        approval_status: task.approval_status || null
       });
     }
   }, [task]);
@@ -493,6 +503,8 @@ export default function TaskDetail() {
       due_date: editedTask.due_date || null,
       setor: editedTask.setor || null,
       assigned_to: editedTask.assigned_to || null,
+      approval_reviewer_id: editedTask.requires_approval ? editedTask.approval_reviewer_id : null,
+      approval_status: editedTask.requires_approval ? (editedTask.approval_status || 'pending') : null,
     };
     updateTaskMutation.mutate(updates);
   };
@@ -653,7 +665,10 @@ export default function TaskDetail() {
                     setor: task.setor || "",
                     due_date: task.due_date || "",
                     documentation: task.documentation || "",
-                    assigned_to: task.assigned_to || ""
+                    assigned_to: task.assigned_to || "",
+                    requires_approval: task.requires_approval || false,
+                    approval_reviewer_id: task.approval_reviewer_id || null,
+                    approval_status: task.approval_status || null
                   });
                 }}>
                   Cancelar
@@ -815,6 +830,97 @@ export default function TaskDetail() {
                       <SelectItem value="completed">Concluído</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Approval Section */}
+                <div className="border-t pt-4 mt-4">
+                  <Label className="flex items-center gap-2 mb-3">
+                    <Shield size={16} />
+                    Aprovação
+                  </Label>
+                  
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="requires-approval" className="text-sm">
+                          Requer aprovação de outra pessoa
+                        </Label>
+                        <Switch
+                          id="requires-approval"
+                          checked={editedTask.requires_approval}
+                          onCheckedChange={(checked) => {
+                            setEditedTask({ 
+                              ...editedTask, 
+                              requires_approval: checked,
+                              approval_status: checked ? 'pending' : null
+                            });
+                            if (checked) {
+                              setShowReviewerSheet(true);
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {editedTask.requires_approval && (
+                        <Sheet open={showReviewerSheet} onOpenChange={setShowReviewerSheet}>
+                          <SheetTrigger asChild>
+                            <Button variant="outline" className="w-full justify-between">
+                              <span className="flex items-center gap-2">
+                                <UserCircle size={16} />
+                                {editedTask.approval_reviewer_id 
+                                  ? workspaceMembers?.find(m => m.user_id === editedTask.approval_reviewer_id)?.profiles?.full_name || "Revisor selecionado"
+                                  : "Selecionar quem deve aprovar"}
+                              </span>
+                              <ChevronRight size={16} />
+                            </Button>
+                          </SheetTrigger>
+                          <SheetContent>
+                            <SheetHeader>
+                              <SheetTitle>Selecionar Revisor</SheetTitle>
+                            </SheetHeader>
+                            <div className="mt-4 space-y-2">
+                              {workspaceMembers?.filter(m => m.user_id !== task?.assigned_to).map((member) => (
+                                <Button
+                                  key={member.user_id}
+                                  variant={editedTask.approval_reviewer_id === member.user_id ? "default" : "outline"}
+                                  className="w-full justify-start"
+                                  onClick={() => {
+                                    setEditedTask({ ...editedTask, approval_reviewer_id: member.user_id });
+                                    setShowReviewerSheet(false);
+                                  }}
+                                >
+                                  <UserCircle size={16} className="mr-2" />
+                                  {member.profiles?.full_name || "Usuário"}
+                                </Button>
+                              ))}
+                            </div>
+                          </SheetContent>
+                        </Sheet>
+                      )}
+                    </div>
+                  ) : task.requires_approval ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          task.approval_status === 'approved' ? 'default' :
+                          task.approval_status === 'rejected' ? 'destructive' : 'secondary'
+                        } className={`${
+                          task.approval_status === 'approved' ? 'bg-status-completed text-status-completed-foreground' : ''
+                        }`}>
+                          {task.approval_status === 'approved' && <CheckCircle size={12} className="mr-1" />}
+                          {task.approval_status === 'rejected' && <XCircle size={12} className="mr-1" />}
+                          {task.approval_status === 'pending' && <Shield size={12} className="mr-1" />}
+                          {task.approval_status === 'approved' ? 'Aprovada' :
+                           task.approval_status === 'rejected' ? 'Rejeitada' : 'Aguardando Aprovação'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Revisor: {workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido"}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">Esta tarefa não requer aprovação</p>
+                  )}
                 </div>
 
                 <div>
