@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, Briefcase } from "lucide-react";
+import { Calendar, Briefcase, Shield } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -334,6 +334,13 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
               <Briefcase size={10} />
               {sectorData.name}
             </div>
+          )}
+
+          {task.requires_approval && task.approval_status === "pending" && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300">
+              <Shield size={10} />
+              Validação
+            </Badge>
           )}
         </div>
 

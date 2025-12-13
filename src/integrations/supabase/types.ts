@@ -1197,6 +1197,8 @@ export type Database = {
       }
       tasks: {
         Row: {
+          approval_reviewer_id: string | null
+          approval_status: string | null
           assigned_to: string | null
           completed_verified: boolean | null
           created_at: string | null
@@ -1208,6 +1210,7 @@ export type Database = {
           process_id: string | null
           project_id: string | null
           recurring_task_id: string | null
+          requires_approval: boolean | null
           routine_id: string | null
           setor: string | null
           status: string | null
@@ -1216,6 +1219,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approval_reviewer_id?: string | null
+          approval_status?: string | null
           assigned_to?: string | null
           completed_verified?: boolean | null
           created_at?: string | null
@@ -1227,6 +1232,7 @@ export type Database = {
           process_id?: string | null
           project_id?: string | null
           recurring_task_id?: string | null
+          requires_approval?: boolean | null
           routine_id?: string | null
           setor?: string | null
           status?: string | null
@@ -1235,6 +1241,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approval_reviewer_id?: string | null
+          approval_status?: string | null
           assigned_to?: string | null
           completed_verified?: boolean | null
           created_at?: string | null
@@ -1246,6 +1254,7 @@ export type Database = {
           process_id?: string | null
           project_id?: string | null
           recurring_task_id?: string | null
+          requires_approval?: boolean | null
           routine_id?: string | null
           setor?: string | null
           status?: string | null
