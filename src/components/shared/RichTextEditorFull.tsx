@@ -72,7 +72,19 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3],
+        },
+        bulletList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+        orderedList: {
+          keepMarks: true,
+          keepAttributes: false,
+        },
+      }),
       FontSize,
       Color,
       ResizableImage.configure({

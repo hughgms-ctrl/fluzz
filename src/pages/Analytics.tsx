@@ -379,40 +379,39 @@ export default function Analytics() {
     
     return (
       <Card 
-        className="p-3 hover:shadow-md transition-shadow cursor-pointer"
+        className="hover:shadow-md transition-shadow cursor-pointer"
         onClick={() => navigate(`/tasks/${task.id}`)}
       >
-        <div className="space-y-2">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className={`font-medium text-sm flex-1 ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            <h3 className={`font-medium ${isOverdue ? "text-destructive" : "text-foreground"}`}>
               {task.title}
             </h3>
+            
+            <div className="flex flex-wrap gap-2 items-center">
+              <Badge 
+                variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
+              >
+                {priorityLabels[task.priority as keyof typeof priorityLabels]}
+              </Badge>
+              
+              <Badge className={statusColors[task.status as keyof typeof statusColors]}>
+                {statusLabels[task.status as keyof typeof statusLabels]}
+              </Badge>
+              
+              {task.due_date && (
+                <div className={`flex items-center gap-1 text-sm ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
+                  <Calendar className="h-4 w-4" />
+                  {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+                </div>
+              )}
+              
+              <span className="text-sm text-muted-foreground">
+                {getProfileName(task.assigned_to)}
+              </span>
+            </div>
           </div>
-          
-          <div className="flex flex-wrap gap-1.5 items-center">
-            <Badge 
-              variant={priorityColors[task.priority as keyof typeof priorityColors] as any}
-              className="text-xs px-2 py-0 h-5"
-            >
-              {priorityLabels[task.priority as keyof typeof priorityLabels]}
-            </Badge>
-            
-            <Badge className={`text-xs px-2 py-0 h-5 ${statusColors[task.status as keyof typeof statusColors]}`}>
-              {statusLabels[task.status as keyof typeof statusLabels]}
-            </Badge>
-            
-            {task.due_date && (
-              <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
-                <Calendar className="h-3 w-3" />
-                {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
-              </div>
-            )}
-            
-            <span className="text-xs text-muted-foreground">
-              {getProfileName(task.assigned_to)}
-            </span>
-          </div>
-        </div>
+        </CardContent>
       </Card>
     );
   };
@@ -443,7 +442,7 @@ export default function Analytics() {
           <span className="font-medium">{title}</span>
           <Badge variant="secondary" className="ml-auto">{tasks.length}</Badge>
         </CollapsibleTrigger>
-        <CollapsibleContent className="pl-8 space-y-2 mt-2">
+        <CollapsibleContent className="space-y-3 mt-3">
           {sortedTasks.map(task => (
             <TaskItem key={task.id} task={task} />
           ))}
