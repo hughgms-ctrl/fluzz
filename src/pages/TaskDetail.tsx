@@ -71,9 +71,111 @@ import { Input } from "@/components/ui/input";
 import { SectorDrawer } from "@/components/tasks/SectorDrawer";
 import { MemberDrawer } from "@/components/tasks/MemberDrawer";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, UserCircle, ChevronRight, Shield, CheckCircle, XCircle } from "lucide-react";
 import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+// Approval Section Component
+const ApprovalSection = ({ 
+  task, 
+  workspaceMembers, 
+  currentUserId,
+  onApprove 
+}: { 
+  task: any; 
+  workspaceMembers: any[] | undefined;
+  currentUserId: string | undefined;
+  onApprove: (status: string, notes?: string) => void;
+}) => {
+  const [showApprovalActions, setShowApprovalActions] = useState(false);
+  const [approvalNotes, setApprovalNotes] = useState("");
+  
+  const isReviewer = currentUserId === task.approval_reviewer_id;
+  const isPending = task.approval_status === 'pending';
+  
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Badge variant={
+          task.approval_status === 'approved' ? 'default' :
+          task.approval_status === 'rejected' ? 'destructive' : 'secondary'
+        } className={`${
+          task.approval_status === 'approved' ? 'bg-status-completed text-status-completed-foreground' : ''
+        }`}>
+          {task.approval_status === 'approved' && <CheckCircle size={12} className="mr-1" />}
+          {task.approval_status === 'rejected' && <XCircle size={12} className="mr-1" />}
+          {task.approval_status === 'pending' && <Shield size={12} className="mr-1" />}
+          {task.approval_status === 'approved' ? 'Aprovada' :
+           task.approval_status === 'rejected' ? 'Solicitar Ajuste' : 'Aguardando Aprovação'}
+        </Badge>
+      </div>
+      
+      <p className="text-sm text-muted-foreground">
+        Revisor: {workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido"}
+      </p>
+      
+      {/* Show approval buttons only if current user is the reviewer and status is pending */}
+      {isReviewer && isPending && (
+        <div className="space-y-3 pt-2 border-t">
+          {!showApprovalActions ? (
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                size="sm" 
+                className="bg-status-completed hover:bg-status-completed/90 text-status-completed-foreground"
+                onClick={() => onApprove('approved')}
+              >
+                <CheckCircle size={14} className="mr-1" />
+                Aprovar
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowApprovalActions(true)}
+              >
+                <XCircle size={14} className="mr-1" />
+                Solicitar Ajuste
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Descreva o que precisa ser ajustado..."
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                className="min-h-[80px]"
+              />
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    onApprove('rejected', approvalNotes);
+                    setShowApprovalActions(false);
+                    setApprovalNotes("");
+                  }}
+                >
+                  Enviar Solicitação de Ajuste
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setShowApprovalActions(false);
+                    setApprovalNotes("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface SortableSubtaskProps {
   subtask: any;
@@ -174,6 +276,7 @@ export default function TaskDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { workspace } = useWorkspace();
+  const { user } = useAuth();
   const [newSubtask, setNewSubtask] = useState("");
   const [isAddingProcess, setIsAddingProcess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -899,25 +1002,17 @@ export default function TaskDetail() {
                       )}
                     </div>
                   ) : task.requires_approval ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={
-                          task.approval_status === 'approved' ? 'default' :
-                          task.approval_status === 'rejected' ? 'destructive' : 'secondary'
-                        } className={`${
-                          task.approval_status === 'approved' ? 'bg-status-completed text-status-completed-foreground' : ''
-                        }`}>
-                          {task.approval_status === 'approved' && <CheckCircle size={12} className="mr-1" />}
-                          {task.approval_status === 'rejected' && <XCircle size={12} className="mr-1" />}
-                          {task.approval_status === 'pending' && <Shield size={12} className="mr-1" />}
-                          {task.approval_status === 'approved' ? 'Aprovada' :
-                           task.approval_status === 'rejected' ? 'Rejeitada' : 'Aguardando Aprovação'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Revisor: {workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido"}
-                      </p>
-                    </div>
+                    <ApprovalSection 
+                      task={task}
+                      workspaceMembers={workspaceMembers}
+                      currentUserId={user?.id}
+                      onApprove={(status, notes) => {
+                        updateTaskMutation.mutate({
+                          approval_status: status,
+                          ...(notes && { documentation: task.documentation ? `${task.documentation}\n\n--- Observação do Revisor ---\n${notes}` : `--- Observação do Revisor ---\n${notes}` })
+                        });
+                      }}
+                    />
                   ) : (
                     <p className="text-muted-foreground text-sm">Esta tarefa não requer aprovação</p>
                   )}
