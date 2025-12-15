@@ -118,21 +118,23 @@ const ApprovalSection = ({
   const [approvalNotes, setApprovalNotes] = useState("");
   
   const isReviewer = currentUserId === task.approval_reviewer_id;
-  const isPending = task.approval_status === 'pending';
-  const isAssignee = currentUserId === task.assigned_to;
+  const approvalStatus = task.approval_status || 'pending';
+  const canReview = isReviewer && (approvalStatus === 'pending' || approvalStatus === 'rejected');
+  
+  const reviewerName = workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido";
   
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <ApprovalStatusBadge status={task.approval_status} />
+        <ApprovalStatusBadge status={approvalStatus} />
       </div>
       
       <p className="text-sm text-muted-foreground">
-        Revisor: {workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido"}
+        Revisor: {reviewerName}
       </p>
       
-      {/* Show message for assignee if rejected */}
-      {isAssignee && task.approval_status === 'rejected' && (
+      {/* Show message for assignee based on status */}
+      {currentUserId === task.assigned_to && approvalStatus === 'rejected' && (
         <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
           <p className="text-sm text-rose-800 dark:text-rose-200 font-medium">
             Ajuste solicitado pelo revisor. Faça as correções necessárias.
@@ -140,8 +142,16 @@ const ApprovalSection = ({
         </div>
       )}
       
-      {/* Show approval buttons only if current user is the reviewer and status is pending */}
-      {isReviewer && isPending && (
+      {currentUserId === task.assigned_to && approvalStatus === 'approved' && (
+        <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+          <p className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
+            Esta tarefa foi aprovada pelo revisor.
+          </p>
+        </div>
+      )}
+      
+      {/* Show approval buttons only if current user is the reviewer */}
+      {canReview && (
         <div className="space-y-3 pt-2 border-t">
           {!showApprovalActions ? (
             <div className="flex gap-2">
@@ -197,6 +207,15 @@ const ApprovalSection = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Show message when already approved for reviewer */}
+      {isReviewer && approvalStatus === 'approved' && (
+        <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+          <p className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
+            Você aprovou esta tarefa.
+          </p>
         </div>
       )}
     </div>
@@ -606,6 +625,36 @@ export default function TaskDetail() {
     },
     onError: () => {
       toast.error("Erro ao atualizar");
+    }
+  });
+
+  const approvalMutation = useMutation({
+    mutationFn: async ({ approval_status, notes }: { approval_status: string; notes?: string }) => {
+      const updates: any = { approval_status };
+      if (notes) {
+        const currentDoc = task?.documentation || '';
+        updates.documentation = currentDoc 
+          ? `${currentDoc}\n\n--- Observação do Revisor ---\n${notes}` 
+          : `--- Observação do Revisor ---\n${notes}`;
+      }
+      const { error } = await supabase
+        .from("tasks")
+        .update(updates)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      if (variables.approval_status === 'approved') {
+        toast.success("Tarefa aprovada!");
+      } else {
+        toast.success("Ajuste solicitado!");
+      }
+    },
+    onError: (error: any) => {
+      console.error("Error updating approval status:", error);
+      toast.error("Erro ao atualizar status de aprovação");
     }
   });
 
@@ -1033,10 +1082,7 @@ export default function TaskDetail() {
                       workspaceMembers={workspaceMembers}
                       currentUserId={user?.id}
                       onApprove={(status, notes) => {
-                        updateTaskMutation.mutate({
-                          approval_status: status,
-                          ...(notes && { documentation: task.documentation ? `${task.documentation}\n\n--- Observação do Revisor ---\n${notes}` : `--- Observação do Revisor ---\n${notes}` })
-                        });
+                        approvalMutation.mutate({ approval_status: status, notes });
                       }}
                     />
                   ) : (
