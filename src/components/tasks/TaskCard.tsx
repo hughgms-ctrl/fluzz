@@ -337,9 +337,23 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
           )}
 
           {task.requires_approval && task.approval_status === "pending" && (
-            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300">
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border-amber-300">
               <Shield size={10} />
-              Validação
+              Validação Pendente
+            </Badge>
+          )}
+          
+          {task.requires_approval && task.approval_status === "approved" && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 border-emerald-300">
+              <Shield size={10} />
+              Aprovada
+            </Badge>
+          )}
+          
+          {task.requires_approval && task.approval_status === "rejected" && (
+            <Badge variant="outline" className="text-xs px-1.5 py-0 h-5 gap-1 bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200 border-rose-300">
+              <Shield size={10} />
+              Ajuste Solicitado
             </Badge>
           )}
         </div>
