@@ -76,6 +76,32 @@ import { Briefcase, UserCircle, ChevronRight, Shield, CheckCircle, XCircle } fro
 import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
+// Approval Status Badge Component
+const ApprovalStatusBadge = ({ status }: { status: string | null }) => {
+  if (status === 'approved') {
+    return (
+      <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200 border-emerald-300">
+        <CheckCircle size={12} className="mr-1" />
+        Aprovada
+      </Badge>
+    );
+  }
+  if (status === 'rejected') {
+    return (
+      <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-200 border-rose-300">
+        <XCircle size={12} className="mr-1" />
+        Ajuste Solicitado
+      </Badge>
+    );
+  }
+  return (
+    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200 border-amber-300">
+      <Shield size={12} className="mr-1" />
+      Validação Pendente
+    </Badge>
+  );
+};
+
 // Approval Section Component
 const ApprovalSection = ({ 
   task, 
@@ -93,27 +119,26 @@ const ApprovalSection = ({
   
   const isReviewer = currentUserId === task.approval_reviewer_id;
   const isPending = task.approval_status === 'pending';
+  const isAssignee = currentUserId === task.assigned_to;
   
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <Badge variant={
-          task.approval_status === 'approved' ? 'default' :
-          task.approval_status === 'rejected' ? 'destructive' : 'secondary'
-        } className={`${
-          task.approval_status === 'approved' ? 'bg-status-completed text-status-completed-foreground' : ''
-        }`}>
-          {task.approval_status === 'approved' && <CheckCircle size={12} className="mr-1" />}
-          {task.approval_status === 'rejected' && <XCircle size={12} className="mr-1" />}
-          {task.approval_status === 'pending' && <Shield size={12} className="mr-1" />}
-          {task.approval_status === 'approved' ? 'Aprovada' :
-           task.approval_status === 'rejected' ? 'Solicitar Ajuste' : 'Aguardando Aprovação'}
-        </Badge>
+        <ApprovalStatusBadge status={task.approval_status} />
       </div>
       
       <p className="text-sm text-muted-foreground">
         Revisor: {workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido"}
       </p>
+      
+      {/* Show message for assignee if rejected */}
+      {isAssignee && task.approval_status === 'rejected' && (
+        <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
+          <p className="text-sm text-rose-800 dark:text-rose-200 font-medium">
+            Ajuste solicitado pelo revisor. Faça as correções necessárias.
+          </p>
+        </div>
+      )}
       
       {/* Show approval buttons only if current user is the reviewer and status is pending */}
       {isReviewer && isPending && (
@@ -123,7 +148,7 @@ const ApprovalSection = ({
               <Button 
                 variant="default" 
                 size="sm" 
-                className="bg-status-completed hover:bg-status-completed/90 text-status-completed-foreground"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => onApprove('approved')}
               >
                 <CheckCircle size={14} className="mr-1" />
@@ -132,6 +157,7 @@ const ApprovalSection = ({
               <Button 
                 variant="outline" 
                 size="sm"
+                className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/30"
                 onClick={() => setShowApprovalActions(true)}
               >
                 <XCircle size={14} className="mr-1" />
