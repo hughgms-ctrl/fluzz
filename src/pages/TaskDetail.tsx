@@ -118,10 +118,20 @@ const ApprovalSection = ({
   const [approvalNotes, setApprovalNotes] = useState("");
   
   const isReviewer = currentUserId === task.approval_reviewer_id;
+  const isAssignee = currentUserId === task.assigned_to;
   const approvalStatus = task.approval_status || 'pending';
   const canReview = isReviewer && (approvalStatus === 'pending' || approvalStatus === 'rejected');
   
   const reviewerName = workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido";
+  
+  // Extract reviewer notes from documentation
+  const extractReviewerNotes = () => {
+    if (!task.documentation) return null;
+    const match = task.documentation.match(/--- Observação do Revisor ---\n([\s\S]*?)(?:$|--- Observação do Revisor ---)/);
+    return match ? match[1].trim() : null;
+  };
+  
+  const reviewerNotes = extractReviewerNotes();
   
   return (
     <div className="space-y-3">
@@ -133,24 +143,30 @@ const ApprovalSection = ({
         Revisor: {reviewerName}
       </p>
       
-      {/* Show message for assignee based on status */}
-      {currentUserId === task.assigned_to && approvalStatus === 'rejected' && (
-        <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800">
+      {/* Show message for rejected status */}
+      {approvalStatus === 'rejected' && (
+        <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 space-y-2">
           <p className="text-sm text-rose-800 dark:text-rose-200 font-medium">
-            Ajuste solicitado pelo revisor. Faça as correções necessárias.
+            Ajustes solicitados pelo revisor
           </p>
+          {reviewerNotes && (
+            <p className="text-sm text-rose-700 dark:text-rose-300 whitespace-pre-wrap">
+              {reviewerNotes}
+            </p>
+          )}
         </div>
       )}
       
-      {currentUserId === task.assigned_to && approvalStatus === 'approved' && (
+      {/* Show message for approved status */}
+      {approvalStatus === 'approved' && (
         <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
           <p className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
-            Esta tarefa foi aprovada pelo revisor.
+            {isReviewer ? "Você aprovou esta tarefa." : "Esta tarefa foi aprovada pelo revisor."}
           </p>
         </div>
       )}
       
-      {/* Show approval buttons only if current user is the reviewer */}
+      {/* Show approval buttons only if current user is the reviewer and can review */}
       {canReview && (
         <div className="space-y-3 pt-2 border-t">
           {!showApprovalActions ? (
@@ -207,15 +223,6 @@ const ApprovalSection = ({
               </div>
             </div>
           )}
-        </div>
-      )}
-      
-      {/* Show message when already approved for reviewer */}
-      {isReviewer && approvalStatus === 'approved' && (
-        <div className="p-3 rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
-          <p className="text-sm text-emerald-800 dark:text-emerald-200 font-medium">
-            Você aprovou esta tarefa.
-          </p>
         </div>
       )}
     </div>
