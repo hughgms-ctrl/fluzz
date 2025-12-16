@@ -22,8 +22,12 @@ import {
   LinkIcon,
   Edit2,
   GripVertical,
-  Paperclip
+  Paperclip,
+  History,
+  ChevronDown,
+  RefreshCcw
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   DndContext,
   closestCenter,
@@ -107,31 +111,51 @@ const ApprovalSection = ({
   task, 
   workspaceMembers, 
   currentUserId,
-  onApprove 
+  onApprove,
+  onResubmit
 }: { 
   task: any; 
   workspaceMembers: any[] | undefined;
   currentUserId: string | undefined;
   onApprove: (status: string, notes?: string) => void;
+  onResubmit: (notes?: string) => void;
 }) => {
   const [showApprovalActions, setShowApprovalActions] = useState(false);
+  const [showResubmitForm, setShowResubmitForm] = useState(false);
   const [approvalNotes, setApprovalNotes] = useState("");
+  const [resubmitNotes, setResubmitNotes] = useState("");
   
   const isReviewer = currentUserId === task.approval_reviewer_id;
   const isAssignee = currentUserId === task.assigned_to;
   const approvalStatus = task.approval_status || 'pending';
-  const canReview = isReviewer && (approvalStatus === 'pending' || approvalStatus === 'rejected');
+  const canReview = isReviewer;
+  const canResubmit = isAssignee && approvalStatus === 'rejected';
   
   const reviewerName = workspaceMembers?.find(m => m.user_id === task.approval_reviewer_id)?.profiles?.full_name || "Não definido";
   
-  // Extract reviewer notes from documentation
-  const extractReviewerNotes = () => {
-    if (!task.documentation) return null;
-    const match = task.documentation.match(/--- Observação do Revisor ---\n([\s\S]*?)(?:$|--- Observação do Revisor ---)/);
-    return match ? match[1].trim() : null;
+  // Extract validation history from documentation
+  const extractValidationHistory = () => {
+    if (!task.documentation) return [];
+    const historyMatch = task.documentation.match(/--- HISTÓRICO DE VALIDAÇÃO ---\n([\s\S]*?)(?:--- FIM DO HISTÓRICO ---|$)/);
+    if (!historyMatch) return [];
+    
+    const historyText = historyMatch[1];
+    const entries: { type: string; date: string; notes: string }[] = [];
+    
+    const regex = /\[(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2})\] (AJUSTE SOLICITADO|REENVIADO PARA VALIDAÇÃO|APROVADO)(?::\n([\s\S]*?))?(?=\n\[|\n--- FIM|$)/g;
+    let match;
+    while ((match = regex.exec(historyText)) !== null) {
+      entries.push({
+        date: match[1],
+        type: match[2],
+        notes: match[3]?.trim() || ''
+      });
+    }
+    return entries;
   };
   
-  const reviewerNotes = extractReviewerNotes();
+  const validationHistory = extractValidationHistory();
+  const lastRejectionNotes = validationHistory.filter(h => h.type === 'AJUSTE SOLICITADO').pop()?.notes;
   
   return (
     <div className="space-y-3">
@@ -143,15 +167,15 @@ const ApprovalSection = ({
         Revisor: {reviewerName}
       </p>
       
-      {/* Show message for rejected status */}
+      {/* Show message for rejected status with last rejection notes */}
       {approvalStatus === 'rejected' && (
         <div className="p-3 rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 space-y-2">
           <p className="text-sm text-rose-800 dark:text-rose-200 font-medium">
             Ajustes solicitados pelo revisor
           </p>
-          {reviewerNotes && (
+          {lastRejectionNotes && (
             <p className="text-sm text-rose-700 dark:text-rose-300 whitespace-pre-wrap">
-              {reviewerNotes}
+              {lastRejectionNotes}
             </p>
           )}
         </div>
@@ -166,8 +190,98 @@ const ApprovalSection = ({
         </div>
       )}
       
-      {/* Show approval buttons only if current user is the reviewer and can review */}
-      {canReview && (
+      {/* Show validation history */}
+      {validationHistory.length > 0 && (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="w-full justify-between text-muted-foreground">
+              <span className="flex items-center gap-2">
+                <History size={14} />
+                Histórico de Validação ({validationHistory.length})
+              </span>
+              <ChevronDown size={14} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-2 mt-2">
+            {validationHistory.map((entry, idx) => (
+              <div 
+                key={idx} 
+                className={`p-2 rounded text-xs border ${
+                  entry.type === 'APROVADO' 
+                    ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800' 
+                    : entry.type === 'AJUSTE SOLICITADO'
+                    ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800'
+                    : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-medium">
+                    {entry.type === 'APROVADO' && 'Aprovado'}
+                    {entry.type === 'AJUSTE SOLICITADO' && 'Ajuste Solicitado'}
+                    {entry.type === 'REENVIADO PARA VALIDAÇÃO' && 'Reenviado para Validação'}
+                  </span>
+                  <span className="text-muted-foreground">{entry.date}</span>
+                </div>
+                {entry.notes && <p className="whitespace-pre-wrap">{entry.notes}</p>}
+              </div>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+      
+      {/* Show resubmit button for assignee when rejected */}
+      {canResubmit && !showResubmitForm && (
+        <div className="pt-2 border-t">
+          <Button 
+            variant="default" 
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            onClick={() => setShowResubmitForm(true)}
+          >
+            <RefreshCcw size={14} className="mr-1" />
+            Reenviar para Validação
+          </Button>
+        </div>
+      )}
+      
+      {/* Resubmit form */}
+      {canResubmit && showResubmitForm && (
+        <div className="space-y-2 pt-2 border-t">
+          <Textarea
+            placeholder="Descreva os ajustes realizados (opcional)..."
+            value={resubmitNotes}
+            onChange={(e) => setResubmitNotes(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <div className="flex gap-2">
+            <Button 
+              variant="default" 
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                onResubmit(resubmitNotes);
+                setShowResubmitForm(false);
+                setResubmitNotes("");
+              }}
+            >
+              Enviar para Validação
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setShowResubmitForm(false);
+                setResubmitNotes("");
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Show approval buttons for reviewer */}
+      {canReview && approvalStatus !== 'approved' && (
         <div className="space-y-3 pt-2 border-t">
           {!showApprovalActions ? (
             <div className="flex gap-2">
@@ -209,6 +323,55 @@ const ApprovalSection = ({
                   }}
                 >
                   Enviar Solicitação de Ajuste
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setShowApprovalActions(false);
+                    setApprovalNotes("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Show button for reviewer to change approved status */}
+      {canReview && approvalStatus === 'approved' && (
+        <div className="pt-2 border-t">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/30"
+            onClick={() => setShowApprovalActions(true)}
+          >
+            <XCircle size={14} className="mr-1" />
+            Revogar Aprovação
+          </Button>
+          
+          {showApprovalActions && (
+            <div className="space-y-2 mt-2">
+              <Textarea
+                placeholder="Descreva o que precisa ser ajustado..."
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                className="min-h-[80px]"
+              />
+              <div className="flex gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    onApprove('rejected', approvalNotes);
+                    setShowApprovalActions(false);
+                    setApprovalNotes("");
+                  }}
+                >
+                  Solicitar Ajustes
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -637,16 +800,34 @@ export default function TaskDetail() {
 
   const approvalMutation = useMutation({
     mutationFn: async ({ approval_status, notes }: { approval_status: string; notes?: string }) => {
-      const updates: any = { approval_status };
-      if (notes) {
-        const currentDoc = task?.documentation || '';
-        updates.documentation = currentDoc 
-          ? `${currentDoc}\n\n--- Observação do Revisor ---\n${notes}` 
-          : `--- Observação do Revisor ---\n${notes}`;
+      const now = new Date();
+      const dateStr = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      
+      const currentDoc = task?.documentation || '';
+      const hasHistory = currentDoc.includes('--- HISTÓRICO DE VALIDAÇÃO ---');
+      
+      let newHistory = '';
+      const statusLabel = approval_status === 'approved' ? 'APROVADO' : 'AJUSTE SOLICITADO';
+      const historyEntry = notes 
+        ? `[${dateStr}] ${statusLabel}:\n${notes}`
+        : `[${dateStr}] ${statusLabel}`;
+      
+      if (hasHistory) {
+        // Insert before --- FIM DO HISTÓRICO ---
+        newHistory = currentDoc.replace(
+          '--- FIM DO HISTÓRICO ---',
+          `${historyEntry}\n\n--- FIM DO HISTÓRICO ---`
+        );
+      } else {
+        // Create new history section
+        newHistory = currentDoc 
+          ? `${currentDoc}\n\n--- HISTÓRICO DE VALIDAÇÃO ---\n${historyEntry}\n\n--- FIM DO HISTÓRICO ---`
+          : `--- HISTÓRICO DE VALIDAÇÃO ---\n${historyEntry}\n\n--- FIM DO HISTÓRICO ---`;
       }
+      
       const { error } = await supabase
         .from("tasks")
-        .update(updates)
+        .update({ approval_status, documentation: newHistory })
         .eq("id", id!);
       if (error) throw error;
     },
@@ -662,6 +843,39 @@ export default function TaskDetail() {
     onError: (error: any) => {
       console.error("Error updating approval status:", error);
       toast.error("Erro ao atualizar status de aprovação");
+    }
+  });
+
+  const resubmitMutation = useMutation({
+    mutationFn: async ({ notes }: { notes?: string }) => {
+      const now = new Date();
+      const dateStr = `${now.toLocaleDateString('pt-BR')} ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      
+      const currentDoc = task?.documentation || '';
+      const historyEntry = notes 
+        ? `[${dateStr}] REENVIADO PARA VALIDAÇÃO:\n${notes}`
+        : `[${dateStr}] REENVIADO PARA VALIDAÇÃO`;
+      
+      // Insert before --- FIM DO HISTÓRICO ---
+      const newHistory = currentDoc.replace(
+        '--- FIM DO HISTÓRICO ---',
+        `${historyEntry}\n\n--- FIM DO HISTÓRICO ---`
+      );
+      
+      const { error } = await supabase
+        .from("tasks")
+        .update({ approval_status: 'pending', documentation: newHistory })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task", id] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      toast.success("Tarefa reenviada para validação!");
+    },
+    onError: (error: any) => {
+      console.error("Error resubmitting task:", error);
+      toast.error("Erro ao reenviar para validação");
     }
   });
 
@@ -1090,6 +1304,9 @@ export default function TaskDetail() {
                       currentUserId={user?.id}
                       onApprove={(status, notes) => {
                         approvalMutation.mutate({ approval_status: status, notes });
+                      }}
+                      onResubmit={(notes) => {
+                        resubmitMutation.mutate({ notes });
                       }}
                     />
                   ) : (
