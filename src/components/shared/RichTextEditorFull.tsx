@@ -84,6 +84,8 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
           keepMarks: true,
           keepAttributes: false,
         },
+        // Avoid duplicate extension name warning (StarterKit already includes Link)
+        link: false,
       }),
       FontSize,
       Color,
@@ -138,31 +140,39 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
           }
         }
 
-        const text = event.clipboardData?.getData('text/plain');
+        const rawText =
+          event.clipboardData?.getData("text/plain") ||
+          event.clipboardData?.getData("text") ||
+          "";
+        const text = rawText.trim();
         if (text) {
-          const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/;
+          const youtubeRegex = /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
           const youtubeMatch = text.match(youtubeRegex);
-          
+
           if (youtubeMatch) {
             event.preventDefault();
             const videoId = youtubeMatch[1];
             const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            view.dispatch(view.state.tr.replaceSelectionWith(
-              view.state.schema.nodes.youtube.create({ src: embedUrl })
-            ));
+            view.dispatch(
+              view.state.tr.replaceSelectionWith(
+                view.state.schema.nodes.youtube.create({ src: embedUrl })
+              )
+            );
             return true;
           }
 
-          const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:vimeo\.com\/)(\d+)/;
+          const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/;
           const vimeoMatch = text.match(vimeoRegex);
-          
+
           if (vimeoMatch) {
             event.preventDefault();
             const videoId = vimeoMatch[1];
             const embedUrl = `https://player.vimeo.com/video/${videoId}`;
-            view.dispatch(view.state.tr.replaceSelectionWith(
-              view.state.schema.nodes.youtube.create({ src: embedUrl })
-            ));
+            view.dispatch(
+              view.state.tr.replaceSelectionWith(
+                view.state.schema.nodes.youtube.create({ src: embedUrl })
+              )
+            );
             return true;
           }
         }
