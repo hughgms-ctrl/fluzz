@@ -42,6 +42,8 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           keepMarks: true,
           keepAttributes: false,
         },
+        // Avoid duplicate extension name warning (StarterKit already includes Link)
+        link: false,
       }),
       Image.configure({
         HTMLAttributes: {
