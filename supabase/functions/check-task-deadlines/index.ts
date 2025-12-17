@@ -17,6 +17,7 @@ interface TaskWithProject {
   projects?: {
     name: string;
     workspace_id: string;
+    archived: boolean;
   };
 }
 
@@ -59,7 +60,8 @@ const handler = async (req: Request): Promise<Response> => {
         project_id,
         projects:project_id (
           name,
-          workspace_id
+          workspace_id,
+          archived
         )
       `)
       .not("due_date", "is", null)
@@ -85,6 +87,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Process each task
     for (const task of (tasks as TaskWithProject[]) || []) {
+      // Skip tasks from archived projects
+      if (task.projects?.archived === true) {
+        console.log(`Skipping task "${task.title}" - project is archived`);
+        continue;
+      }
+
       const dueDate = new Date(task.due_date);
       dueDate.setHours(0, 0, 0, 0);
 
