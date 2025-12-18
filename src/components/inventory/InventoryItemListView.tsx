@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowDownToLine, ArrowUpFromLine, History, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, History, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { RegisterMovementDialog } from "./RegisterMovementDialog";
 import { MovementHistoryDialog } from "./MovementHistoryDialog";
@@ -98,7 +98,7 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
                     onClick={() => handleMovement(item, "entrada")}
                     title="Entrada"
                   >
-                    <ArrowDownToLine className="h-4 w-4 text-green-600" />
+                    <ArrowUp className="h-4 w-4 text-green-600" />
                   </Button>
                   <Button
                     variant="ghost"
@@ -106,7 +106,7 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
                     onClick={() => handleMovement(item, "saida")}
                     title="Saída"
                   >
-                    <ArrowUpFromLine className="h-4 w-4 text-red-600" />
+                    <ArrowDown className="h-4 w-4 text-red-600" />
                   </Button>
                   <Button
                     variant="ghost"
