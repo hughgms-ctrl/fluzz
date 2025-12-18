@@ -1126,7 +1126,7 @@ export default function TaskDetail() {
                     />
                   ) : (
                     <p 
-                      className="text-muted-foreground mt-2 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 py-1"
+                      className="text-muted-foreground mt-2 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 py-1 whitespace-pre-wrap"
                       onDoubleClick={() => {
                         setEditDescription(task.description || "");
                         setIsEditingDescription(true);
