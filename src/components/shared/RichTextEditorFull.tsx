@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bold, Italic, List, ListOrdered, Image as ImageIcon, Video, Link as LinkIcon, Heading1, Heading2, Quote, Palette, Type, Minus, Plus } from "lucide-react";
@@ -181,6 +181,17 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
       },
     },
   });
+
+  // Sync external content changes to editor
+  useEffect(() => {
+    if (editor && content !== undefined) {
+      const currentContent = editor.getHTML();
+      // Only update if content is different (to avoid cursor position issues)
+      if (content !== currentContent && content !== "<p></p>" || (content && currentContent === "<p></p>")) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [content, editor]);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

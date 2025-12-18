@@ -248,10 +248,14 @@ export default function ProcessForm() {
 
   // Load process data when editing
   useEffect(() => {
-    if (process && editor) {
+    if (process && editor && !editor.isDestroyed) {
       setArea(process.area);
       setTitle(process.title);
-      editor.commands.setContent(process.content || "");
+      // Only set content if it's different from current content
+      const currentContent = editor.getHTML();
+      if (process.content && process.content !== currentContent) {
+        editor.commands.setContent(process.content);
+      }
     }
   }, [process, editor]);
 
