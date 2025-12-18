@@ -17,7 +17,7 @@ import {
   Heading2,
   Quote
 } from "lucide-react";
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 
 interface RichTextEditorProps {
   content: string;
@@ -76,6 +76,17 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
       },
     },
   });
+
+  // Sync external content changes to editor
+  useEffect(() => {
+    if (editor && content !== undefined) {
+      const currentContent = editor.getHTML();
+      // Only update if content is different (to avoid cursor position issues)
+      if (content !== currentContent && content !== "<p></p>" || (content && currentContent === "<p></p>")) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [content, editor]);
 
   const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
