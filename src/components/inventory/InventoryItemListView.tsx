@@ -1,9 +1,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, ArrowDown, History, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, History, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { RegisterMovementDialog } from "./RegisterMovementDialog";
 import { MovementHistoryDialog } from "./MovementHistoryDialog";
+import { EditInventoryItemDialog } from "./EditInventoryItemDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
   const [movementType, setMovementType] = useState<"entrada" | "saida">("entrada");
   const [movementDialogOpen, setMovementDialogOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleMovement = (item: any, type: "entrada" | "saida") => {
@@ -39,6 +41,11 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
   const handleHistory = (item: any) => {
     setSelectedItem(item);
     setHistoryDialogOpen(true);
+  };
+
+  const handleEdit = (item: any) => {
+    setSelectedItem(item);
+    setEditDialogOpen(true);
   };
 
   const deleteMutation = useMutation({
@@ -116,6 +123,14 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
                   >
                     <History className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(item)}
+                    title="Editar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" title="Excluir">
@@ -161,6 +176,11 @@ export function InventoryItemListView({ items }: InventoryItemListViewProps) {
             onOpenChange={setHistoryDialogOpen}
             itemId={selectedItem.id}
             itemName={selectedItem.name}
+          />
+          <EditInventoryItemDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            item={selectedItem}
           />
         </>
       )}

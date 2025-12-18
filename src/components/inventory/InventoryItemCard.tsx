@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, History, Trash2 } from "lucide-react";
+import { ArrowUp, ArrowDown, History, Trash2, Pencil } from "lucide-react";
 import { RegisterMovementDialog } from "./RegisterMovementDialog";
 import { MovementHistoryDialog } from "./MovementHistoryDialog";
+import { EditInventoryItemDialog } from "./EditInventoryItemDialog";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
   const [movementOpen, setMovementOpen] = useState(false);
   const [movementType, setMovementType] = useState<"entrada" | "saida">("entrada");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const handleMovement = (type: "entrada" | "saida") => {
@@ -103,6 +105,14 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
               <History className="h-4 w-4 mr-1" />
               Histórico
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Editar
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
@@ -145,6 +155,12 @@ export function InventoryItemCard({ item }: InventoryItemCardProps) {
         onOpenChange={setHistoryOpen}
         itemId={item.id}
         itemName={item.name}
+      />
+
+      <EditInventoryItemDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        item={item}
       />
     </>
   );
