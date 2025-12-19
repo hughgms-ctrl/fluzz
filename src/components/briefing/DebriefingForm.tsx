@@ -22,6 +22,8 @@ interface Vendedor {
   vendedor_nome: string;
   leads_recebidos: number;
   vendas_realizadas: number;
+  vendas_outras_estrategias: number;
+  ingressos_gratuitos: number;
 }
 
 export default function DebriefingForm({ projectId, briefingId }: DebriefingFormProps) {
@@ -83,6 +85,8 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
             vendedor_nome: v.vendedor_nome,
             leads_recebidos: v.leads_recebidos,
             vendas_realizadas: v.vendas_realizadas,
+            vendas_outras_estrategias: v.vendas_outras_estrategias || 0,
+            ingressos_gratuitos: v.ingressos_gratuitos || 0,
           })));
         }
       }
@@ -135,6 +139,8 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                 vendedor_nome: v.vendedor_nome,
                 leads_recebidos: v.leads_recebidos,
                 vendas_realizadas: v.vendas_realizadas,
+                vendas_outras_estrategias: v.vendas_outras_estrategias,
+                ingressos_gratuitos: v.ingressos_gratuitos,
               }))
             );
           if (vendError) throw vendError;
@@ -157,6 +163,8 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                 vendedor_nome: v.vendedor_nome,
                 leads_recebidos: v.leads_recebidos,
                 vendas_realizadas: v.vendas_realizadas,
+                vendas_outras_estrategias: v.vendas_outras_estrategias,
+                ingressos_gratuitos: v.ingressos_gratuitos,
               }))
             );
           if (vendError) throw vendError;
@@ -187,6 +195,8 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
         vendedor_nome: "",
         leads_recebidos: 0,
         vendas_realizadas: 0,
+        vendas_outras_estrategias: 0,
+        ingressos_gratuitos: 0,
       },
     ]);
   };
@@ -226,6 +236,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Seção de Tráfego */}
               <div className="space-y-2">
                 <Label htmlFor="investimento">Investimento em Tráfego</Label>
                 <div className="relative">
@@ -243,7 +254,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="leads">Leads</Label>
+                <Label htmlFor="leads">Leads (Tráfego)</Label>
                 <Input
                   id="leads"
                   type="number"
@@ -254,7 +265,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendasIngressos">Vendas de Ingressos</Label>
+                <Label htmlFor="vendasIngressos">Vendas de Ingressos (Tráfego)</Label>
                 <Input
                   id="vendasIngressos"
                   type="number"
@@ -265,7 +276,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="retornoVendas">Retorno Vendas de Ingressos</Label>
+                <Label htmlFor="retornoVendas">Retorno Vendas de Ingressos (Tráfego)</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -280,35 +291,9 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                 </div>
               </div>
 
+              {/* Seção de Outras Estratégias */}
               <div className="space-y-2">
-                <Label htmlFor="mentoriasVendidas">Mentorias Vendidas</Label>
-                <Input
-                  id="mentoriasVendidas"
-                  type="number"
-                  value={mentoriasVendidas}
-                  onChange={(e) => setMentoriasVendidas(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="valorMentorias">Valor Vendas Mentorias</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="valorMentorias"
-                    type="number"
-                    step="0.01"
-                    className="pl-9"
-                    value={valorVendasMentorias}
-                    onChange={(e) => setValorVendasMentorias(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="participantesOutras">Participantes (Outras Estratégias)</Label>
+                <Label htmlFor="participantesOutras">Participantes (Outras Estratégias Pagantes)</Label>
                 <Input
                   id="participantesOutras"
                   type="number"
@@ -334,8 +319,9 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                 </div>
               </div>
 
+              {/* Total de Participantes */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="totalParticipantes">Total de Participantes</Label>
+                <Label htmlFor="totalParticipantes">Total de Participantes (exceto equipe)</Label>
                 <Input
                   id="totalParticipantes"
                   type="number"
@@ -344,8 +330,37 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                   required
                 />
               </div>
+
+              {/* Seção de Mentorias - movida para depois de total de participantes */}
+              <div className="space-y-2">
+                <Label htmlFor="mentoriasVendidas">Mentorias Vendidas (Tráfego)</Label>
+                <Input
+                  id="mentoriasVendidas"
+                  type="number"
+                  value={mentoriasVendidas}
+                  onChange={(e) => setMentoriasVendidas(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="valorMentorias">Valor Vendas Mentorias (Tráfego)</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="valorMentorias"
+                    type="number"
+                    step="0.01"
+                    className="pl-9"
+                    value={valorVendasMentorias}
+                    onChange={(e) => setValorVendasMentorias(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* Vendedores */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Vendedores</h3>
@@ -356,7 +371,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               </div>
 
               {vendedores.map((vendedor) => (
-                <div key={vendedor.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                <div key={vendedor.id} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border rounded-lg">
                   <div className="space-y-2">
                     <Label>Nome do Vendedor</Label>
                     <Input
@@ -366,21 +381,37 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Leads Recebidos</Label>
+                    <Label>Leads Recebidos (Tráfego)</Label>
                     <Input
                       type="number"
                       value={vendedor.leads_recebidos}
-                      onChange={(e) => updateVendedor(vendedor.id, "leads_recebidos", parseInt(e.target.value))}
+                      onChange={(e) => updateVendedor(vendedor.id, "leads_recebidos", parseInt(e.target.value) || 0)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Vendas Realizadas</Label>
+                    <Label>Vendas Realizadas (Tráfego)</Label>
                     <Input
                       type="number"
                       value={vendedor.vendas_realizadas}
-                      onChange={(e) => updateVendedor(vendedor.id, "vendas_realizadas", parseInt(e.target.value))}
+                      onChange={(e) => updateVendedor(vendedor.id, "vendas_realizadas", parseInt(e.target.value) || 0)}
                       required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Vendas Outras Estratégias</Label>
+                    <Input
+                      type="number"
+                      value={vendedor.vendas_outras_estrategias}
+                      onChange={(e) => updateVendedor(vendedor.id, "vendas_outras_estrategias", parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ingressos Gratuitos (Convidados)</Label>
+                    <Input
+                      type="number"
+                      value={vendedor.ingressos_gratuitos}
+                      onChange={(e) => updateVendedor(vendedor.id, "ingressos_gratuitos", parseInt(e.target.value) || 0)}
                     />
                   </div>
                   <div className="flex items-end">

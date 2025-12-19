@@ -164,7 +164,9 @@ export type Database = {
           created_at: string
           debriefing_id: string
           id: string
+          ingressos_gratuitos: number | null
           leads_recebidos: number
+          vendas_outras_estrategias: number | null
           vendas_realizadas: number
           vendedor_nome: string
         }
@@ -172,7 +174,9 @@ export type Database = {
           created_at?: string
           debriefing_id: string
           id?: string
+          ingressos_gratuitos?: number | null
           leads_recebidos: number
+          vendas_outras_estrategias?: number | null
           vendas_realizadas: number
           vendedor_nome: string
         }
@@ -180,7 +184,9 @@ export type Database = {
           created_at?: string
           debriefing_id?: string
           id?: string
+          ingressos_gratuitos?: number | null
           leads_recebidos?: number
+          vendas_outras_estrategias?: number | null
           vendas_realizadas?: number
           vendedor_nome?: string
         }
