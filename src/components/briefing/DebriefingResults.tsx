@@ -63,13 +63,13 @@ export default function DebriefingResults({
 
   return (
     <div className="space-y-6">
-      {/* 1. Resumo Financeiro - Vendas de Ingressos */}
+      {/* 1. Resumo Financeiro - Vendas de Ingressos e Mentorias */}
       <Card>
         <CardHeader>
-          <CardTitle>Resumo Financeiro - Vendas de Ingressos</CardTitle>
+          <CardTitle>Resumo Financeiro - Vendas de Ingressos e Mentorias</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Vendas de Ingressos (Tráfego) */}
             <div className="space-y-3 p-4 rounded-lg border bg-card">
               <p className="text-sm font-semibold text-muted-foreground">Vendas de Ingressos (Tráfego)</p>
@@ -104,6 +104,25 @@ export default function DebriefingResults({
                 <div className="flex justify-between pt-2 border-t">
                   <span className="text-sm font-semibold text-primary">ROAS:</span>
                   <span className="font-bold text-primary text-lg">{roasOutrasEstrategias.toFixed(2)}x</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Mentorias Vendidas (Tráfego) */}
+            <div className="space-y-3 p-4 rounded-lg border bg-card">
+              <p className="text-sm font-semibold text-muted-foreground">Mentorias Vendidas (Tráfego)</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Quantidade:</span>
+                  <span className="font-semibold">{debriefing.mentorias_vendidas}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Valor Total:</span>
+                  <span className="font-semibold">{formatCurrency(debriefing.valor_vendas_mentorias)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t">
+                  <span className="text-sm font-semibold text-primary">ROAS Mentorias:</span>
+                  <span className="font-bold text-primary text-lg">{roasMentorias.toFixed(2)}x</span>
                 </div>
               </div>
             </div>
@@ -205,32 +224,8 @@ export default function DebriefingResults({
         </CardContent>
       </Card>
 
-      {/* 4. Mentorias Vendidas - Movida para após comparativo */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mentorias Vendidas (Tráfego)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 p-4 rounded-lg border bg-card max-w-md">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Quantidade:</span>
-                <span className="font-semibold">{debriefing.mentorias_vendidas}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Valor Total:</span>
-                <span className="font-semibold">{formatCurrency(debriefing.valor_vendas_mentorias)}</span>
-              </div>
-              <div className="flex justify-between pt-2 border-t">
-                <span className="text-sm font-semibold text-primary">ROAS Mentorias:</span>
-                <span className="font-bold text-primary text-lg">{roasMentorias.toFixed(2)}x</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* 5. Conversão por Vendedor */}
+      {/* 4. Conversão por Vendedor */}
       {vendedores.length > 0 && (
         <Card>
           <CardHeader>
