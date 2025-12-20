@@ -159,6 +159,44 @@ export type Database = {
           },
         ]
       }
+      debriefing_extras: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          debriefing_id: string
+          id: string
+          nome: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          debriefing_id: string
+          id?: string
+          nome: string
+          tipo: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          debriefing_id?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debriefing_extras_debriefing_id_fkey"
+            columns: ["debriefing_id"]
+            isOneToOne: false
+            referencedRelation: "debriefings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       debriefing_vendedores: {
         Row: {
           created_at: string
