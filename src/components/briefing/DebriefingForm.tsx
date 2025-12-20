@@ -26,6 +26,13 @@ interface Vendedor {
   ingressos_gratuitos: number;
 }
 
+interface ExtraItem {
+  id: string;
+  tipo: "receita" | "despesa";
+  nome: string;
+  valor: number;
+}
+
 export default function DebriefingForm({ projectId, briefingId }: DebriefingFormProps) {
   const queryClient = useQueryClient();
   const { workspace } = useWorkspace();
@@ -41,6 +48,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
   const [totalParticipantes, setTotalParticipantes] = useState("");
   const [observacoes, setObservacoes] = useState("");
   const [vendedores, setVendedores] = useState<Vendedor[]>([]);
+  const [extras, setExtras] = useState<ExtraItem[]>([]);
 
   const { data: briefing } = useQuery({
     queryKey: ["briefing", briefingId],
@@ -89,6 +97,21 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
             ingressos_gratuitos: v.ingressos_gratuitos || 0,
           })));
         }
+
+        // Fetch extras
+        const { data: extrasData } = await supabase
+          .from("debriefing_extras")
+          .select("*")
+          .eq("debriefing_id", data.id);
+        
+        if (extrasData) {
+          setExtras(extrasData.map((e: any) => ({
+            id: e.id,
+            tipo: e.tipo,
+            nome: e.nome,
+            valor: e.valor,
+          })));
+        }
       }
       return data;
     },
@@ -118,6 +141,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
         created_by: user.id,
       };
 
+
       if (debriefing) {
         const { error } = await supabase
           .from("debriefings")
@@ -125,6 +149,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
           .eq("id", debriefing.id);
         if (error) throw error;
 
+        // Delete and re-insert vendedores
         await supabase
           .from("debriefing_vendedores")
           .delete()
@@ -144,6 +169,27 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               }))
             );
           if (vendError) throw vendError;
+        }
+
+        // Delete and re-insert extras
+        await supabase
+          .from("debriefing_extras")
+          .delete()
+          .eq("debriefing_id", debriefing.id);
+
+        if (extras.length > 0) {
+          const { error: extrasError } = await supabase
+            .from("debriefing_extras")
+            .insert(
+              extras.map((e) => ({
+                debriefing_id: debriefing.id,
+                tipo: e.tipo,
+                nome: e.nome,
+                valor: e.valor,
+                created_by: user?.id,
+              }))
+            );
+          if (extrasError) throw extrasError;
         }
       } else {
         const { data: newDebriefing, error } = await supabase
@@ -168,6 +214,21 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               }))
             );
           if (vendError) throw vendError;
+        }
+
+        if (extras.length > 0) {
+          const { error: extrasError } = await supabase
+            .from("debriefing_extras")
+            .insert(
+              extras.map((e) => ({
+                debriefing_id: newDebriefing.id,
+                tipo: e.tipo,
+                nome: e.nome,
+                valor: e.valor,
+                created_by: user?.id,
+              }))
+            );
+          if (extrasError) throw extrasError;
         }
       }
     },
@@ -209,6 +270,30 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
     setVendedores(
       vendedores.map((v) =>
         v.id === id ? { ...v, [field]: value } : v
+      )
+    );
+  };
+
+  const addExtra = () => {
+    setExtras([
+      ...extras,
+      {
+        id: crypto.randomUUID(),
+        tipo: "despesa",
+        nome: "",
+        valor: 0,
+      },
+    ]);
+  };
+
+  const removeExtra = (id: string) => {
+    setExtras(extras.filter((e) => e.id !== id));
+  };
+
+  const updateExtra = (id: string, field: keyof ExtraItem, value: string | number) => {
+    setExtras(
+      extras.map((e) =>
+        e.id === id ? { ...e, [field]: value } : e
       )
     );
   };
@@ -428,6 +513,70 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               ))}
             </div>
 
+            {/* Outras Despesas e Receitas */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Outras Despesas e Receitas</h3>
+                <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar Item
+                </Button>
+              </div>
+
+              {extras.map((extra) => (
+                <div key={extra.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                  <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <Select
+                      value={extra.tipo}
+                      onValueChange={(value: "receita" | "despesa") => updateExtra(extra.id, "tipo", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="receita">Receita (+)</SelectItem>
+                        <SelectItem value="despesa">Despesa (-)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome do Item</Label>
+                    <Input
+                      value={extra.nome}
+                      onChange={(e) => updateExtra(extra.id, "nome", e.target.value)}
+                      placeholder="Ex: Patrocínio, Aluguel de equipamentos..."
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="pl-9"
+                        value={extra.valor}
+                        onChange={(e) => updateExtra(extra.id, "valor", parseFloat(e.target.value) || 0)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeExtra(extra.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>
               <Textarea
@@ -452,6 +601,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
           debriefing={debriefing}
           briefing={briefing}
           vendedores={vendedores}
+          extras={extras}
           currency={currency}
         />
       )}
