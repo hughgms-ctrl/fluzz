@@ -17,29 +17,52 @@ const ResetPassword = () => {
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    // Listen for the PASSWORD_RECOVERY event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "PASSWORD_RECOVERY") {
+    // Process the hash fragment from the URL
+    // Supabase sends tokens in the URL hash like: #access_token=...&type=recovery
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
+
+    if (accessToken && type === 'recovery') {
+      // Set the session using the tokens from the URL
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+      }).then(({ data, error }) => {
+        if (error) {
+          console.error('Error setting session:', error);
+          setIsValidSession(false);
+        } else if (data.session) {
           setIsValidSession(true);
-          setCheckingSession(false);
-        } else if (session) {
-          // User has a valid session (possibly from recovery link)
-          setIsValidSession(true);
-          setCheckingSession(false);
         }
-      }
-    );
+        setCheckingSession(false);
+      });
+    } else {
+      // Listen for the PASSWORD_RECOVERY event
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          if (event === "PASSWORD_RECOVERY") {
+            setIsValidSession(true);
+            setCheckingSession(false);
+          } else if (session && !checkingSession) {
+            setIsValidSession(true);
+            setCheckingSession(false);
+          }
+        }
+      );
 
-    // Check if there's already a session (user came from email link)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setIsValidSession(true);
-      }
-      setCheckingSession(false);
-    });
+      // Check if there's already a session
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          // Check if this is a recovery session by looking at the user metadata
+          setIsValidSession(true);
+        }
+        setCheckingSession(false);
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
