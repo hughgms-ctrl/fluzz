@@ -41,7 +41,22 @@ export default function BriefingDocument() {
     },
   });
 
-  const isLoading = briefingLoading || debriefingLoading;
+  const { data: extras = [], isLoading: extrasLoading } = useQuery({
+    queryKey: ["debriefing-extras", debriefing?.id],
+    queryFn: async () => {
+      if (!debriefing?.id) return [];
+      const { data, error } = await supabase
+        .from("debriefing_extras")
+        .select("*")
+        .eq("debriefing_id", debriefing.id);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!debriefing?.id,
+  });
+
+  const isLoading = briefingLoading || debriefingLoading || extrasLoading;
 
   const formatDate = (date: string) => {
     return formatDateWithOptions(date, {
@@ -194,6 +209,12 @@ export default function BriefingDocument() {
                   briefing={briefing}
                   vendedores={vendedores}
                   currency={debriefing.currency as "BRL" | "USD"}
+                  extras={extras.map(e => ({
+                    id: e.id,
+                    tipo: e.tipo as "receita" | "despesa",
+                    nome: e.nome,
+                    valor: e.valor
+                  }))}
                 />
               </div>
             </>
