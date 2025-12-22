@@ -56,6 +56,7 @@ export const TimelineView = ({
     startX: number;
     initialStartDate: string | null;
     initialDueDate: string | null;
+    currentDaysDelta: number;
   } | null>(null);
   
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -88,12 +89,26 @@ export const TimelineView = ({
 
   const dayWidth = 40; // Fixed pixel width per day for smooth scrolling
 
-  // Get task bar position and width
-  const getTaskBar = (task: Task) => {
-    const startDate = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
-    const endDate = task.due_date ? new Date(task.due_date) : startDate;
+  // Get task bar position and width - with optional drag offset
+  const getTaskBar = (task: Task, dragOffset: number = 0, mode: DragMode = null) => {
+    let startDate = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
+    let endDate = task.due_date ? new Date(task.due_date) : startDate;
     
     if (!startDate || !endDate) return null;
+
+    // Apply drag offset based on mode
+    if (dragOffset !== 0) {
+      if (mode === 'move') {
+        startDate = addDays(startDate, dragOffset);
+        endDate = addDays(endDate, dragOffset);
+      } else if (mode === 'resize-start') {
+        const newStart = addDays(startDate, dragOffset);
+        startDate = newStart > endDate ? endDate : newStart;
+      } else if (mode === 'resize-end') {
+        const newEnd = addDays(endDate, dragOffset);
+        endDate = newEnd < startDate ? startDate : newEnd;
+      }
+    }
 
     const clampedStart = startDate < viewStart ? viewStart : startDate;
     const clampedEnd = endDate > viewEnd ? viewEnd : endDate;
@@ -119,20 +134,31 @@ export const TimelineView = ({
       startX: e.clientX,
       initialStartDate: task.start_date || null,
       initialDueDate: task.due_date || null,
+      currentDaysDelta: 0,
     });
   };
 
-  // Handle drag move
+  // Handle drag move - update visual state in real-time
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragState) return;
 
     const deltaX = e.clientX - dragState.startX;
     const daysDelta = Math.round(deltaX / dayWidth);
 
-    if (daysDelta === 0) return;
+    // Update visual state immediately
+    setDragState(prev => prev ? { ...prev, currentDaysDelta: daysDelta } : null);
+  }, [dragState, dayWidth]);
+
+  // Handle drag end - commit changes
+  const handleMouseUp = useCallback(() => {
+    if (!dragState || dragState.currentDaysDelta === 0) {
+      setDragState(null);
+      return;
+    }
 
     const initialStart = dragState.initialStartDate ? new Date(dragState.initialStartDate) : null;
     const initialEnd = dragState.initialDueDate ? new Date(dragState.initialDueDate) : null;
+    const daysDelta = dragState.currentDaysDelta;
 
     let newStartDate = initialStart;
     let newDueDate = initialEnd;
@@ -157,18 +183,19 @@ export const TimelineView = ({
       newStartDate ? format(newStartDate, 'yyyy-MM-dd') : null,
       newDueDate ? format(newDueDate, 'yyyy-MM-dd') : null
     );
-  }, [dragState, dayWidth, onUpdateTaskDates]);
 
-  // Handle drag end
-  const handleMouseUp = useCallback(() => {
     setDragState(null);
-  }, []);
+  }, [dragState, onUpdateTaskDates]);
 
   useEffect(() => {
     if (dragState) {
+      document.body.style.cursor = dragState.mode === 'move' ? 'grabbing' : 'col-resize';
+      document.body.style.userSelect = 'none';
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       return () => {
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
       };
@@ -188,8 +215,8 @@ export const TimelineView = ({
   // Get day of week abbreviation in Portuguese
   const getDayOfWeek = (date: Date) => {
     const dayIndex = date.getDay();
-    const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-    return days[dayIndex];
+    const weekDays = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    return weekDays[dayIndex];
   };
 
   const goToToday = () => setViewOffset(0);
@@ -314,7 +341,10 @@ export const TimelineView = ({
                 </div>
               ) : (
                 visibleTasks.map(task => {
-                  const bar = getTaskBar(task);
+                  const isDragging = dragState?.taskId === task.id;
+                  const dragOffset = isDragging ? dragState.currentDaysDelta : 0;
+                  const dragMode = isDragging ? dragState.mode : null;
+                  const bar = getTaskBar(task, dragOffset, dragMode);
                   
                   return (
                     <div key={task.id} className="h-12 relative border-b">
@@ -336,9 +366,11 @@ export const TimelineView = ({
                       {bar && (
                         <div
                           className={cn(
-                            "absolute top-2 h-8 rounded flex items-center group transition-shadow cursor-grab",
+                            "absolute top-2 h-8 rounded-md flex items-center group transition-all duration-75",
                             getStatusColor(task.status),
-                            dragState?.taskId === task.id && "shadow-lg ring-2 ring-primary cursor-grabbing"
+                            isDragging 
+                              ? "shadow-xl ring-2 ring-primary/50 opacity-90 scale-[1.02]" 
+                              : "shadow-sm hover:shadow-md"
                           )}
                           style={{
                             left: bar.left,
@@ -347,28 +379,41 @@ export const TimelineView = ({
                         >
                           {/* Resize handle - start */}
                           <div
-                            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-l flex items-center justify-center"
+                            className={cn(
+                              "absolute left-0 top-0 bottom-0 w-2 cursor-col-resize rounded-l-md transition-all",
+                              "flex items-center justify-center",
+                              "hover:bg-white/30",
+                              isDragging && dragMode === 'resize-start' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                            )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
                           >
-                            <div className="w-0.5 h-4 bg-white/70 rounded" />
+                            <div className="w-[2px] h-3 bg-white/80 rounded-full" />
                           </div>
 
-                          {/* Move handle */}
+                          {/* Move handle - main area */}
                           <div 
-                            className="flex-1 h-full flex items-center justify-center px-3"
+                            className={cn(
+                              "flex-1 h-full flex items-center justify-center px-3 cursor-grab",
+                              isDragging && dragMode === 'move' && "cursor-grabbing"
+                            )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
                           >
-                            <span className="text-xs font-medium text-white truncate">
+                            <span className="text-xs font-medium text-white truncate select-none">
                               {task.title}
                             </span>
                           </div>
 
                           {/* Resize handle - end */}
                           <div
-                            className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-r flex items-center justify-center"
+                            className={cn(
+                              "absolute right-0 top-0 bottom-0 w-2 cursor-col-resize rounded-r-md transition-all",
+                              "flex items-center justify-center",
+                              "hover:bg-white/30",
+                              isDragging && dragMode === 'resize-end' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                            )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
                           >
-                            <div className="w-0.5 h-4 bg-white/70 rounded" />
+                            <div className="w-[2px] h-3 bg-white/80 rounded-full" />
                           </div>
                         </div>
                       )}
@@ -380,10 +425,10 @@ export const TimelineView = ({
               {/* Today indicator line - inside the timeline only */}
               {showTodayLine && (
                 <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-red-500/70 z-30 pointer-events-none"
+                  className="absolute top-0 bottom-0 w-0.5 bg-destructive/60 z-30 pointer-events-none"
                   style={{ left: todayPosition + dayWidth / 2 }}
                 >
-                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full" />
+                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-destructive rounded-full shadow-sm" />
                 </div>
               )}
             </div>
