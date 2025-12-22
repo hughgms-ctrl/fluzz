@@ -210,7 +210,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
           taskIdToIndex[task.id] = index;
         });
 
-        // Mapear tarefas removendo datas e IDs, resetando status para 'todo'
+        // Mapear tarefas SEM copiar: due_date, documentation (links e anexos são externos)
         const newTasks = tasks.map((task) => ({
           title: task.title,
           description: task.description,
@@ -218,10 +218,11 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
           priority: task.priority,
           assigned_to: task.assigned_to,
           setor: task.setor,
-          documentation: task.documentation,
+          documentation: null, // NÃO copiar documentação
           process_id: task.process_id,
           completed_verified: false,
           project_id: newProject.id,
+          due_date: null, // NÃO copiar datas
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
