@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, useSearchParams, Link } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ export default function Auth() {
     signIn
   } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteData, setInviteData] = useState<any>(null);
@@ -192,8 +193,8 @@ export default function Auth() {
         setInviteToken(null);
         setInviteData(null);
 
-        // Fazer reload completo da página na home
-        window.location.href = "/";
+         // Ir para a home sem recarregar a página (evita perder conteúdo em edição)
+         navigate("/", { replace: true });
       } catch (error: any) {
         console.error("Erro ao definir senha:", error);
         toast.error(error.message || "Erro ao definir senha");

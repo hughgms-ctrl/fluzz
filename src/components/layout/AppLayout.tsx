@@ -27,13 +27,21 @@ export const AppLayout = ({
     changeWorkspace
   } = useWorkspace();
   const navigate = useNavigate();
-  if (loading || workspaceLoading) {
-    return <div className="flex min-h-screen items-center justify-center bg-background">
+
+  // Evita "desmontar" a tela inteira depois que já carregou uma vez.
+  // Isso previne perda de texto em formulários quando o workspace faz refetch em background.
+  const shouldBlockForBootstrap =
+    loading || (user && workspaceLoading && workspaces.length === 0 && !workspaceMember);
+
+  if (shouldBlockForBootstrap) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando...</p>
         </div>
-      </div>;
+      </div>
+    );
   }
 
   // IMPORTANTE: Apenas redireciona para setup se o usuário não tem NENHUM workspace
