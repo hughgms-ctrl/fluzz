@@ -56,14 +56,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<UserPermissions>({
-    can_view_projects: true,
-    can_view_tasks: true,
-    can_view_positions: true,
-    can_view_analytics: true,
-    can_view_briefings: true,
-    can_view_culture: true,
-    can_view_vision: true,
-    can_view_processes: true,
+    can_view_projects: false,
+    can_view_tasks: false,
+    can_view_positions: false,
+    can_view_analytics: false,
+    can_view_briefings: false,
+    can_view_culture: false,
+    can_view_vision: false,
+    can_view_processes: false,
     can_view_inventory: false,
   });
 
@@ -168,27 +168,58 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
       setWorkspace(activeWorkspace);
 
-      // Fetch user permissions
+      // Fetch user permissions - Admins e Gestores têm acesso total
       if (user && activeWorkspace) {
-        const { data: permissionsData } = await supabase
-          .from("user_permissions")
-          .select("*")
-          .eq("user_id", user.id)
-          .eq("workspace_id", activeWorkspace.id)
-          .single();
-
-        if (permissionsData) {
+        const isAdminOrGestor = activeMember.role === 'admin' || activeMember.role === 'gestor';
+        
+        if (isAdminOrGestor) {
+          // Admins e Gestores têm acesso total
           setPermissions({
-            can_view_projects: permissionsData.can_view_projects,
-            can_view_tasks: permissionsData.can_view_tasks,
-            can_view_positions: permissionsData.can_view_positions,
-            can_view_analytics: permissionsData.can_view_analytics,
-            can_view_briefings: permissionsData.can_view_briefings,
-            can_view_culture: permissionsData.can_view_culture,
-            can_view_vision: permissionsData.can_view_vision,
-            can_view_processes: permissionsData.can_view_processes,
-            can_view_inventory: permissionsData.can_view_inventory ?? false,
+            can_view_projects: true,
+            can_view_tasks: true,
+            can_view_positions: true,
+            can_view_analytics: true,
+            can_view_briefings: true,
+            can_view_culture: true,
+            can_view_vision: true,
+            can_view_processes: true,
+            can_view_inventory: true,
           });
+        } else {
+          // Membros precisam de permissão explícita
+          const { data: permissionsData } = await supabase
+            .from("user_permissions")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("workspace_id", activeWorkspace.id)
+            .single();
+
+          if (permissionsData) {
+            setPermissions({
+              can_view_projects: permissionsData.can_view_projects,
+              can_view_tasks: permissionsData.can_view_tasks,
+              can_view_positions: permissionsData.can_view_positions,
+              can_view_analytics: permissionsData.can_view_analytics,
+              can_view_briefings: permissionsData.can_view_briefings,
+              can_view_culture: permissionsData.can_view_culture,
+              can_view_vision: permissionsData.can_view_vision,
+              can_view_processes: permissionsData.can_view_processes,
+              can_view_inventory: permissionsData.can_view_inventory ?? false,
+            });
+          } else {
+            // Se não há registro de permissão, negar tudo para membros
+            setPermissions({
+              can_view_projects: false,
+              can_view_tasks: false,
+              can_view_positions: false,
+              can_view_analytics: false,
+              can_view_briefings: false,
+              can_view_culture: false,
+              can_view_vision: false,
+              can_view_processes: false,
+              can_view_inventory: false,
+            });
+          }
         }
       }
     } catch (error: any) {
