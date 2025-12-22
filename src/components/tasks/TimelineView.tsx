@@ -90,22 +90,32 @@ export const TimelineView = ({
   const dayWidth = 40; // Fixed pixel width per day for smooth scrolling
 
   // Get task bar position and width - with optional drag offset
-  const getTaskBar = (task: Task, dragOffset: number = 0, mode: DragMode = null) => {
-    let startDate = task.start_date ? new Date(task.start_date) : task.due_date ? new Date(task.due_date) : null;
-    let endDate = task.due_date ? new Date(task.due_date) : startDate;
+  const getTaskBar = (task: Task, dragInfo: { offset: number; mode: DragMode; initialStart: string | null; initialEnd: string | null } | null) => {
+    // Use initial dates from drag state if dragging, otherwise use task dates
+    let startDateStr = task.start_date;
+    let endDateStr = task.due_date;
+    
+    if (dragInfo) {
+      // Use the initial dates from when drag started
+      startDateStr = dragInfo.initialStart;
+      endDateStr = dragInfo.initialEnd;
+    }
+    
+    let startDate = startDateStr ? new Date(startDateStr) : endDateStr ? new Date(endDateStr) : null;
+    let endDate = endDateStr ? new Date(endDateStr) : startDate;
     
     if (!startDate || !endDate) return null;
 
     // Apply drag offset based on mode
-    if (dragOffset !== 0) {
-      if (mode === 'move') {
-        startDate = addDays(startDate, dragOffset);
-        endDate = addDays(endDate, dragOffset);
-      } else if (mode === 'resize-start') {
-        const newStart = addDays(startDate, dragOffset);
+    if (dragInfo && dragInfo.offset !== 0) {
+      if (dragInfo.mode === 'move') {
+        startDate = addDays(startDate, dragInfo.offset);
+        endDate = addDays(endDate, dragInfo.offset);
+      } else if (dragInfo.mode === 'resize-start') {
+        const newStart = addDays(startDate, dragInfo.offset);
         startDate = newStart > endDate ? endDate : newStart;
-      } else if (mode === 'resize-end') {
-        const newEnd = addDays(endDate, dragOffset);
+      } else if (dragInfo.mode === 'resize-end') {
+        const newEnd = addDays(endDate, dragInfo.offset);
         endDate = newEnd < startDate ? startDate : newEnd;
       }
     }
@@ -342,9 +352,13 @@ export const TimelineView = ({
               ) : (
                 visibleTasks.map(task => {
                   const isDragging = dragState?.taskId === task.id;
-                  const dragOffset = isDragging ? dragState.currentDaysDelta : 0;
-                  const dragMode = isDragging ? dragState.mode : null;
-                  const bar = getTaskBar(task, dragOffset, dragMode);
+                  const dragInfo = isDragging ? {
+                    offset: dragState.currentDaysDelta,
+                    mode: dragState.mode,
+                    initialStart: dragState.initialStartDate,
+                    initialEnd: dragState.initialDueDate,
+                  } : null;
+                  const bar = getTaskBar(task, dragInfo);
                   
                   return (
                     <div key={task.id} className="h-12 relative border-b">
@@ -383,7 +397,7 @@ export const TimelineView = ({
                               "absolute left-0 top-0 bottom-0 w-2 cursor-col-resize rounded-l-md transition-all",
                               "flex items-center justify-center",
                               "hover:bg-white/30",
-                              isDragging && dragMode === 'resize-start' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                              isDragging && dragInfo?.mode === 'resize-start' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
                           >
@@ -394,7 +408,7 @@ export const TimelineView = ({
                           <div 
                             className={cn(
                               "flex-1 h-full flex items-center justify-center px-3 cursor-grab",
-                              isDragging && dragMode === 'move' && "cursor-grabbing"
+                              isDragging && dragInfo?.mode === 'move' && "cursor-grabbing"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
                           >
@@ -409,7 +423,7 @@ export const TimelineView = ({
                               "absolute right-0 top-0 bottom-0 w-2 cursor-col-resize rounded-r-md transition-all",
                               "flex items-center justify-center",
                               "hover:bg-white/30",
-                              isDragging && dragMode === 'resize-end' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                              isDragging && dragInfo?.mode === 'resize-end' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
                           >
