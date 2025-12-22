@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { format, addDays, differenceInDays, isToday, startOfDay } from "date-fns";
+import { format, addDays, differenceInDays, isToday, startOfDay, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,14 @@ type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
 const naturalSort = (a: string, b: string) => {
   return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
 };
+
+const parseTaskDate = (value: string) => {
+  // Avoid JS Date UTC parsing for YYYY-MM-DD (causes off-by-one in many timezones)
+  if (value.includes("T")) return startOfDay(new Date(value));
+  return startOfDay(parse(value, "yyyy-MM-dd", new Date()));
+};
+
+const formatTaskDate = (date: Date) => format(startOfDay(date), "yyyy-MM-dd");
 
 export const TimelineView = ({ 
   tasks, 
@@ -69,8 +77,8 @@ export const TimelineView = ({
         return naturalSort(a.title, b.title);
       }
       // Manual - by start_date (tasks without dates go to the end)
-      const aStart = a.start_date ? new Date(a.start_date).getTime() : Infinity;
-      const bStart = b.start_date ? new Date(b.start_date).getTime() : Infinity;
+      const aStart = a.start_date ? parseTaskDate(a.start_date).getTime() : Infinity;
+      const bStart = b.start_date ? parseTaskDate(b.start_date).getTime() : Infinity;
       return aStart - bStart;
     });
   }, [tasks, sortMode]);
@@ -81,8 +89,8 @@ export const TimelineView = ({
       // Tasks without dates are always visible (as ghost bars)
       if (!task.start_date && !task.due_date) return true;
       
-      const taskStart = task.start_date ? new Date(task.start_date) : null;
-      const taskEnd = task.due_date ? new Date(task.due_date) : taskStart;
+      const taskStart = task.start_date ? parseTaskDate(task.start_date) : null;
+      const taskEnd = task.due_date ? parseTaskDate(task.due_date) : taskStart;
       if (!taskStart && !taskEnd) return true;
       
       const start = taskStart || taskEnd!;
@@ -109,8 +117,8 @@ export const TimelineView = ({
     if (!startDateStr && !endDateStr) return null;
     
     // Handle cases with only one date - use that date for both start and end
-    let startDate = startDateStr ? new Date(startDateStr) : new Date(endDateStr!);
-    let endDate = endDateStr ? new Date(endDateStr) : new Date(startDateStr!);
+    let startDate = startDateStr ? parseTaskDate(startDateStr) : parseTaskDate(endDateStr!);
+    let endDate = endDateStr ? parseTaskDate(endDateStr) : parseTaskDate(startDateStr!);
 
     // Apply drag offset based on mode
     if (dragInfo && dragInfo.offset !== 0) {
@@ -177,8 +185,8 @@ export const TimelineView = ({
     const daysDelta = dragState.currentDaysDelta;
 
     // Handle cases where we only have one date
-    const initialStart = initialStartStr ? new Date(initialStartStr) : initialEndStr ? new Date(initialEndStr) : null;
-    const initialEnd = initialEndStr ? new Date(initialEndStr) : initialStartStr ? new Date(initialStartStr) : null;
+    const initialStart = initialStartStr ? parseTaskDate(initialStartStr) : initialEndStr ? parseTaskDate(initialEndStr) : null;
+    const initialEnd = initialEndStr ? parseTaskDate(initialEndStr) : initialStartStr ? parseTaskDate(initialStartStr) : null;
 
     if (!initialStart || !initialEnd) {
       setDragState(null);
@@ -205,8 +213,8 @@ export const TimelineView = ({
 
     onUpdateTaskDates(
       dragState.taskId,
-      format(newStartDate, 'yyyy-MM-dd'),
-      format(newDueDate, 'yyyy-MM-dd')
+      formatTaskDate(newStartDate),
+      formatTaskDate(newDueDate)
     );
 
     setDragState(null);
