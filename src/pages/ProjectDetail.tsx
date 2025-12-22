@@ -105,7 +105,15 @@ export default function ProjectDetail() {
   });
 
   const handleDateChange = (date: Date | undefined) => {
-    const dateStr = date ? format(date, 'yyyy-MM-dd') : null;
+    if (!date) {
+      updateProjectMutation.mutate({ end_date: null });
+      return;
+    }
+    // Format date using local timezone to avoid off-by-one errors
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
     updateProjectMutation.mutate({ end_date: dateStr });
   };
 
