@@ -793,10 +793,12 @@ export type Database = {
           archived: boolean
           created_at: string | null
           description: string | null
+          end_date: string | null
           id: string
           is_standalone_folder: boolean
           is_template: boolean
           name: string
+          start_date: string | null
           status: string | null
           updated_at: string | null
           user_id: string
@@ -806,10 +808,12 @@ export type Database = {
           archived?: boolean
           created_at?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_standalone_folder?: boolean
           is_template?: boolean
           name: string
+          start_date?: string | null
           status?: string | null
           updated_at?: string | null
           user_id: string
@@ -819,10 +823,12 @@ export type Database = {
           archived?: boolean
           created_at?: string | null
           description?: string | null
+          end_date?: string | null
           id?: string
           is_standalone_folder?: boolean
           is_template?: boolean
           name?: string
+          start_date?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string
@@ -1257,6 +1263,7 @@ export type Database = {
           requires_approval: boolean | null
           routine_id: string | null
           setor: string | null
+          start_date: string | null
           status: string | null
           task_order: number | null
           title: string
@@ -1279,6 +1286,7 @@ export type Database = {
           requires_approval?: boolean | null
           routine_id?: string | null
           setor?: string | null
+          start_date?: string | null
           status?: string | null
           task_order?: number | null
           title: string
@@ -1301,6 +1309,7 @@ export type Database = {
           requires_approval?: boolean | null
           routine_id?: string | null
           setor?: string | null
+          start_date?: string | null
           status?: string | null
           task_order?: number | null
           title?: string

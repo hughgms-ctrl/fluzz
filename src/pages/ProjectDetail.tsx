@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -17,6 +17,7 @@ import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
 import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
 import { ProjectNotes } from "@/components/projects/ProjectNotes";
+import { TimelineView } from "@/components/tasks/TimelineView";
 import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -31,7 +32,7 @@ export default function ProjectDetail() {
   const isMobile = useIsMobile();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
-  const [view, setView] = useState<"board" | "list">("list");
+  const [view, setView] = useState<"board" | "list" | "timeline">("list");
   const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
@@ -502,7 +503,7 @@ export default function ProjectDetail() {
             {/* View toggle - only show on desktop */}
             {!isMobile && (
               <div className="flex justify-end">
-                <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list")}>
+                <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list" | "timeline")}>
                   <TabsList>
                     <TabsTrigger value="list" className="gap-2">
                       <List size={16} />
@@ -511,6 +512,10 @@ export default function ProjectDetail() {
                     <TabsTrigger value="board" className="gap-2">
                       <LayoutGrid size={16} />
                       <span className="hidden sm:inline">Kanban</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="timeline" className="gap-2">
+                      <GanttChartSquare size={16} />
+                      <span className="hidden sm:inline">Cronograma</span>
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -533,7 +538,22 @@ export default function ProjectDetail() {
               </div>
             ) : (
               <>
-                {view === "board" && !isMobile ? (
+                {view === "timeline" && !isMobile ? (
+                  <TimelineView
+                    tasks={filteredTasks || []}
+                    onUpdateTaskDates={async (taskId, startDate, dueDate) => {
+                      const { error } = await supabase
+                        .from("tasks")
+                        .update({ start_date: startDate, due_date: dueDate })
+                        .eq("id", taskId);
+                      if (error) {
+                        toast.error("Erro ao atualizar datas");
+                      } else {
+                        queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+                      }
+                    }}
+                  />
+                ) : view === "board" && !isMobile ? (
                   <DraggableTaskBoard
                     tasks={filteredTasks || []}
                     onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}

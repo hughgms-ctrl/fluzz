@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,19 +32,29 @@ import { cn } from "@/lib/utils";
 interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultDate?: Date | null;
 }
 
 type DialogStep = "choose" | "new" | "template" | "standalone";
 
-export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogProps) => {
+export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateProjectDialogProps) => {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState<string>("");
   const [step, setStep] = useState<DialogStep>("choose");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
+
+  // Set default date when provided
+  useEffect(() => {
+    if (defaultDate && open) {
+      const dateStr = defaultDate.toISOString().split('T')[0];
+      setStartDate(dateStr);
+    }
+  }, [defaultDate, open]);
 
   const { data: templates } = useQuery({
     queryKey: ["project-templates", workspace?.id],
@@ -78,6 +88,8 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
             description,
             status: "active",
             is_standalone_folder: isStandaloneFolder,
+            start_date: startDate || null,
+            end_date: startDate || null,
           },
         ])
         .select()
@@ -234,6 +246,7 @@ export const CreateProjectDialog = ({ open, onOpenChange }: CreateProjectDialogP
   const handleClose = () => {
     setName("");
     setDescription("");
+    setStartDate("");
     setStep("choose");
     setSelectedTemplate(null);
     onOpenChange(false);

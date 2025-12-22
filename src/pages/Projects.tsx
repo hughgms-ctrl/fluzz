@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid, List, Folder } from "lucide-react";
+import { Plus, LayoutGrid, List, Folder, CalendarDays } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
+import { ProjectsCalendarView } from "@/components/projects/ProjectsCalendarView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,11 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { formatDateBR } from "@/lib/utils";
+import { format } from "date-fns";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [viewMode, setViewMode] = useState<"grid" | "list" | "calendar">("list");
+  const [defaultProjectDate, setDefaultProjectDate] = useState<Date | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();
@@ -30,7 +33,7 @@ export default function Projects() {
       
       const { data, error } = await supabase
         .from("projects")
-        .select("*, tasks(id, status)")
+        .select("*, tasks(id, status), start_date, end_date")
         .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -123,6 +126,7 @@ export default function Projects() {
                 size="icon"
                 onClick={() => setViewMode("grid")}
                 className="rounded-r-none"
+                title="Visualização em grade"
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
@@ -130,9 +134,18 @@ export default function Projects() {
                 variant={viewMode === "list" ? "default" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("list")}
-                className="rounded-l-none"
+                title="Visualização em lista"
               >
                 <List className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "calendar" ? "default" : "ghost"}
+                size="icon"
+                onClick={() => setViewMode("calendar")}
+                className="rounded-l-none"
+                title="Visualização de calendário"
+              >
+                <CalendarDays className="h-4 w-4" />
               </Button>
             </div>
             {(isAdmin || isGestor) && (
@@ -165,7 +178,16 @@ export default function Projects() {
           </TabsList>
 
           <TabsContent value="active" className="mt-6">
-            {activeProjects.length === 0 ? (
+            {viewMode === "calendar" ? (
+              <ProjectsCalendarView
+                projects={activeProjects}
+                onCreateProject={(date) => {
+                  setDefaultProjectDate(date);
+                  setIsCreateOpen(true);
+                }}
+                canEdit={isAdmin || isGestor}
+              />
+            ) : activeProjects.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-muted-foreground mb-4">
                   Você ainda não tem projetos ativos. Comece criando um!
@@ -285,7 +307,14 @@ export default function Projects() {
         </Tabs>
       </div>
 
-      <CreateProjectDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+      <CreateProjectDialog 
+        open={isCreateOpen} 
+        onOpenChange={(open) => {
+          setIsCreateOpen(open);
+          if (!open) setDefaultProjectDate(null);
+        }}
+        defaultDate={defaultProjectDate}
+      />
     </AppLayout>
   );
 }
