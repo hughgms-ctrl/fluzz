@@ -9,6 +9,80 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 
+// Função para calcular similaridade de strings (Levenshtein simplificado)
+function similarity(s1: string, s2: string): number {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+  if (longer.length === 0) return 1.0;
+  
+  const editDistance = (a: string, b: string): number => {
+    const matrix: number[][] = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  };
+  
+  return (longer.length - editDistance(longer, shorter)) / longer.length;
+}
+
+// Busca usuário por nome similar
+async function findUserByName(supabase: any, workspaceId: string, searchName: string) {
+  const { data: members } = await supabase
+    .from("workspace_members")
+    .select("user_id")
+    .eq("workspace_id", workspaceId);
+
+  if (!members || members.length === 0) return null;
+
+  const userIds = members.map((m: any) => m.user_id);
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", userIds);
+
+  if (!profiles || profiles.length === 0) return null;
+
+  const searchLower = searchName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  
+  let bestMatch: any = null;
+  let bestScore = 0;
+
+  for (const profile of profiles) {
+    const nameLower = (profile.full_name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Verifica se o nome contém a busca
+    if (nameLower.includes(searchLower)) {
+      const score = 0.9 + (searchLower.length / nameLower.length) * 0.1;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = profile;
+      }
+    } else {
+      // Calcula similaridade
+      const score = similarity(searchLower, nameLower);
+      if (score > bestScore && score > 0.4) {
+        bestScore = score;
+        bestMatch = profile;
+      }
+    }
+  }
+
+  return bestMatch ? { ...bestMatch, similarity: bestScore } : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,10 +111,78 @@ serve(async (req) => {
 
     const { action, params, workspace_id } = await req.json();
 
+    // Get user role for permission checking
+    const { data: memberData } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("workspace_id", workspace_id)
+      .single();
+
+    const userRole = memberData?.role || "membro";
+    const isAdmin = userRole === "admin";
+
     let result: any = null;
 
     switch (action) {
+      case "find_user_by_name": {
+        const foundUser = await findUserByName(supabase, workspace_id, params.name);
+        if (foundUser) {
+          result = {
+            success: true,
+            user: foundUser,
+            message: `Encontrei: ${foundUser.full_name}`,
+          };
+        } else {
+          result = {
+            success: false,
+            error: `Não encontrei nenhum usuário com nome similar a "${params.name}"`,
+          };
+        }
+        break;
+      }
+
+      case "query_user_tasks": {
+        const foundUser = await findUserByName(supabase, workspace_id, params.user_name);
+        if (!foundUser) {
+          result = {
+            success: false,
+            error: `Não encontrei usuário com nome similar a "${params.user_name}"`,
+          };
+          break;
+        }
+
+        let query = supabase
+          .from("tasks")
+          .select("id, title, due_date, priority, status, project:projects(name)")
+          .eq("assigned_to", foundUser.id);
+
+        if (params.status && params.status !== "todas") {
+          query = query.eq("status", params.status);
+        }
+
+        const { data, error } = await query.order("due_date", { ascending: true }).limit(20);
+        if (error) throw error;
+
+        result = {
+          success: true,
+          user_name: foundUser.full_name,
+          tasks: data,
+          count: data?.length || 0,
+        };
+        break;
+      }
+
       case "create_task": {
+        // Permission check
+        if (!isAdmin && params.assigned_to && params.assigned_to !== user.id) {
+          result = {
+            success: false,
+            error: "Você não tem permissão para criar tarefas para outras pessoas. Apenas administradores podem fazer isso.",
+          };
+          break;
+        }
+
         const priorityMap: Record<string, string> = {
           baixa: "low",
           média: "medium",
@@ -54,7 +196,7 @@ serve(async (req) => {
             description: params.description || null,
             priority: priorityMap[params.priority] || "medium",
             project_id: params.project_id || null,
-            assigned_to: params.assigned_to || null,
+            assigned_to: params.assigned_to || user.id,
             setor: params.setor || null,
             due_date: params.due_date || null,
             status: "a fazer",
@@ -68,6 +210,15 @@ serve(async (req) => {
       }
 
       case "create_project": {
+        // Only admin can create projects
+        if (!isAdmin) {
+          result = {
+            success: false,
+            error: "Apenas administradores podem criar projetos.",
+          };
+          break;
+        }
+
         const { data, error } = await supabase
           .from("projects")
           .insert({
@@ -91,9 +242,34 @@ serve(async (req) => {
         const today = new Date().toISOString().split("T")[0];
         let query = supabase
           .from("tasks")
-          .select("id, title, due_date, priority, status, project:projects(name)")
+          .select("id, title, due_date, priority, status, assigned_to, project:projects(name)")
           .lt("due_date", today)
           .neq("status", "feita");
+
+        // If user_name is provided, find the user first
+        if (params.user_name) {
+          const foundUser = await findUserByName(supabase, workspace_id, params.user_name);
+          if (!foundUser) {
+            result = {
+              success: false,
+              error: `Não encontrei usuário com nome similar a "${params.user_name}"`,
+            };
+            break;
+          }
+          query = query.eq("assigned_to", foundUser.id);
+          
+          const { data, error } = await query.order("due_date", { ascending: true });
+          if (error) throw error;
+
+          // Get profile for display
+          result = {
+            success: true,
+            user_name: foundUser.full_name,
+            tasks: data,
+            count: data?.length || 0,
+          };
+          break;
+        }
 
         if (!params.include_all_workspace) {
           query = query.eq("assigned_to", user.id);
@@ -101,6 +277,21 @@ serve(async (req) => {
 
         const { data, error } = await query.order("due_date", { ascending: true });
         if (error) throw error;
+
+        // Enrich with user names
+        if (data && data.length > 0) {
+          const userIds = [...new Set(data.map((t: any) => t.assigned_to).filter(Boolean))];
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name")
+            .in("id", userIds);
+
+          const profileMap = new Map(profiles?.map((p: any) => [p.id, p.full_name]) || []);
+          data.forEach((task: any) => {
+            task.assigned_to_name = profileMap.get(task.assigned_to) || "Não atribuído";
+          });
+        }
+
         result = { success: true, tasks: data, count: data?.length || 0 };
         break;
       }
@@ -108,13 +299,24 @@ serve(async (req) => {
       case "query_tasks_by_status": {
         let query = supabase
           .from("tasks")
-          .select("id, title, due_date, priority, status, project:projects(name)");
+          .select("id, title, due_date, priority, status, assigned_to, project:projects(name)");
 
         if (params.status) {
           query = query.eq("status", params.status);
         }
 
-        if (!params.include_all_workspace) {
+        // If user_name is provided, find the user first
+        if (params.user_name) {
+          const foundUser = await findUserByName(supabase, workspace_id, params.user_name);
+          if (!foundUser) {
+            result = {
+              success: false,
+              error: `Não encontrei usuário com nome similar a "${params.user_name}"`,
+            };
+            break;
+          }
+          query = query.eq("assigned_to", foundUser.id);
+        } else if (!params.include_all_workspace) {
           query = query.eq("assigned_to", user.id);
         }
 
@@ -152,14 +354,26 @@ serve(async (req) => {
       case "list_members": {
         const { data, error } = await supabase
           .from("workspace_members")
-          .select("user_id, profiles:user_id(full_name)")
+          .select("user_id, role")
           .eq("workspace_id", workspace_id);
 
         if (error) throw error;
-        const members = data?.map((m: any) => ({
-          id: m.user_id,
-          name: m.profiles?.full_name || "Sem nome",
-        }));
+        
+        const userIds = data?.map((m: any) => m.user_id) || [];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", userIds);
+
+        const members = data?.map((m: any) => {
+          const profile = profiles?.find((p: any) => p.id === m.user_id);
+          return {
+            id: m.user_id,
+            name: profile?.full_name || "Sem nome",
+            role: m.role,
+          };
+        });
+        
         result = { success: true, members };
         break;
       }
@@ -174,14 +388,8 @@ serve(async (req) => {
   } catch (error) {
     console.error("Erro ao executar ação:", error);
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Erro desconhecido" 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
