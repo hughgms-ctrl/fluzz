@@ -79,7 +79,7 @@ const tools = [
     type: "function",
     function: {
       name: "query_overdue_tasks",
-      description: "Consulta tarefas atrasadas do usuário ou workspace",
+      description: "Consulta tarefas atrasadas do usuário ou workspace. Esta é uma consulta que pode ser executada imediatamente.",
       parameters: {
         type: "object",
         properties: {
@@ -93,7 +93,7 @@ const tools = [
     type: "function",
     function: {
       name: "query_tasks_by_status",
-      description: "Consulta tarefas por status",
+      description: "Consulta tarefas por status. Esta é uma consulta que pode ser executada imediatamente.",
       parameters: {
         type: "object",
         properties: {
@@ -108,7 +108,7 @@ const tools = [
     type: "function",
     function: {
       name: "list_projects",
-      description: "Lista projetos disponíveis no workspace",
+      description: "Lista projetos disponíveis no workspace. Esta é uma consulta que pode ser executada imediatamente.",
       parameters: {
         type: "object",
         properties: {},
@@ -120,7 +120,7 @@ const tools = [
     type: "function",
     function: {
       name: "list_sectors",
-      description: "Lista setores disponíveis no workspace",
+      description: "Lista setores disponíveis no workspace. Esta é uma consulta que pode ser executada imediatamente.",
       parameters: {
         type: "object",
         properties: {},
@@ -132,7 +132,7 @@ const tools = [
     type: "function",
     function: {
       name: "list_members",
-      description: "Lista membros do workspace com seus nomes",
+      description: "Lista membros do workspace com seus nomes. Esta é uma consulta que pode ser executada imediatamente.",
       parameters: {
         type: "object",
         properties: {},
@@ -174,22 +174,25 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    const systemPrompt = `Você é um assistente de gestão de tarefas e projetos. Você ajuda o usuário a:
+    const systemPrompt = `Você é um assistente de gestão de tarefas e projetos chamado Fluzz AI. Você ajuda o usuário a:
 - Extrair tarefas de resumos de reuniões e textos
 - Criar tarefas e projetos
 - Consultar tarefas atrasadas ou por status
 - Atribuir tarefas a pessoas e setores
 
 REGRAS IMPORTANTES:
-1. Quando extrair tarefas de um texto, SEMPRE use a função extract_tasks_from_text primeiro
-2. NUNCA crie tarefas ou projetos sem confirmação explícita do usuário
-3. Quando mostrar tarefas extraídas, pergunte se o usuário quer criar cada uma
-4. Para cada ação (criar tarefa, criar projeto), pergunte se deve executar ou apenas sugerir
-5. Seja conciso e objetivo nas respostas
-6. Use formatação clara com listas quando apropriado
-7. Sempre responda em português brasileiro
+1. Quando extrair tarefas de um texto, use a função extract_tasks_from_text
+2. Para CONSULTAS (query_overdue_tasks, query_tasks_by_status, list_projects, list_sectors, list_members), execute IMEDIATAMENTE sem pedir confirmação
+3. Para CRIAÇÕES (create_task, create_project), peça confirmação antes de executar
+4. Seja conciso, amigável e objetivo
+5. Use formatação Markdown para respostas elegantes
+6. Sempre responda em português brasileiro
+7. Quando mostrar listas de tarefas, use formatação clara com emojis apropriados
 
-Quando o usuário colar um texto ou resumo de reunião, extraia as tarefas e apresente-as de forma organizada, perguntando como deseja proceder com cada uma.`;
+Quando receber resultados de consultas, apresente-os de forma elegante e conversacional.
+Por exemplo, para tarefas atrasadas:
+- Se houver tarefas: "📋 Encontrei X tarefas atrasadas:\n\n• **Título** - Projeto (prioridade)\n  📅 Venceu em: data"
+- Se não houver: "✨ Ótima notícia! Não há tarefas atrasadas."`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
