@@ -170,7 +170,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto com status ativo, SEM copiar a descrição
+      // Criar novo projeto com status ativo, SEM copiar a descrição e com pending_notifications = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -180,6 +180,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
             status: 'active',
             user_id: user.id,
             workspace_id: project.workspace_id,
+            pending_notifications: true, // Notificações pendentes - usuário deve clicar para notificar
           },
         ])
         .select()
@@ -210,10 +211,11 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
           taskIdToIndex[task.id] = index;
         });
 
-        // Mapear tarefas SEM copiar: due_date, documentation (links e anexos são externos)
+        // Mapear tarefas: copiar apenas título, setor, responsável e processos
+        // NÃO copiar: descrição, due_date, documentation (links e anexos)
         const newTasks = tasks.map((task) => ({
           title: task.title,
-          description: task.description,
+          description: null, // NÃO copiar descrição
           status: 'todo',
           priority: task.priority,
           assigned_to: task.assigned_to,
@@ -223,6 +225,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
           completed_verified: false,
           project_id: newProject.id,
           due_date: null, // NÃO copiar datas
+          start_date: null, // NÃO copiar datas
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
@@ -277,53 +280,19 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
             }
           }
 
-          // Criar notificações para usuários com tarefas atribuídas
-          const assignedUserTasks: Record<string, { taskId: string; taskTitle: string }[]> = {};
-          
-          insertedTasks.forEach((task) => {
-            if (task.assigned_to) {
-              if (!assignedUserTasks[task.assigned_to]) {
-                assignedUserTasks[task.assigned_to] = [];
-              }
-              assignedUserTasks[task.assigned_to].push({
-                taskId: task.id,
-                taskTitle: task.title,
-              });
-            }
-          });
-
-          // Criar notificações em batch por usuário
-          const notifications = Object.entries(assignedUserTasks).map(([userId, userTasks]) => ({
-            user_id: userId,
-            workspace_id: newProject.workspace_id,
-            type: 'task_assigned',
-            title: 'Novas tarefas atribuídas',
-            message: userTasks.length === 1
-              ? `Você foi atribuído à tarefa "${userTasks[0].taskTitle}" no projeto ${newProject.name}`
-              : `Você foi atribuído a ${userTasks.length} tarefas no projeto ${newProject.name}`,
-            link: `/projects/${newProject.id}`,
-            data: {
-              project_id: newProject.id,
-              project_name: newProject.name,
-              tasks: userTasks,
-            },
-          }));
-
-          if (notifications.length > 0) {
-            const { error: notifError } = await supabase
-              .from("notifications")
-              .insert(notifications);
-            
-            if (notifError) console.warn("Erro ao criar notificações:", notifError);
-          }
+          // NÃO criar notificações imediatamente - o usuário deve clicar no botão "Notificar Responsáveis"
         }
       }
 
       return newProject;
     },
-    onSuccess: () => {
+    onSuccess: (newProject) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Projeto duplicado com sucesso!");
+      toast.success("Projeto duplicado! Edite e clique em 'Notificar Responsáveis' quando estiver pronto.");
+      // Navegar para o novo projeto para edição
+      if (newProject) {
+        navigate(`/projects/${newProject.id}`);
+      }
     },
     onError: (error) => {
       console.error("Erro ao duplicar projeto:", error);

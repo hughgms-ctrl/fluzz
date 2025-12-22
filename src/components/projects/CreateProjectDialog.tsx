@@ -129,16 +129,17 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
       if (templateError) throw templateError;
 
-      // Create new project based on template
+      // Create new project based on template with pending_notifications = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
           {
             name: template.name,
-            description: template.description,
+            description: null, // NÃO copiar descrição do template
             status: "active",
             user_id: user.id,
             workspace_id: workspace.id,
+            pending_notifications: true, // Notificações pendentes
           },
         ])
         .select()
@@ -175,14 +176,16 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
         const newTasks = templateTasks.map((task) => ({
           title: task.title,
-          description: task.description,
+          description: null, // NÃO copiar descrição
           status: "todo",
           priority: task.priority,
           setor: task.setor,
-          documentation: task.documentation,
+          documentation: null, // NÃO copiar documentação
           process_id: task.process_id,
           completed_verified: false,
           project_id: newProject.id,
+          due_date: null, // NÃO copiar datas
+          start_date: null, // NÃO copiar datas
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
@@ -232,10 +235,14 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
       return newProject;
     },
-    onSuccess: async () => {
+    onSuccess: async (newProject) => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Projeto criado a partir do modelo!");
+      toast.success("Projeto criado! Edite e clique em 'Notificar Responsáveis' quando estiver pronto.");
       handleClose();
+      // Navegar para o novo projeto
+      if (newProject) {
+        window.location.href = `/projects/${newProject.id}`;
+      }
     },
     onError: (error) => {
       console.error("Erro ao criar projeto a partir do modelo:", error);
