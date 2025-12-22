@@ -439,20 +439,20 @@ export const TimelineView = ({
                           {/* Resize handle - start */}
                           <div
                             className={cn(
-                              "absolute left-0 top-0 bottom-0 w-2 cursor-col-resize rounded-l-md transition-all",
+                              "absolute left-0 top-0 bottom-0 w-3 cursor-col-resize rounded-l-md transition-all z-10",
                               "flex items-center justify-center",
-                              "hover:bg-white/30",
-                              isDragging && dragInfo?.mode === 'resize-start' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                              "bg-black/20 hover:bg-white/40",
+                              isDragging && dragInfo?.mode === 'resize-start' && "bg-white/50"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
                           >
-                            <div className="w-[2px] h-3 bg-white/80 rounded-full" />
+                            <div className="w-[2px] h-4 bg-white/90 rounded-full" />
                           </div>
 
                           {/* Move handle - main area */}
                           <div 
                             className={cn(
-                              "flex-1 h-full flex items-center justify-center px-3 cursor-grab",
+                              "flex-1 h-full flex items-center justify-center px-4 cursor-grab",
                               isDragging && dragInfo?.mode === 'move' && "cursor-grabbing"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
@@ -465,14 +465,14 @@ export const TimelineView = ({
                           {/* Resize handle - end */}
                           <div
                             className={cn(
-                              "absolute right-0 top-0 bottom-0 w-2 cursor-col-resize rounded-r-md transition-all",
+                              "absolute right-0 top-0 bottom-0 w-3 cursor-col-resize rounded-r-md transition-all z-10",
                               "flex items-center justify-center",
-                              "hover:bg-white/30",
-                              isDragging && dragInfo?.mode === 'resize-end' ? "bg-white/40" : "opacity-0 group-hover:opacity-100"
+                              "bg-black/20 hover:bg-white/40",
+                              isDragging && dragInfo?.mode === 'resize-end' && "bg-white/50"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
                           >
-                            <div className="w-[2px] h-3 bg-white/80 rounded-full" />
+                            <div className="w-[2px] h-4 bg-white/90 rounded-full" />
                           </div>
                         </div>
                       )}
