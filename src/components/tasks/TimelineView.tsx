@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, differenceInDays, addDays, isToday, isSameMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, addDays, differenceInDays, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface Task {
   id: string;
@@ -19,13 +20,36 @@ interface Task {
 interface TimelineViewProps {
   tasks: Task[];
   onUpdateTaskDates: (taskId: string, startDate: string | null, dueDate: string | null) => void;
+  sortMode?: "az" | "manual";
+  onSortModeChange?: (mode: "az" | "manual") => void;
 }
 
 type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
 
-export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) => {
+// Natural sort function - recognizes numbers in strings
+const naturalSort = (a: string, b: string) => {
+  return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+};
+
+export const TimelineView = ({ 
+  tasks, 
+  onUpdateTaskDates,
+  sortMode = "az",
+  onSortModeChange
+}: TimelineViewProps) => {
   const navigate = useNavigate();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const today = startOfDay(new Date());
+  
+  // View spans 60 days - 30 before today, 30 after
+  const [viewOffset, setViewOffset] = useState(0);
+  const viewStart = addDays(today, -30 + viewOffset);
+  const totalDays = 90;
+  const viewEnd = addDays(viewStart, totalDays - 1);
+  
+  const days = useMemo(() => {
+    return Array.from({ length: totalDays }, (_, i) => addDays(viewStart, i));
+  }, [viewStart, totalDays]);
+
   const [dragState, setDragState] = useState<{
     taskId: string;
     mode: DragMode;
@@ -33,37 +57,36 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
     initialStartDate: string | null;
     initialDueDate: string | null;
   } | null>(null);
+  
+  const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate visible date range (current month view)
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const viewStart = startOfWeek(monthStart, { locale: ptBR });
-  const viewEnd = endOfWeek(monthEnd, { locale: ptBR });
-  
-  const days = eachDayOfInterval({ start: viewStart, end: viewEnd });
-  const totalDays = days.length;
-
-  // Filter tasks that have dates within the visible range
+  // Sort and filter tasks
   const visibleTasks = useMemo(() => {
-    return tasks.filter(task => {
+    const filtered = tasks.filter(task => {
       if (!task.start_date && !task.due_date) return false;
       const taskStart = task.start_date ? new Date(task.start_date) : null;
       const taskEnd = task.due_date ? new Date(task.due_date) : taskStart;
       if (!taskStart && !taskEnd) return false;
       
-      // Check if task overlaps with visible range
       const start = taskStart || taskEnd!;
       const end = taskEnd || taskStart!;
       return end >= viewStart && start <= viewEnd;
     });
-  }, [tasks, viewStart, viewEnd]);
 
-  // Get day position as percentage
-  const getDayPosition = (date: Date): number => {
-    const daysDiff = differenceInDays(date, viewStart);
-    return (daysDiff / totalDays) * 100;
-  };
+    // Sort based on mode
+    return [...filtered].sort((a, b) => {
+      if (sortMode === "az") {
+        return naturalSort(a.title, b.title);
+      }
+      // Manual - by start_date
+      const aStart = a.start_date ? new Date(a.start_date).getTime() : 0;
+      const bStart = b.start_date ? new Date(b.start_date).getTime() : 0;
+      return aStart - bStart;
+    });
+  }, [tasks, viewStart, viewEnd, sortMode]);
+
+  const dayWidth = 40; // Fixed pixel width per day for smooth scrolling
 
   // Get task bar position and width
   const getTaskBar = (task: Task) => {
@@ -72,13 +95,12 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
     
     if (!startDate || !endDate) return null;
 
-    // Clamp dates to visible range
     const clampedStart = startDate < viewStart ? viewStart : startDate;
     const clampedEnd = endDate > viewEnd ? viewEnd : endDate;
 
-    const left = getDayPosition(clampedStart);
+    const left = differenceInDays(clampedStart, viewStart) * dayWidth;
     const duration = differenceInDays(clampedEnd, clampedStart) + 1;
-    const width = (duration / totalDays) * 100;
+    const width = duration * dayWidth;
 
     return { left, width };
   };
@@ -102,11 +124,9 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
 
   // Handle drag move
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!dragState || !containerRef.current) return;
+    if (!dragState) return;
 
-    const containerWidth = containerRef.current.getBoundingClientRect().width;
     const deltaX = e.clientX - dragState.startX;
-    const dayWidth = containerWidth / totalDays;
     const daysDelta = Math.round(deltaX / dayWidth);
 
     if (daysDelta === 0) return;
@@ -122,13 +142,11 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
       if (initialEnd) newDueDate = addDays(initialEnd, daysDelta);
     } else if (dragState.mode === 'resize-start' && initialStart) {
       newStartDate = addDays(initialStart, daysDelta);
-      // Don't allow start date to be after end date
       if (newDueDate && newStartDate > newDueDate) {
         newStartDate = newDueDate;
       }
     } else if (dragState.mode === 'resize-end' && initialEnd) {
       newDueDate = addDays(initialEnd, daysDelta);
-      // Don't allow end date to be before start date
       if (newStartDate && newDueDate < newStartDate) {
         newDueDate = newStartDate;
       }
@@ -139,14 +157,13 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
       newStartDate ? format(newStartDate, 'yyyy-MM-dd') : null,
       newDueDate ? format(newDueDate, 'yyyy-MM-dd') : null
     );
-  }, [dragState, totalDays, onUpdateTaskDates]);
+  }, [dragState, dayWidth, onUpdateTaskDates]);
 
   // Handle drag end
   const handleMouseUp = useCallback(() => {
     setDragState(null);
   }, []);
 
-  // Add/remove event listeners
   useEffect(() => {
     if (dragState) {
       window.addEventListener('mousemove', handleMouseMove);
@@ -168,7 +185,19 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
     }
   };
 
-  const goToToday = () => setCurrentMonth(new Date());
+  // Get day of week abbreviation in Portuguese
+  const getDayOfWeek = (date: Date) => {
+    const dayIndex = date.getDay();
+    const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    return days[dayIndex];
+  };
+
+  const goToToday = () => setViewOffset(0);
+
+  // Calculate today indicator position
+  const todayIndex = differenceInDays(today, viewStart);
+  const todayPosition = todayIndex * dayWidth;
+  const showTodayLine = todayIndex >= 0 && todayIndex < totalDays;
 
   return (
     <div className="space-y-4">
@@ -178,144 +207,189 @@ export const TimelineView = ({ tasks, onUpdateTaskDates }: TimelineViewProps) =>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            onClick={() => setViewOffset(offset => offset - 30)}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            onClick={() => setViewOffset(offset => offset + 30)}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold capitalize ml-2">
-            {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-          </h2>
+          <Button variant="outline" size="sm" onClick={goToToday}>
+            Hoje
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={goToToday}>
-          Hoje
-        </Button>
+        
+        {/* Sort Toggle */}
+        {onSortModeChange && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onSortModeChange(sortMode === "manual" ? "az" : "manual")}
+            className="gap-2"
+          >
+            {sortMode === "az" ? (
+              <>
+                <ArrowDownAZ size={16} />
+                A-Z
+              </>
+            ) : (
+              <>
+                <GripVertical size={16} />
+                Manual
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
-      {/* Timeline */}
-      <div className="border rounded-lg overflow-hidden bg-card">
-        {/* Date header */}
-        <div className="flex border-b bg-muted/50 sticky top-0 z-10">
-          <div className="w-48 shrink-0 p-2 border-r font-medium text-sm">
-            Tarefa
-          </div>
-          <div className="flex-1 flex">
-            {days.map((day, i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex-1 min-w-[30px] text-center py-1 border-r text-xs",
-                  !isSameMonth(day, currentMonth) && "bg-muted/30 text-muted-foreground",
-                  isToday(day) && "bg-primary/10"
-                )}
-              >
-                <div className={cn(
-                  "font-medium",
-                  isToday(day) && "text-primary"
-                )}>
-                  {format(day, "d")}
-                </div>
-                <div className="text-muted-foreground text-[10px]">
-                  {format(day, "EEE", { locale: ptBR })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Task rows */}
-        <div ref={containerRef}>
-          {visibleTasks.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              Nenhuma tarefa com datas definidas neste período.
+      {/* Timeline Container */}
+      <div className="border rounded-lg overflow-hidden bg-card" ref={containerRef}>
+        <div className="flex">
+          {/* Task names column - fixed */}
+          <div className="w-48 shrink-0 border-r bg-card z-20">
+            {/* Header */}
+            <div className="h-14 p-2 border-b bg-muted/50 font-medium text-sm flex items-center">
+              Tarefa
             </div>
-          ) : (
-            visibleTasks.map(task => {
-              const bar = getTaskBar(task);
-              
-              return (
-                <div key={task.id} className="flex border-b hover:bg-muted/30 transition-colors relative h-12">
-                  {/* Task name */}
-                  <div 
-                    className="w-48 shrink-0 p-2 border-r flex items-center gap-2 cursor-pointer hover:text-primary"
-                    onClick={() => navigate(`/tasks/${task.id}`)}
-                  >
-                    <span className="text-sm truncate">{task.title}</span>
-                  </div>
-                  
-                  {/* Timeline area */}
-                  <div className="flex-1 relative">
-                    {/* Grid lines */}
-                    <div className="absolute inset-0 flex pointer-events-none">
-                      {days.map((day, i) => (
-                        <div 
-                          key={i} 
-                          className={cn(
-                            "flex-1 border-r",
-                            isToday(day) && "bg-primary/5"
-                          )} 
-                        />
-                      ))}
-                    </div>
-
-                    {/* Task bar */}
-                    {bar && (
-                      <div
-                        className={cn(
-                          "absolute top-2 h-8 rounded flex items-center group transition-shadow",
-                          getStatusColor(task.status),
-                          dragState?.taskId === task.id && "shadow-lg ring-2 ring-primary"
-                        )}
-                        style={{
-                          left: `${bar.left}%`,
-                          width: `${Math.max(bar.width, 2)}%`,
-                        }}
-                      >
-                        {/* Resize handle - start */}
-                        <div
-                          className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 rounded-l flex items-center justify-center"
-                          onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
-                        >
-                          <div className="w-0.5 h-3 bg-white/50 rounded" />
-                        </div>
-
-                        {/* Move handle */}
-                        <div 
-                          className="flex-1 h-full flex items-center justify-center cursor-grab active:cursor-grabbing px-2"
-                          onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
-                        >
-                          <span className="text-xs font-medium text-white truncate">
-                            {task.title}
-                          </span>
-                        </div>
-
-                        {/* Resize handle - end */}
-                        <div
-                          className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/20 rounded-r flex items-center justify-center"
-                          onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
-                        >
-                          <div className="w-0.5 h-3 bg-white/50 rounded" />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+            {/* Task rows */}
+            {visibleTasks.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-sm">
+                Nenhuma tarefa
+              </div>
+            ) : (
+              visibleTasks.map(task => (
+                <div 
+                  key={task.id} 
+                  className="h-12 p-2 border-b flex items-center cursor-pointer hover:bg-muted/30 hover:text-primary transition-colors"
+                  onClick={() => navigate(`/tasks/${task.id}`)}
+                >
+                  <span className="text-sm truncate">{task.title}</span>
                 </div>
-              );
-            })
-          )}
-        </div>
+              ))
+            )}
+          </div>
 
-        {/* Today indicator line */}
-        <div 
-          className="absolute top-0 bottom-0 w-0.5 bg-destructive z-20 pointer-events-none"
-          style={{ left: `calc(12rem + ${getDayPosition(new Date())}%)` }}
-        />
+          {/* Scrollable timeline area */}
+          <ScrollArea className="flex-1" type="always">
+            <div 
+              ref={timelineRef}
+              className="relative"
+              style={{ width: totalDays * dayWidth }}
+            >
+              {/* Date header */}
+              <div className="h-14 flex border-b bg-muted/50 sticky top-0 z-10">
+                {days.map((day, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex flex-col items-center justify-center border-r text-xs",
+                      isToday(day) && "bg-primary/10"
+                    )}
+                    style={{ width: dayWidth }}
+                  >
+                    <div className={cn(
+                      "font-medium",
+                      isToday(day) && "text-primary font-bold"
+                    )}>
+                      {format(day, "d")}
+                    </div>
+                    <div className={cn(
+                      "text-[10px] text-muted-foreground",
+                      isToday(day) && "text-primary"
+                    )}>
+                      {getDayOfWeek(day)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Task rows with bars */}
+              {visibleTasks.length === 0 ? (
+                <div className="h-32 flex items-center justify-center text-muted-foreground">
+                  Nenhuma tarefa com datas definidas.
+                </div>
+              ) : (
+                visibleTasks.map(task => {
+                  const bar = getTaskBar(task);
+                  
+                  return (
+                    <div key={task.id} className="h-12 relative border-b">
+                      {/* Grid lines */}
+                      <div className="absolute inset-0 flex pointer-events-none">
+                        {days.map((day, i) => (
+                          <div 
+                            key={i} 
+                            className={cn(
+                              "border-r",
+                              isToday(day) && "bg-primary/5"
+                            )}
+                            style={{ width: dayWidth }}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Task bar */}
+                      {bar && (
+                        <div
+                          className={cn(
+                            "absolute top-2 h-8 rounded flex items-center group transition-shadow cursor-grab",
+                            getStatusColor(task.status),
+                            dragState?.taskId === task.id && "shadow-lg ring-2 ring-primary cursor-grabbing"
+                          )}
+                          style={{
+                            left: bar.left,
+                            width: Math.max(bar.width, dayWidth),
+                          }}
+                        >
+                          {/* Resize handle - start */}
+                          <div
+                            className="absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-l flex items-center justify-center"
+                            onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
+                          >
+                            <div className="w-0.5 h-4 bg-white/70 rounded" />
+                          </div>
+
+                          {/* Move handle */}
+                          <div 
+                            className="flex-1 h-full flex items-center justify-center px-3"
+                            onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
+                          >
+                            <span className="text-xs font-medium text-white truncate">
+                              {task.title}
+                            </span>
+                          </div>
+
+                          {/* Resize handle - end */}
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-black/30 rounded-r flex items-center justify-center"
+                            onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
+                          >
+                            <div className="w-0.5 h-4 bg-white/70 rounded" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Today indicator line - inside the timeline only */}
+              {showTodayLine && (
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500/70 z-30 pointer-events-none"
+                  style={{ left: todayPosition + dayWidth / 2 }}
+                >
+                  <div className="absolute -top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full" />
+                </div>
+              )}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
       </div>
 
       {/* Hint */}

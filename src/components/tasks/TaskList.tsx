@@ -20,7 +20,7 @@ export const TaskList = ({
   tasks, 
   onDeleteTask, 
   onUpdateOrder,
-  sortMode = "az",
+  sortMode = "az", // Default to A-Z
   onSortModeChange
 }: TaskListProps) => {
   // Sort tasks based on mode
