@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays } from "lucide-react";
@@ -104,6 +103,11 @@ export default function ProjectDetail() {
     },
   });
 
+  const parseDateOnly = (ymd: string) => {
+    const [y, m, d] = ymd.split("-").map((n) => parseInt(n, 10));
+    return new Date(y, (m || 1) - 1, d || 1);
+  };
+
   const handleDateChange = (date: Date | undefined) => {
     if (!date) {
       updateProjectMutation.mutate({ end_date: null });
@@ -111,8 +115,8 @@ export default function ProjectDetail() {
     }
     // Format date using local timezone to avoid off-by-one errors
     const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
     updateProjectMutation.mutate({ end_date: dateStr });
   };
@@ -434,7 +438,7 @@ export default function ProjectDetail() {
                   >
                     <CalendarDays size={14} />
                     {project.end_date
-                      ? format(new Date(project.end_date), "dd/MM/yyyy", { locale: ptBR })
+                      ? format(parseDateOnly(project.end_date), "dd/MM/yyyy", { locale: ptBR })
                       : "Definir data do projeto"
                     }
                   </Button>
@@ -442,7 +446,7 @@ export default function ProjectDetail() {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={project.end_date ? new Date(project.end_date) : undefined}
+                    selected={project.end_date ? parseDateOnly(project.end_date) : undefined}
                     onSelect={handleDateChange}
                     locale={ptBR}
                     initialFocus
