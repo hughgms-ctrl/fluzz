@@ -35,7 +35,8 @@ interface ExtraItem {
 
 export default function DebriefingForm({ projectId, briefingId }: DebriefingFormProps) {
   const queryClient = useQueryClient();
-  const { workspace } = useWorkspace();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
+  const canSeeExtras = isAdmin || isGestor;
   const [currency, setCurrency] = useState<"BRL" | "USD">("BRL");
   const [investimentoTrafego, setInvestimentoTrafego] = useState("");
   const [leads, setLeads] = useState("");
@@ -513,69 +514,71 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
               ))}
             </div>
 
-            {/* Outras Despesas e Receitas */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Outras Despesas e Receitas</h3>
-                <Button type="button" variant="outline" size="sm" onClick={addExtra}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar Item
-                </Button>
-              </div>
+            {/* Outras Despesas e Receitas - Apenas para Admin/Gestor */}
+            {canSeeExtras && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Outras Despesas e Receitas</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={addExtra}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Item
+                  </Button>
+                </div>
 
-              {extras.map((extra) => (
-                <div key={extra.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select
-                      value={extra.tipo}
-                      onValueChange={(value: "receita" | "despesa") => updateExtra(extra.id, "tipo", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="receita">Receita (+)</SelectItem>
-                        <SelectItem value="despesa">Despesa (-)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Nome do Item</Label>
-                    <Input
-                      value={extra.nome}
-                      onChange={(e) => updateExtra(extra.id, "nome", e.target.value)}
-                      placeholder="Ex: Patrocínio, Aluguel de equipamentos..."
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                {extras.map((extra) => (
+                  <div key={extra.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border rounded-lg">
+                    <div className="space-y-2">
+                      <Label>Tipo</Label>
+                      <Select
+                        value={extra.tipo}
+                        onValueChange={(value: "receita" | "despesa") => updateExtra(extra.id, "tipo", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="receita">Receita (+)</SelectItem>
+                          <SelectItem value="despesa">Despesa (-)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nome do Item</Label>
                       <Input
-                        type="number"
-                        step="0.01"
-                        className="pl-9"
-                        value={extra.valor}
-                        onChange={(e) => updateExtra(extra.id, "valor", parseFloat(e.target.value) || 0)}
+                        value={extra.nome}
+                        onChange={(e) => updateExtra(extra.id, "nome", e.target.value)}
+                        placeholder="Ex: Patrocínio, Aluguel de equipamentos..."
                         required
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label>Valor</Label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="pl-9"
+                          value={extra.valor}
+                          onChange={(e) => updateExtra(extra.id, "valor", parseFloat(e.target.value) || 0)}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeExtra(extra.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-end">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => removeExtra(extra.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="observacoes">Observações</Label>
@@ -601,8 +604,9 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
           debriefing={debriefing}
           briefing={briefing}
           vendedores={vendedores}
-          extras={extras}
+          extras={canSeeExtras ? extras : []}
           currency={currency}
+          canSeeFinancialResult={canSeeExtras}
         />
       )}
     </div>

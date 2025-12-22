@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, FileText } from "lucide-react";
@@ -12,6 +13,8 @@ import { formatDateWithOptions } from "@/lib/utils";
 export default function BriefingDocument() {
   const { briefingId } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
+  const canSeeExtras = isAdmin || isGestor;
 
   const { data: briefing, isLoading: briefingLoading } = useQuery({
     queryKey: ["briefing", briefingId],
@@ -209,12 +212,13 @@ export default function BriefingDocument() {
                   briefing={briefing}
                   vendedores={vendedores}
                   currency={debriefing.currency as "BRL" | "USD"}
-                  extras={extras.map(e => ({
+                  extras={canSeeExtras ? extras.map(e => ({
                     id: e.id,
                     tipo: e.tipo as "receita" | "despesa",
                     nome: e.nome,
                     valor: e.valor
-                  }))}
+                  })) : []}
+                  canSeeFinancialResult={canSeeExtras}
                 />
               </div>
             </>

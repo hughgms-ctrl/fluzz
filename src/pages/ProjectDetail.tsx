@@ -19,11 +19,13 @@ import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
 import { ProjectNotes } from "@/components/projects/ProjectNotes";
 import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { permissions } = useWorkspace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -425,7 +427,7 @@ export default function ProjectDetail() {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "notes" | "briefing")}>
-          <TabsList className="grid w-full max-w-3xl grid-cols-4">
+          <TabsList className={`grid w-full max-w-3xl ${permissions?.can_view_briefings ? 'grid-cols-4' : 'grid-cols-3'}`}>
             <TabsTrigger value="tasks" className="gap-2">
               <LayoutGrid size={16} />
               <span className="hidden sm:inline">Tarefas</span>
@@ -438,10 +440,12 @@ export default function ProjectDetail() {
               <FileText size={16} />
               <span className="hidden sm:inline">Notas</span>
             </TabsTrigger>
-            <TabsTrigger value="briefing" className="gap-2">
-              <LayoutGrid size={16} />
-              <span className="hidden sm:inline">Briefing</span>
-            </TabsTrigger>
+            {permissions?.can_view_briefings && (
+              <TabsTrigger value="briefing" className="gap-2">
+                <LayoutGrid size={16} />
+                <span className="hidden sm:inline">Briefing</span>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="dashboard" className="mt-6">

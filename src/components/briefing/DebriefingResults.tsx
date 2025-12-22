@@ -31,6 +31,7 @@ interface DebriefingResultsProps {
   vendedores: Vendedor[];
   extras: ExtraItem[];
   currency: "BRL" | "USD";
+  canSeeFinancialResult?: boolean;
 }
 
 export default function DebriefingResults({
@@ -39,6 +40,7 @@ export default function DebriefingResults({
   vendedores,
   extras,
   currency,
+  canSeeFinancialResult = true,
 }: DebriefingResultsProps) {
   const [showFinancialResult, setShowFinancialResult] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -153,49 +155,51 @@ export default function DebriefingResults({
 
   return (
     <div className="space-y-6">
-      {/* Toolbar de ações */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30">
-        <div className="flex items-center gap-3">
-          <Switch
-            id="show-financial"
-            checked={showFinancialResult}
-            onCheckedChange={setShowFinancialResult}
-          />
-          <Label htmlFor="show-financial" className="flex items-center gap-2 cursor-pointer">
-            {showFinancialResult ? (
-              <>
-                <Eye className="h-4 w-4" />
-                Resultado Financeiro Visível
-              </>
-            ) : (
-              <>
-                <EyeOff className="h-4 w-4" />
-                Resultado Financeiro Oculto
-              </>
-            )}
-          </Label>
+      {/* Toolbar de ações - Apenas para Admin/Gestor */}
+      {canSeeFinancialResult && (
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="show-financial"
+              checked={showFinancialResult}
+              onCheckedChange={setShowFinancialResult}
+            />
+            <Label htmlFor="show-financial" className="flex items-center gap-2 cursor-pointer">
+              {showFinancialResult ? (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Resultado Financeiro Visível
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  Resultado Financeiro Oculto
+                </>
+              )}
+            </Label>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleExportPDF(false)}
+              disabled={isExporting}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              PDF (Marketing)
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleExportPDF(true)}
+              disabled={isExporting}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              PDF (Completo)
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleExportPDF(false)}
-            disabled={isExporting}
-          >
-            <FileDown className="h-4 w-4 mr-2" />
-            PDF (Marketing)
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => handleExportPDF(true)}
-            disabled={isExporting}
-          >
-            <FileDown className="h-4 w-4 mr-2" />
-            PDF (Completo)
-          </Button>
-        </div>
-      </div>
+      )}
 
       <div ref={contentRef} className="space-y-6 bg-background">
         {/* 1. Resumo Financeiro - Vendas de Ingressos e Mentorias */}
@@ -442,8 +446,8 @@ export default function DebriefingResults({
           </Card>
         )}
 
-        {/* 6. Resultado Financeiro Geral - Visibilidade controlada */}
-        {showFinancialResult && (
+        {/* 6. Resultado Financeiro Geral - Apenas para Admin/Gestor */}
+        {canSeeFinancialResult && showFinancialResult && (
           <Card className="border-2 border-muted">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
