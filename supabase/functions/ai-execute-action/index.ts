@@ -38,6 +38,16 @@ function similarity(s1: string, s2: string): number {
   return (longer.length - editDistance(longer, shorter)) / longer.length;
 }
 
+// Normalize string for comparison
+function normalizeString(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim();
+}
+
 // Busca usuário por nome similar
 async function findUserByName(supabase: any, workspaceId: string, searchName: string) {
   const { data: members } = await supabase
@@ -55,32 +65,98 @@ async function findUserByName(supabase: any, workspaceId: string, searchName: st
 
   if (!profiles || profiles.length === 0) return null;
 
-  const searchLower = searchName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const searchNorm = normalizeString(searchName);
+  const searchParts = searchNorm.split(/\s+/);
   
   let bestMatch: any = null;
   let bestScore = 0;
 
   for (const profile of profiles) {
-    const nameLower = (profile.full_name || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const fullName = profile.full_name || "";
+    const nameNorm = normalizeString(fullName);
+    const nameParts = nameNorm.split(/\s+/);
     
-    // Verifica se o nome contém a busca
-    if (nameLower.includes(searchLower)) {
-      const score = 0.9 + (searchLower.length / nameLower.length) * 0.1;
+    // Direct containment check
+    if (nameNorm.includes(searchNorm)) {
+      const score = 0.9 + (searchNorm.length / nameNorm.length) * 0.1;
       if (score > bestScore) {
         bestScore = score;
         bestMatch = profile;
       }
-    } else {
-      // Calcula similaridade
-      const score = similarity(searchLower, nameLower);
-      if (score > bestScore && score > 0.4) {
-        bestScore = score;
+      continue;
+    }
+    
+    // Check if any search part matches any name part
+    let partMatchScore = 0;
+    for (const searchPart of searchParts) {
+      for (const namePart of nameParts) {
+        if (namePart.includes(searchPart) || searchPart.includes(namePart)) {
+          partMatchScore += 0.6;
+        } else {
+          const sim = similarity(searchPart, namePart);
+          if (sim > 0.6) {
+            partMatchScore += sim * 0.5;
+          }
+        }
+      }
+    }
+    
+    const avgScore = partMatchScore / Math.max(searchParts.length, 1);
+    if (avgScore > bestScore && avgScore > 0.3) {
+      bestScore = avgScore;
+      bestMatch = profile;
+    }
+    
+    // Full string similarity as fallback
+    if (bestScore < 0.4) {
+      const fullSim = similarity(searchNorm, nameNorm);
+      if (fullSim > bestScore && fullSim > 0.3) {
+        bestScore = fullSim;
         bestMatch = profile;
       }
     }
   }
 
   return bestMatch ? { ...bestMatch, similarity: bestScore } : null;
+}
+
+// Get user permissions
+async function getUserPermissions(supabase: any, userId: string, workspaceId: string, userRole: string) {
+  // Admin and gestor have full view permissions
+  if (userRole === "admin" || userRole === "gestor") {
+    return {
+      can_view_projects: true,
+      can_view_tasks: true,
+      can_view_positions: true,
+      can_view_analytics: true,
+      can_view_briefings: true,
+      can_view_culture: true,
+      can_view_vision: true,
+      can_view_processes: true,
+      can_view_inventory: true,
+      can_see_financial: userRole === "admin" || userRole === "gestor", // Only admin/gestor see financial
+    };
+  }
+
+  const { data: permissions } = await supabase
+    .from("user_permissions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
+    .single();
+
+  return {
+    can_view_projects: permissions?.can_view_projects ?? true,
+    can_view_tasks: permissions?.can_view_tasks ?? true,
+    can_view_positions: permissions?.can_view_positions ?? true,
+    can_view_analytics: permissions?.can_view_analytics ?? true,
+    can_view_briefings: permissions?.can_view_briefings ?? true,
+    can_view_culture: permissions?.can_view_culture ?? true,
+    can_view_vision: permissions?.can_view_vision ?? true,
+    can_view_processes: permissions?.can_view_processes ?? true,
+    can_view_inventory: permissions?.can_view_inventory ?? false,
+    can_see_financial: false, // Members never see financial data
+  };
 }
 
 serve(async (req) => {
@@ -121,6 +197,7 @@ serve(async (req) => {
 
     const userRole = memberData?.role || "membro";
     const isAdmin = userRole === "admin";
+    const permissions = await getUserPermissions(supabase, user.id, workspace_id, userRole);
 
     let result: any = null;
 
@@ -143,6 +220,11 @@ serve(async (req) => {
       }
 
       case "query_user_tasks": {
+        if (!permissions.can_view_tasks) {
+          result = { success: false, error: "Você não tem permissão para visualizar tarefas." };
+          break;
+        }
+
         const foundUser = await findUserByName(supabase, workspace_id, params.user_name);
         if (!foundUser) {
           result = {
@@ -154,7 +236,7 @@ serve(async (req) => {
 
         let query = supabase
           .from("tasks")
-          .select("id, title, due_date, priority, status, project:projects(name)")
+          .select("id, title, due_date, priority, status, project_id, project:projects(id, name)")
           .eq("assigned_to", foundUser.id);
 
         if (params.status && params.status !== "todas") {
@@ -201,7 +283,7 @@ serve(async (req) => {
             due_date: params.due_date || null,
             status: "a fazer",
           })
-          .select()
+          .select("id, title")
           .single();
 
         if (error) throw error;
@@ -230,7 +312,7 @@ serve(async (req) => {
             workspace_id: workspace_id,
             status: "active",
           })
-          .select()
+          .select("id, name")
           .single();
 
         if (error) throw error;
@@ -239,10 +321,15 @@ serve(async (req) => {
       }
 
       case "query_overdue_tasks": {
+        if (!permissions.can_view_tasks) {
+          result = { success: false, error: "Você não tem permissão para visualizar tarefas." };
+          break;
+        }
+
         const today = new Date().toISOString().split("T")[0];
         let query = supabase
           .from("tasks")
-          .select("id, title, due_date, priority, status, assigned_to, project:projects(name)")
+          .select("id, title, due_date, priority, status, assigned_to, project_id, project:projects(id, name)")
           .lt("due_date", today)
           .neq("status", "feita");
 
@@ -261,7 +348,6 @@ serve(async (req) => {
           const { data, error } = await query.order("due_date", { ascending: true });
           if (error) throw error;
 
-          // Get profile for display
           result = {
             success: true,
             user_name: foundUser.full_name,
@@ -297,9 +383,14 @@ serve(async (req) => {
       }
 
       case "query_tasks_by_status": {
+        if (!permissions.can_view_tasks) {
+          result = { success: false, error: "Você não tem permissão para visualizar tarefas." };
+          break;
+        }
+
         let query = supabase
           .from("tasks")
-          .select("id, title, due_date, priority, status, assigned_to, project:projects(name)");
+          .select("id, title, due_date, priority, status, assigned_to, project_id, project:projects(id, name)");
 
         if (params.status) {
           query = query.eq("status", params.status);
@@ -327,9 +418,14 @@ serve(async (req) => {
       }
 
       case "list_projects": {
+        if (!permissions.can_view_projects) {
+          result = { success: false, error: "Você não tem permissão para visualizar projetos." };
+          break;
+        }
+
         const { data, error } = await supabase
           .from("projects")
-          .select("id, name, status")
+          .select("id, name, status, description")
           .eq("workspace_id", workspace_id)
           .eq("archived", false)
           .order("name");
@@ -375,6 +471,93 @@ serve(async (req) => {
         });
         
         result = { success: true, members };
+        break;
+      }
+
+      case "query_briefings": {
+        if (!permissions.can_view_briefings) {
+          result = { success: false, error: "Você não tem permissão para visualizar briefings." };
+          break;
+        }
+
+        let query = supabase
+          .from("briefings")
+          .select(`
+            id, data, local, participantes_pagantes,
+            project:projects(id, name)
+          `)
+          .eq("workspace_id", workspace_id)
+          .order("data", { ascending: false })
+          .limit(10);
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        // If user can see financial data, include it
+        if (permissions.can_see_financial) {
+          const { data: fullData } = await supabase
+            .from("briefings")
+            .select(`
+              id, data, local, participantes_pagantes, investimento_trafego, precos,
+              project:projects(id, name)
+            `)
+            .eq("workspace_id", workspace_id)
+            .order("data", { ascending: false })
+            .limit(10);
+          
+          result = { success: true, briefings: fullData, include_financial: true };
+        } else {
+          result = { success: true, briefings: data, include_financial: false };
+        }
+        break;
+      }
+
+      case "query_positions": {
+        if (!permissions.can_view_positions) {
+          result = { success: false, error: "Você não tem permissão para visualizar cargos." };
+          break;
+        }
+
+        const { data, error } = await supabase
+          .from("positions")
+          .select("id, name, description")
+          .eq("workspace_id", workspace_id)
+          .order("name");
+
+        if (error) throw error;
+        result = { success: true, positions: data };
+        break;
+      }
+
+      case "query_analytics": {
+        if (!permissions.can_view_analytics) {
+          result = { success: false, error: "Você não tem permissão para visualizar analytics." };
+          break;
+        }
+
+        // Get projects in workspace
+        const { data: projects } = await supabase
+          .from("projects")
+          .select("id")
+          .eq("workspace_id", workspace_id);
+
+        const projectIds = projects?.map((p: any) => p.id) || [];
+
+        // Get basic task stats
+        const { data: tasks } = await supabase
+          .from("tasks")
+          .select("status, priority")
+          .in("project_id", projectIds);
+
+        const stats = {
+          total: tasks?.length || 0,
+          completed: tasks?.filter((t: any) => t.status === "feita").length || 0,
+          in_progress: tasks?.filter((t: any) => t.status === "fazendo").length || 0,
+          todo: tasks?.filter((t: any) => t.status === "a fazer").length || 0,
+          high_priority: tasks?.filter((t: any) => t.priority === "high").length || 0,
+        };
+
+        result = { success: true, analytics: stats };
         break;
       }
 
