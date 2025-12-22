@@ -237,7 +237,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
     },
     onSuccess: async (newProject) => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Projeto criado! Edite e clique em 'Notificar Responsáveis' quando estiver pronto.");
+      toast.success("Rascunho criado! Edite e clique em 'Publicar' quando estiver pronto.");
       handleClose();
       // Navegar para o novo projeto
       if (newProject) {
