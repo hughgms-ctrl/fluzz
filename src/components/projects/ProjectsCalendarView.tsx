@@ -37,21 +37,18 @@ export const ProjectsCalendarView = ({
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  // Group projects by date
+  // Group projects by end_date (primary) for calendar display
   const projectsByDate = useMemo(() => {
     const map = new Map<string, Project[]>();
     projects
       .filter(p => !p.is_standalone_folder)
       .forEach(project => {
-        const dates: string[] = [];
-        if (project.start_date) dates.push(project.start_date);
-        if (project.end_date && project.end_date !== project.start_date) dates.push(project.end_date);
-        
-        dates.forEach(date => {
-          const key = date;
-          if (!map.has(key)) map.set(key, []);
-          map.get(key)!.push(project);
-        });
+        // Use end_date as the primary date for calendar display
+        const date = project.end_date;
+        if (date) {
+          if (!map.has(date)) map.set(date, []);
+          map.get(date)!.push(project);
+        }
       });
     return map;
   }, [projects]);

@@ -6,7 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -22,7 +25,9 @@ import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -45,10 +50,10 @@ export default function ProjectDetail() {
   const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   
-  // Load sort mode from localStorage for this project
+  // Load sort mode from localStorage for this project - default to A-Z
   const [sortMode, setSortMode] = useState<"manual" | "az">(() => {
     const saved = localStorage.getItem(`project-sort-mode-${id}`);
-    return (saved === "az" || saved === "manual") ? saved : "manual";
+    return (saved === "az" || saved === "manual") ? saved : "az";
   });
 
   // Persist sort mode changes to localStorage
@@ -73,10 +78,11 @@ export default function ProjectDetail() {
   });
 
   const updateProjectMutation = useMutation({
-    mutationFn: async ({ name, description }: { name?: string; description?: string }) => {
+    mutationFn: async ({ name, description, end_date }: { name?: string; description?: string; end_date?: string | null }) => {
       const updates: any = {};
       if (name !== undefined) updates.name = name;
       if (description !== undefined) updates.description = description || null;
+      if (end_date !== undefined) updates.end_date = end_date;
       
       const { error } = await supabase
         .from("projects")
@@ -97,6 +103,11 @@ export default function ProjectDetail() {
       setProjectDescription(project?.description || "");
     },
   });
+
+  const handleDateChange = (date: Date | undefined) => {
+    const dateStr = date ? format(date, 'yyyy-MM-dd') : null;
+    updateProjectMutation.mutate({ end_date: dateStr });
+  };
 
   const { data: tasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["tasks", id],
@@ -401,6 +412,35 @@ export default function ProjectDetail() {
                   {project.description || "Clique para adicionar descrição..."}
                 </p>
               )}
+              
+              {/* Project Date */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "gap-2 text-xs justify-start mt-2 h-7 px-2",
+                      !project.end_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays size={14} />
+                    {project.end_date
+                      ? format(new Date(project.end_date), "dd/MM/yyyy", { locale: ptBR })
+                      : "Definir data do projeto"
+                    }
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={project.end_date ? new Date(project.end_date) : undefined}
+                    onSelect={handleDateChange}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -552,6 +592,8 @@ export default function ProjectDetail() {
                         queryClient.invalidateQueries({ queryKey: ["tasks", id] });
                       }
                     }}
+                    sortMode={sortMode}
+                    onSortModeChange={handleSortModeChange}
                   />
                 ) : view === "board" && !isMobile ? (
                   <DraggableTaskBoard
