@@ -17,6 +17,7 @@ interface WorkspaceMemberWithProfile {
   role: string;
   created_at: string;
   invited_by: string | null;
+  email?: string | null;
   profiles: {
     full_name: string | null;
     avatar_url: string | null;
@@ -50,6 +51,50 @@ export default function TeamManagement() {
         .select("id, full_name, avatar_url")
         .in("id", userIds);
 
+      // For users without profiles, try to get their email from invites
+      const usersWithoutProfiles = userIds.filter(
+        userId => !profilesData?.find(p => p.id === userId)?.full_name
+      );
+
+      // Get emails from workspace_invites for users without profiles
+      let emailMap: Record<string, string> = {};
+      if (usersWithoutProfiles.length > 0) {
+        const { data: invitesWithEmails } = await supabase
+          .from("workspace_invites")
+          .select("email")
+          .eq("workspace_id", workspace.id)
+          .eq("accepted", true);
+        
+        // Also check if there are any users we need to create profiles for
+        // by using the get_user_by_email function or just display email
+        if (invitesWithEmails) {
+          for (const invite of invitesWithEmails) {
+            // Try to match with user_id via profile creation
+            const { data: userData } = await supabase
+              .rpc("get_user_by_email", { _email: invite.email });
+            
+            if (userData && userData.length > 0) {
+              const userId = userData[0].user_id;
+              if (usersWithoutProfiles.includes(userId)) {
+                emailMap[userId] = invite.email;
+                
+                // Try to create a profile for this user if missing
+                const existingProfile = profilesData?.find(p => p.id === userId);
+                if (!existingProfile) {
+                  // Create profile with email as fallback name
+                  await supabase
+                    .from("profiles")
+                    .upsert({
+                      id: userId,
+                      full_name: invite.email.split('@')[0], // Use email prefix as fallback
+                    }, { onConflict: 'id' });
+                }
+              }
+            }
+          }
+        }
+      }
+
       // Fetch profiles for inviters
       const inviterIds = membersData?.map(m => m.invited_by).filter(Boolean) || [];
       const { data: inviterProfilesData } = await supabase
@@ -57,14 +102,24 @@ export default function TeamManagement() {
         .select("id, full_name")
         .in("id", inviterIds);
 
+      // Re-fetch profiles after potential upserts
+      const { data: updatedProfilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
+
       // Merge data
-      const result = membersData?.map(member => ({
-        ...member,
-        profiles: profilesData?.find(p => p.id === member.user_id) || null,
-        inviter_profile: member.invited_by 
-          ? inviterProfilesData?.find(p => p.id === member.invited_by) || null
-          : null
-      })) || [];
+      const result = membersData?.map(member => {
+        const profile = updatedProfilesData?.find(p => p.id === member.user_id);
+        return {
+          ...member,
+          profiles: profile || null,
+          email: emailMap[member.user_id] || null,
+          inviter_profile: member.invited_by 
+            ? inviterProfilesData?.find(p => p.id === member.invited_by) || null
+            : null
+        };
+      }) || [];
 
       return result as WorkspaceMemberWithProfile[];
     },
@@ -197,11 +252,13 @@ export default function TeamManagement() {
           <h2 className="text-xl font-semibold text-foreground">Membros Ativos</h2>
           <div className="grid gap-3">
             {members?.map((member) => {
-              const initials = member.profiles?.full_name
-                ?.split(" ")
+              const displayName = member.profiles?.full_name || member.email || "Usuário";
+              const initials = displayName
+                .split(" ")
                 .map((n) => n[0])
                 .join("")
-                .toUpperCase() || "?";
+                .toUpperCase()
+                .slice(0, 2) || "?";
 
               const memberSince = new Date(member.created_at).toLocaleDateString('pt-BR', {
                 day: '2-digit',
@@ -227,7 +284,7 @@ export default function TeamManagement() {
                         </Avatar>
                         <div className="flex-1">
                           <h3 className="font-medium text-foreground">
-                            {member.profiles?.full_name || "Usuário"}
+                            {displayName}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 mt-1">
                             <Badge variant={member.role === "admin" ? "default" : "secondary"}>
