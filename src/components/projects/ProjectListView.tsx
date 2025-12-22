@@ -273,7 +273,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
     },
     onSuccess: (newProject) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Projeto duplicado! Edite e clique em 'Notificar Responsáveis' quando estiver pronto.");
+      toast.success("Rascunho criado! Edite e clique em 'Publicar' quando estiver pronto.");
       // Navegar para o novo projeto
       if (newProject) {
         navigateHook(`/projects/${newProject.id}`);

@@ -170,14 +170,14 @@ export default function ProjectDetail() {
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ["project", id] });
       if (count > 0) {
-        toast.success(`${count} responsável(eis) notificado(s)!`);
+        toast.success(`Projeto publicado! ${count} responsável(eis) notificado(s).`);
       } else {
-        toast.success("Projeto finalizado! Nenhum responsável para notificar.");
+        toast.success("Projeto publicado!");
       }
     },
     onError: (error) => {
-      console.error("Erro ao notificar responsáveis:", error);
-      toast.error("Erro ao notificar responsáveis");
+      console.error("Erro ao publicar projeto:", error);
+      toast.error("Erro ao publicar projeto");
     },
   });
 
@@ -544,10 +544,10 @@ export default function ProjectDetail() {
               >
                 <Bell size={14} className="sm:w-4 sm:h-4" />
                 <span className="hidden sm:inline">
-                  {notifyResponsiblesMutation.isPending ? "Notificando..." : "Notificar Responsáveis"}
+                  {notifyResponsiblesMutation.isPending ? "Publicando..." : "Publicar"}
                 </span>
                 <span className="sm:hidden">
-                  {notifyResponsiblesMutation.isPending ? "..." : "Notificar"}
+                  {notifyResponsiblesMutation.isPending ? "..." : "Publicar"}
                 </span>
               </Button>
             )}
