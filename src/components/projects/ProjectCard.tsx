@@ -103,10 +103,10 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
         const newTemplateTasks = tasks.map((task, index) => ({
           template_id: newTemplate.id,
           title: task.title,
-          description: task.description,
+          description: null, // NÃO copiar descrição
           priority: task.priority,
           setor: task.setor,
-          documentation: task.documentation,
+          documentation: null, // NÃO copiar documentação
           process_id: task.process_id,
           task_order: index,
         }));
@@ -399,18 +399,16 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
                     <Copy className="mr-2 h-4 w-4" />
                     {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
                   </DropdownMenuItem>
-                  {!project.is_template && (
-                    <DropdownMenuItem 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        saveAsTemplateMutation.mutate();
-                      }}
-                      disabled={saveAsTemplateMutation.isPending}
-                    >
-                      <Bookmark className="mr-2 h-4 w-4" />
-                      {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      saveAsTemplateMutation.mutate();
+                    }}
+                    disabled={saveAsTemplateMutation.isPending}
+                  >
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={(e) => {
                       e.stopPropagation();
