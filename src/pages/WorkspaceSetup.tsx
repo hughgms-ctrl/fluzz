@@ -12,7 +12,7 @@ import { Building2 } from "lucide-react";
 
 export default function WorkspaceSetup() {
   const { user } = useAuth();
-  const { workspaces, loading: workspaceLoading } = useWorkspace();
+  const { workspaces, loading: workspaceLoading, changeWorkspace } = useWorkspace();
   const navigate = useNavigate();
   const [workspaceName, setWorkspaceName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -55,8 +55,8 @@ export default function WorkspaceSetup() {
       if (memberError) throw memberError;
 
       toast.success("Workspace criado com sucesso!");
-      navigate("/");
-      window.location.reload(); // Recarregar para atualizar o contexto
+      await changeWorkspace(workspace.id);
+      navigate("/", { replace: true });
     } catch (error: any) {
       console.error("Erro ao criar workspace:", error);
       toast.error("Erro ao criar workspace");

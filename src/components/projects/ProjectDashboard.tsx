@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
@@ -27,6 +28,8 @@ const COLORS = {
 };
 
 export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps) {
+  const navigate = useNavigate();
+
   const metrics = useMemo(() => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -255,7 +258,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                 <div
                   key={task.id}
                   className="flex items-center justify-between p-3 bg-destructive/5 rounded-lg hover:bg-destructive/10 transition-colors cursor-pointer"
-                  onClick={() => window.location.href = `/tasks/${task.id}`}
+                  onClick={() => navigate(`/tasks/${task.id}`)}
                 >
                   <div className="flex-1">
                     <p className="font-medium">{task.title}</p>

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { NotificationItem } from "./NotificationItem";
 import { CheckCheck, Bell } from "lucide-react";
 
@@ -19,6 +20,7 @@ export const NotificationList = ({
 }: NotificationListProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { refetchWorkspace } = useWorkspace();
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -113,12 +115,10 @@ export const NotificationList = ({
         .delete()
         .eq("id", notification.id);
 
-      toast.success("Convite aceito! Recarregando...");
-      
-      // Reload to show new workspace
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 1000);
+      toast.success("Convite aceito!");
+      await refetchWorkspace();
+      navigate("/", { replace: true });
+      onClose();
     } catch (error: any) {
       console.error("Erro ao aceitar convite:", error);
       toast.error(error.message || "Erro ao aceitar convite");
