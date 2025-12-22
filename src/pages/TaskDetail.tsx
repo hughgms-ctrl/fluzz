@@ -511,6 +511,7 @@ export default function TaskDetail() {
     priority: "",
     status: "",
     setor: "",
+    start_date: "",
     due_date: "",
     documentation: "",
     assigned_to: "",
@@ -554,6 +555,7 @@ export default function TaskDetail() {
         priority: task.priority || "medium",
         status: task.status || "todo",
         setor: task.setor || "",
+        start_date: task.start_date || "",
         due_date: task.due_date || "",
         documentation: task.documentation || "",
         assigned_to: task.assigned_to || "",
@@ -899,6 +901,7 @@ export default function TaskDetail() {
   const handleSave = () => {
     const updates = {
       ...editedTask,
+      start_date: editedTask.start_date || null,
       due_date: editedTask.due_date || null,
       setor: editedTask.setor || null,
       assigned_to: editedTask.assigned_to || null,
@@ -1062,6 +1065,7 @@ export default function TaskDetail() {
                     priority: task.priority || "medium",
                     status: task.status || "todo",
                     setor: task.setor || "",
+                    start_date: task.start_date || "",
                     due_date: task.due_date || "",
                     documentation: task.documentation || "",
                     assigned_to: task.assigned_to || "",
@@ -1314,27 +1318,53 @@ export default function TaskDetail() {
                   )}
                 </div>
 
-                <div>
-                  <Label>Prazo</Label>
-                  {isEditing ? (
-                    <Input
-                      type="date"
-                      value={editedTask.due_date}
-                      onChange={(e) => setEditedTask({ ...editedTask, due_date: e.target.value })}
-                      className="mt-2"
-                    />
-                  ) : (
-                    <div className="mt-2">
-                      {task.due_date ? (
-                        <Badge variant={isOverdue ? "destructive" : "secondary"}>
-                          <Calendar size={12} className="mr-1" />
-                          {formatDateBR(task.due_date)}
-                        </Badge>
-                      ) : (
-                        <p className="text-muted-foreground">Sem prazo definido</p>
-                      )}
-                    </div>
-                  )}
+                {/* Datas de início e fim */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Data de Início</Label>
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        value={editedTask.start_date}
+                        onChange={(e) => setEditedTask({ ...editedTask, start_date: e.target.value })}
+                        className="mt-2"
+                      />
+                    ) : (
+                      <div className="mt-2">
+                        {task.start_date ? (
+                          <Badge variant="secondary">
+                            <Calendar size={12} className="mr-1" />
+                            {formatDateBR(task.start_date)}
+                          </Badge>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">Não definida</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label>Data de Fim (Prazo)</Label>
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        value={editedTask.due_date}
+                        onChange={(e) => setEditedTask({ ...editedTask, due_date: e.target.value })}
+                        className="mt-2"
+                      />
+                    ) : (
+                      <div className="mt-2">
+                        {task.due_date ? (
+                          <Badge variant={isOverdue ? "destructive" : "secondary"}>
+                            <Calendar size={12} className="mr-1" />
+                            {formatDateBR(task.due_date)}
+                          </Badge>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">Não definida</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div>
