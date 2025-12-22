@@ -62,30 +62,34 @@ export const TimelineView = ({
   const timelineRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Sort and filter tasks
+  // All tasks sorted - including those without dates
+  const allTasksSorted = useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      if (sortMode === "az") {
+        return naturalSort(a.title, b.title);
+      }
+      // Manual - by start_date (tasks without dates go to the end)
+      const aStart = a.start_date ? new Date(a.start_date).getTime() : Infinity;
+      const bStart = b.start_date ? new Date(b.start_date).getTime() : Infinity;
+      return aStart - bStart;
+    });
+  }, [tasks, sortMode]);
+
+  // Filter tasks with dates that are visible in current view
   const visibleTasks = useMemo(() => {
-    const filtered = tasks.filter(task => {
-      if (!task.start_date && !task.due_date) return false;
+    return allTasksSorted.filter(task => {
+      // Tasks without dates are always visible (as ghost bars)
+      if (!task.start_date && !task.due_date) return true;
+      
       const taskStart = task.start_date ? new Date(task.start_date) : null;
       const taskEnd = task.due_date ? new Date(task.due_date) : taskStart;
-      if (!taskStart && !taskEnd) return false;
+      if (!taskStart && !taskEnd) return true;
       
       const start = taskStart || taskEnd!;
       const end = taskEnd || taskStart!;
       return end >= viewStart && start <= viewEnd;
     });
-
-    // Sort based on mode
-    return [...filtered].sort((a, b) => {
-      if (sortMode === "az") {
-        return naturalSort(a.title, b.title);
-      }
-      // Manual - by start_date
-      const aStart = a.start_date ? new Date(a.start_date).getTime() : 0;
-      const bStart = b.start_date ? new Date(b.start_date).getTime() : 0;
-      return aStart - bStart;
-    });
-  }, [tasks, viewStart, viewEnd, sortMode]);
+  }, [allTasksSorted, viewStart, viewEnd]);
 
   const dayWidth = 40; // Fixed pixel width per day for smooth scrolling
 
@@ -347,7 +351,7 @@ export const TimelineView = ({
               {/* Task rows with bars */}
               {visibleTasks.length === 0 ? (
                 <div className="h-32 flex items-center justify-center text-muted-foreground">
-                  Nenhuma tarefa com datas definidas.
+                  Nenhuma tarefa neste projeto.
                 </div>
               ) : (
                 visibleTasks.map(task => {
@@ -359,6 +363,12 @@ export const TimelineView = ({
                     initialEnd: dragState.initialDueDate,
                   } : null;
                   const bar = getTaskBar(task, dragInfo);
+                  const hasNoDates = !task.start_date && !task.due_date;
+                  
+                  // For ghost bars - position centered on today
+                  const todayIdx = differenceInDays(today, viewStart);
+                  const ghostLeft = todayIdx * dayWidth;
+                  const ghostWidth = dayWidth * 3; // 3 days default width
                   
                   return (
                     <div key={task.id} className="h-12 relative border-b">
@@ -376,7 +386,31 @@ export const TimelineView = ({
                         ))}
                       </div>
 
-                      {/* Task bar */}
+                      {/* Ghost bar for tasks without dates */}
+                      {hasNoDates && !isDragging && (
+                        <div
+                          className="absolute top-2 h-8 rounded-md flex items-center justify-center cursor-pointer
+                            bg-muted/40 border-2 border-dashed border-muted-foreground/30 
+                            hover:bg-muted/60 hover:border-muted-foreground/50 transition-all"
+                          style={{
+                            left: ghostLeft,
+                            width: ghostWidth,
+                          }}
+                          onClick={() => {
+                            // Set dates starting from today with 3 day duration
+                            const startDate = format(today, 'yyyy-MM-dd');
+                            const endDate = format(addDays(today, 2), 'yyyy-MM-dd');
+                            onUpdateTaskDates(task.id, startDate, endDate);
+                          }}
+                          title="Clique para definir datas"
+                        >
+                          <span className="text-xs text-muted-foreground/70 select-none">
+                            Clique para definir
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Task bar - real or being dragged */}
                       {bar && (
                         <div
                           className={cn(
@@ -453,7 +487,7 @@ export const TimelineView = ({
 
       {/* Hint */}
       <p className="text-xs text-muted-foreground text-center">
-        Arraste as barras para mover ou redimensione pelas bordas para alterar as datas
+        Arraste as barras para mover ou redimensione pelas bordas • Clique nas barras tracejadas para definir datas
       </p>
     </div>
   );
