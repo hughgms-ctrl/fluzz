@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -100,6 +100,84 @@ export default function ProjectDetail() {
       toast.error("Erro ao atualizar projeto");
       setProjectName(project?.name || "");
       setProjectDescription(project?.description || "");
+    },
+  });
+
+  // Mutation para notificar responsáveis (quando o usuário termina de editar)
+  const notifyResponsiblesMutation = useMutation({
+    mutationFn: async () => {
+      if (!project || !id) throw new Error("Projeto não encontrado");
+
+      // Buscar todas as tarefas do projeto com assigned_to
+      const { data: tasksToNotify, error: tasksError } = await supabase
+        .from("tasks")
+        .select("id, title, assigned_to")
+        .eq("project_id", id)
+        .not("assigned_to", "is", null);
+
+      if (tasksError) throw tasksError;
+
+      // Agrupar tarefas por usuário
+      const assignedUserTasks: Record<string, { taskId: string; taskTitle: string }[]> = {};
+      
+      tasksToNotify?.forEach((task) => {
+        if (task.assigned_to) {
+          if (!assignedUserTasks[task.assigned_to]) {
+            assignedUserTasks[task.assigned_to] = [];
+          }
+          assignedUserTasks[task.assigned_to].push({
+            taskId: task.id,
+            taskTitle: task.title,
+          });
+        }
+      });
+
+      // Criar notificações
+      const notifications = Object.entries(assignedUserTasks).map(([userId, userTasks]) => ({
+        user_id: userId,
+        workspace_id: project.workspace_id,
+        type: 'task_assigned',
+        title: 'Novas tarefas atribuídas',
+        message: userTasks.length === 1
+          ? `Você foi atribuído à tarefa "${userTasks[0].taskTitle}" no projeto ${project.name}`
+          : `Você foi atribuído a ${userTasks.length} tarefas no projeto ${project.name}`,
+        link: `/projects/${id}`,
+        data: {
+          project_id: id,
+          project_name: project.name,
+          tasks: userTasks,
+        },
+      }));
+
+      if (notifications.length > 0) {
+        const { error: notifError } = await supabase
+          .from("notifications")
+          .insert(notifications);
+        
+        if (notifError) throw notifError;
+      }
+
+      // Marcar projeto como notificado (pending_notifications = false)
+      const { error: updateError } = await supabase
+        .from("projects")
+        .update({ pending_notifications: false })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      return notifications.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["project", id] });
+      if (count > 0) {
+        toast.success(`${count} responsável(eis) notificado(s)!`);
+      } else {
+        toast.success("Projeto finalizado! Nenhum responsável para notificar.");
+      }
+    },
+    onError: (error) => {
+      console.error("Erro ao notificar responsáveis:", error);
+      toast.error("Erro ao notificar responsáveis");
     },
   });
 
@@ -456,6 +534,23 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Botão de Notificar Responsáveis - só aparece quando pending_notifications = true */}
+            {project.pending_notifications && (
+              <Button
+                onClick={() => notifyResponsiblesMutation.mutate()}
+                disabled={notifyResponsiblesMutation.isPending}
+                className="gap-2 flex-1 sm:flex-initial text-xs sm:text-sm bg-amber-500 hover:bg-amber-600 text-white"
+                size="sm"
+              >
+                <Bell size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">
+                  {notifyResponsiblesMutation.isPending ? "Notificando..." : "Notificar Responsáveis"}
+                </span>
+                <span className="sm:hidden">
+                  {notifyResponsiblesMutation.isPending ? "..." : "Notificar"}
+                </span>
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={() => setShowMembers(!showMembers)}

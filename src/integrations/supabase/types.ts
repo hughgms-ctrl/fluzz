@@ -836,6 +836,7 @@ export type Database = {
           is_standalone_folder: boolean
           is_template: boolean
           name: string
+          pending_notifications: boolean | null
           start_date: string | null
           status: string | null
           updated_at: string | null
@@ -851,6 +852,7 @@ export type Database = {
           is_standalone_folder?: boolean
           is_template?: boolean
           name: string
+          pending_notifications?: boolean | null
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
@@ -866,6 +868,7 @@ export type Database = {
           is_standalone_folder?: boolean
           is_template?: boolean
           name?: string
+          pending_notifications?: boolean | null
           start_date?: string | null
           status?: string | null
           updated_at?: string | null
