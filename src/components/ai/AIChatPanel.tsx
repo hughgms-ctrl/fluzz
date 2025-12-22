@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, Trash2, X, Check, AlertCircle } from "lucide-react";
+import { Send, Loader2, Trash2, X, Check, Sparkles, Bot, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,14 +26,13 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
   } = useAIChat();
 
   const [input, setInput] = useState("");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, pendingToolCalls]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,15 +62,42 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
     return labels[name] || name;
   };
 
+  const quickActions = [
+    { label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas?" },
+    { label: "Em andamento", prompt: "Quais tarefas estão em andamento?" },
+    { label: "Meus projetos", prompt: "Liste meus projetos ativos" },
+  ];
+
+  const formatMessageContent = (content: string) => {
+    // Simple markdown-like formatting
+    return content
+      .split('\n')
+      .map((line, i) => {
+        // Bold text
+        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Handle bullet points
+        if (line.startsWith('• ') || line.startsWith('- ')) {
+          return `<div class="pl-2 py-0.5">${line}</div>`;
+        }
+        return line;
+      })
+      .join('<br/>');
+  };
+
   return (
-    <div className={cn("flex flex-col h-full bg-background", className)}>
+    <div className={cn("flex flex-col h-full bg-gradient-to-b from-background to-muted/20", className)}>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h2 className="font-semibold text-lg">Assistente IA</h2>
-          <p className="text-sm text-muted-foreground">
-            Cole resumos de reuniões, pergunte sobre tarefas...
-          </p>
+      <div className="flex items-center justify-between p-4 border-b bg-card/50 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg">Fluzz AI</h2>
+            <p className="text-xs text-muted-foreground">
+              Seu assistente inteligente
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
@@ -80,12 +106,13 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
               size="icon"
               onClick={clearChat}
               title="Limpar conversa"
+              className="h-8 w-8"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
           {showCloseButton && onClose && (
-            <Button variant="ghost" size="icon" onClick={onClose}>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -93,161 +120,190 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-8">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <AlertCircle className="h-8 w-8 text-primary" />
+      <ScrollArea className="flex-1 px-4" ref={scrollRef}>
+        <div className="py-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center mb-6 shadow-inner">
+                <Bot className="h-10 w-10 text-primary" />
+              </div>
+              <h3 className="font-semibold text-xl mb-2">Olá! Como posso ajudar?</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                Cole um resumo de reunião para extrair tarefas, pergunte sobre tarefas atrasadas, ou peça para criar projetos.
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {quickActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full hover:bg-primary hover:text-primary-foreground transition-colors"
+                    onClick={() => {
+                      setInput(action.prompt);
+                      sendMessage(action.prompt);
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-            <h3 className="font-medium mb-2">Como posso ajudar?</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
-              Cole um resumo de reunião para extrair tarefas, pergunte sobre tarefas atrasadas, ou peça para criar projetos.
-            </p>
-            <div className="flex flex-wrap gap-2 mt-4 justify-center">
-              <Badge
-                variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80"
-                onClick={() => setInput("Quais tarefas estão atrasadas?")}
-              >
-                Tarefas atrasadas
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80"
-                onClick={() => setInput("Quais tarefas estou fazendo?")}
-              >
-                Em andamento
-              </Badge>
-              <Badge
-                variant="secondary"
-                className="cursor-pointer hover:bg-secondary/80"
-                onClick={() => setInput("Liste meus projetos")}
-              >
-                Meus projetos
-              </Badge>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "flex",
-                  message.role === "user" ? "justify-end" : "justify-start"
-                )}
-              >
+          ) : (
+            <div className="space-y-4">
+              {messages.map((message) => (
                 <div
+                  key={message.id}
                   className={cn(
-                    "max-w-[85%] rounded-lg px-4 py-2",
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                    "flex gap-3",
+                    message.role === "user" ? "justify-end" : "justify-start"
                   )}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.role === "assistant" && (
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                      <Sparkles className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                  )}
+                  <div
+                    className={cn(
+                      "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
+                      message.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-card border rounded-bl-md"
+                    )}
+                  >
+                    <div
+                      className="text-sm leading-relaxed"
+                      dangerouslySetInnerHTML={{
+                        __html: formatMessageContent(message.content),
+                      }}
+                    />
+                  </div>
+                  {message.role === "user" && (
+                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                      <UserIcon className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {/* Pending Tool Calls */}
-            {pendingToolCalls.map((tc) => (
-              <Card key={tc.id} className="p-4 border-primary/50">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <Badge variant="outline" className="mb-2">
-                      {getToolCallLabel(tc.name)}
-                    </Badge>
-                    <div className="text-sm space-y-1">
-                      {tc.name === "create_task" && (
-                        <>
-                          <p><strong>Título:</strong> {tc.arguments.title}</p>
-                          {tc.arguments.description && (
-                            <p><strong>Descrição:</strong> {tc.arguments.description}</p>
+              {/* Pending Tool Calls (only for actions that need confirmation) */}
+              {pendingToolCalls.map((tc) => (
+                <div key={tc.id} className="flex gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <Card className="flex-1 p-4 border-primary/30 bg-primary/5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <Badge variant="secondary" className="mb-3 bg-primary/10 text-primary border-0">
+                          {getToolCallLabel(tc.name)}
+                        </Badge>
+                        <div className="text-sm space-y-2">
+                          {tc.name === "create_task" && (
+                            <>
+                              <p className="font-medium">{tc.arguments.title}</p>
+                              {tc.arguments.description && (
+                                <p className="text-muted-foreground">{tc.arguments.description}</p>
+                              )}
+                              <Badge variant="outline" className="text-xs">
+                                Prioridade: {tc.arguments.priority}
+                              </Badge>
+                            </>
                           )}
-                          <p><strong>Prioridade:</strong> {tc.arguments.priority}</p>
-                        </>
-                      )}
-                      {tc.name === "create_project" && (
-                        <>
-                          <p><strong>Nome:</strong> {tc.arguments.name}</p>
-                          {tc.arguments.description && (
-                            <p><strong>Descrição:</strong> {tc.arguments.description}</p>
+                          {tc.name === "create_project" && (
+                            <>
+                              <p className="font-medium">{tc.arguments.name}</p>
+                              {tc.arguments.description && (
+                                <p className="text-muted-foreground">{tc.arguments.description}</p>
+                              )}
+                            </>
                           )}
-                        </>
-                      )}
-                      {tc.name === "extract_tasks_from_text" && tc.arguments.tasks && (
-                        <div className="space-y-2">
-                          {tc.arguments.tasks.map((task: any, idx: number) => (
-                            <div key={idx} className="p-2 bg-background rounded">
-                              <p><strong>{idx + 1}.</strong> {task.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Prioridade: {task.priority}
-                              </p>
+                          {tc.name === "extract_tasks_from_text" && tc.arguments.tasks && (
+                            <div className="space-y-2">
+                              {tc.arguments.tasks.map((task: any, idx: number) => (
+                                <div key={idx} className="p-2 bg-background rounded-lg border">
+                                  <p className="font-medium">{task.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Prioridade: {task.priority}
+                                  </p>
+                                </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
-                      )}
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => rejectToolCall(tc.id)}
+                          className="h-8 px-3"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => confirmToolCall(tc.id)}
+                          className="h-8 px-3"
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Confirmar
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                    <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  </div>
+                  <div className="bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <div className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <div className="h-2 w-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </div>
+                      <span className="text-sm text-muted-foreground">Pensando...</span>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => rejectToolCall(tc.id)}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Cancelar
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => confirmToolCall(tc.id)}
-                    >
-                      <Check className="h-4 w-4 mr-1" />
-                      Confirmar
-                    </Button>
-                  </div>
                 </div>
-              </Card>
-            ))}
-
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </ScrollArea>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t">
-        <div className="flex gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem ou cole um resumo de reunião..."
-            className="min-h-[60px] max-h-[200px] resize-none"
-            disabled={isLoading}
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={!input.trim() || isLoading}
-            className="shrink-0"
-          >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </form>
+      <div className="p-4 border-t bg-card/50 backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="flex gap-3">
+          <div className="flex-1 relative">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite sua mensagem..."
+              className="min-h-[52px] max-h-[200px] resize-none pr-12 rounded-xl bg-background border-muted-foreground/20"
+              disabled={isLoading}
+            />
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim() || isLoading}
+              className="absolute right-2 bottom-2 h-8 w-8 rounded-lg"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
