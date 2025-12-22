@@ -91,10 +91,10 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
         const newTemplateTasks = tasks.map((task, index) => ({
           template_id: newTemplate.id,
           title: task.title,
-          description: task.description,
+          description: null, // NÃO copiar descrição
           priority: task.priority,
           setor: task.setor,
-          documentation: task.documentation,
+          documentation: null, // NÃO copiar documentação
           process_id: task.process_id,
           task_order: index,
         }));
@@ -328,7 +328,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                           <Copy className="mr-2 h-4 w-4" />
                           {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
                         </DropdownMenuItem>
-                        {!project.is_template && !isStandaloneFolder && (
+                        {!isStandaloneFolder && (
                           <DropdownMenuItem 
                             onClick={(e) => {
                               e.stopPropagation();
