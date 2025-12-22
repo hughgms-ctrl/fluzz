@@ -14,6 +14,53 @@ interface AIChatPanelProps {
   className?: string;
 }
 
+// Parse markdown-like formatting
+function parseMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  
+  lines.forEach((line, lineIndex) => {
+    // Process bold text
+    const parts: React.ReactNode[] = [];
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = boldRegex.exec(line)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        parts.push(line.substring(lastIndex, match.index));
+      }
+      // Add bold text
+      parts.push(
+        <strong key={`bold-${lineIndex}-${match.index}`} className="font-semibold">
+          {match[1]}
+        </strong>
+      );
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Add remaining text
+    if (lastIndex < line.length) {
+      parts.push(line.substring(lastIndex));
+    }
+    
+    // If no parts were added, use the original line
+    if (parts.length === 0) {
+      parts.push(line);
+    }
+    
+    elements.push(
+      <React.Fragment key={`line-${lineIndex}`}>
+        {parts}
+        {lineIndex < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+  
+  return elements;
+}
+
 export function AIChatPanel({ onClose, showCloseButton = false, className }: AIChatPanelProps) {
   const {
     messages,
@@ -53,36 +100,16 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
       extract_tasks_from_text: "Extrair tarefas",
       create_task: "Criar tarefa",
       create_project: "Criar projeto",
-      query_overdue_tasks: "Buscar atrasadas",
-      query_tasks_by_status: "Buscar por status",
-      list_projects: "Listar projetos",
-      list_sectors: "Listar setores",
-      list_members: "Listar membros",
     };
     return labels[name] || name;
   };
 
   const quickActions = [
-    { label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas?" },
+    { label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas no workspace?" },
     { label: "Em andamento", prompt: "Quais tarefas estão em andamento?" },
-    { label: "Meus projetos", prompt: "Liste meus projetos ativos" },
+    { label: "Meus projetos", prompt: "Liste todos os projetos ativos" },
+    { label: "Membros", prompt: "Quem são os membros do workspace?" },
   ];
-
-  const formatMessageContent = (content: string) => {
-    // Simple markdown-like formatting
-    return content
-      .split('\n')
-      .map((line, i) => {
-        // Bold text
-        line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Handle bullet points
-        if (line.startsWith('• ') || line.startsWith('- ')) {
-          return `<div class="pl-2 py-0.5">${line}</div>`;
-        }
-        return line;
-      })
-      .join('<br/>');
-  };
 
   return (
     <div className={cn("flex flex-col h-full bg-gradient-to-b from-background to-muted/20", className)}>
@@ -129,9 +156,9 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
               </div>
               <h3 className="font-semibold text-xl mb-2">Olá! Como posso ajudar?</h3>
               <p className="text-sm text-muted-foreground max-w-sm mb-6">
-                Cole um resumo de reunião para extrair tarefas, pergunte sobre tarefas atrasadas, ou peça para criar projetos.
+                Pergunte sobre tarefas de qualquer pessoa, cole resumos de reuniões, ou consulte projetos e membros.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center">
+              <div className="flex flex-wrap gap-2 justify-center max-w-md">
                 {quickActions.map((action) => (
                   <Button
                     key={action.label}
@@ -159,27 +186,24 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                   )}
                 >
                   {message.role === "assistant" && (
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm mt-1">
                       <Sparkles className="h-4 w-4 text-primary-foreground" />
                     </div>
                   )}
                   <div
                     className={cn(
-                      "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
+                      "max-w-[85%] rounded-2xl px-4 py-3 shadow-sm",
                       message.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-md"
                         : "bg-card border rounded-bl-md"
                     )}
                   >
-                    <div
-                      className="text-sm leading-relaxed"
-                      dangerouslySetInnerHTML={{
-                        __html: formatMessageContent(message.content),
-                      }}
-                    />
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {parseMarkdown(message.content)}
+                    </div>
                   </div>
                   {message.role === "user" && (
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-1">
                       <UserIcon className="h-4 w-4 text-muted-foreground" />
                     </div>
                   )}
@@ -189,7 +213,7 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
               {/* Pending Tool Calls (only for actions that need confirmation) */}
               {pendingToolCalls.map((tc) => (
                 <div key={tc.id} className="flex gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm mt-1">
                     <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                   <Card className="flex-1 p-4 border-primary/30 bg-primary/5">
@@ -257,7 +281,7 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
 
               {isLoading && (
                 <div className="flex gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shrink-0 shadow-sm mt-1">
                     <Sparkles className="h-4 w-4 text-primary-foreground" />
                   </div>
                   <div className="bg-card border rounded-2xl rounded-bl-md px-4 py-3 shadow-sm">

@@ -15,7 +15,7 @@ const tools = [
     type: "function",
     function: {
       name: "extract_tasks_from_text",
-      description: "Extrai tarefas de um texto como resumo de reunião. Retorna lista de tarefas sugeridas com título, descrição e prioridade.",
+      description: "Extrai tarefas de um texto como resumo de reunião. Retorna lista de tarefas sugeridas.",
       parameters: {
         type: "object",
         properties: {
@@ -24,11 +24,10 @@ const tools = [
             items: {
               type: "object",
               properties: {
-                title: { type: "string", description: "Título da tarefa" },
-                description: { type: "string", description: "Descrição detalhada" },
+                title: { type: "string" },
+                description: { type: "string" },
                 priority: { type: "string", enum: ["baixa", "média", "alta"] },
-                suggested_project: { type: "string", description: "Nome sugerido do projeto, se aplicável" },
-                suggested_sector: { type: "string", description: "Setor sugerido, se identificável" },
+                suggested_assignee_name: { type: "string", description: "Nome sugerido do responsável" },
               },
               required: ["title", "priority"],
             },
@@ -42,17 +41,17 @@ const tools = [
     type: "function",
     function: {
       name: "create_task",
-      description: "Cria uma nova tarefa no sistema. Use apenas quando o usuário confirmar a criação.",
+      description: "Cria uma nova tarefa. REGRAS: Admin pode criar para qualquer pessoa. Gestor/Membro só pode criar para si mesmo.",
       parameters: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Título da tarefa" },
-          description: { type: "string", description: "Descrição da tarefa" },
+          title: { type: "string" },
+          description: { type: "string" },
           priority: { type: "string", enum: ["baixa", "média", "alta"] },
-          project_id: { type: "string", description: "ID do projeto (opcional)" },
-          assigned_to: { type: "string", description: "ID do usuário para atribuir (opcional)" },
-          setor: { type: "string", description: "ID do setor (opcional)" },
-          due_date: { type: "string", description: "Data de vencimento no formato YYYY-MM-DD (opcional)" },
+          project_id: { type: "string" },
+          assigned_to: { type: "string", description: "ID do usuário (apenas Admin pode atribuir a outros)" },
+          setor: { type: "string" },
+          due_date: { type: "string" },
         },
         required: ["title", "priority"],
       },
@@ -62,14 +61,14 @@ const tools = [
     type: "function",
     function: {
       name: "create_project",
-      description: "Cria um novo projeto no sistema. Use apenas quando o usuário confirmar a criação.",
+      description: "Cria um novo projeto. APENAS Admin pode criar projetos.",
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "Nome do projeto" },
-          description: { type: "string", description: "Descrição do projeto" },
-          start_date: { type: "string", description: "Data de início no formato YYYY-MM-DD" },
-          end_date: { type: "string", description: "Data de término no formato YYYY-MM-DD" },
+          name: { type: "string" },
+          description: { type: "string" },
+          start_date: { type: "string" },
+          end_date: { type: "string" },
         },
         required: ["name"],
       },
@@ -79,11 +78,12 @@ const tools = [
     type: "function",
     function: {
       name: "query_overdue_tasks",
-      description: "Consulta tarefas atrasadas do usuário ou workspace. Esta é uma consulta que pode ser executada imediatamente.",
+      description: "Consulta tarefas atrasadas. Pode filtrar por usuário específico usando o nome.",
       parameters: {
         type: "object",
         properties: {
-          include_all_workspace: { type: "boolean", description: "Se true, inclui todas do workspace; se false, apenas do usuário" },
+          user_name: { type: "string", description: "Nome do usuário para filtrar (busca aproximada)" },
+          include_all_workspace: { type: "boolean" },
         },
         required: [],
       },
@@ -93,12 +93,13 @@ const tools = [
     type: "function",
     function: {
       name: "query_tasks_by_status",
-      description: "Consulta tarefas por status. Esta é uma consulta que pode ser executada imediatamente.",
+      description: "Consulta tarefas por status. Pode filtrar por usuário específico.",
       parameters: {
         type: "object",
         properties: {
-          status: { type: "string", enum: ["a fazer", "fazendo", "feita"], description: "Status das tarefas" },
-          include_all_workspace: { type: "boolean", description: "Se true, inclui todas do workspace" },
+          status: { type: "string", enum: ["a fazer", "fazendo", "feita"] },
+          user_name: { type: "string", description: "Nome do usuário para filtrar" },
+          include_all_workspace: { type: "boolean" },
         },
         required: ["status"],
       },
@@ -107,37 +108,54 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "list_projects",
-      description: "Lista projetos disponíveis no workspace. Esta é uma consulta que pode ser executada imediatamente.",
+      name: "query_user_tasks",
+      description: "Consulta todas as tarefas de um usuário específico pelo nome.",
       parameters: {
         type: "object",
-        properties: {},
-        required: [],
+        properties: {
+          user_name: { type: "string", description: "Nome do usuário (busca aproximada)" },
+          status: { type: "string", enum: ["a fazer", "fazendo", "feita", "todas"] },
+        },
+        required: ["user_name"],
       },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "find_user_by_name",
+      description: "Busca um usuário pelo nome (busca aproximada/fuzzy).",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Nome ou parte do nome do usuário" },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "list_projects",
+      description: "Lista projetos do workspace.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
   {
     type: "function",
     function: {
       name: "list_sectors",
-      description: "Lista setores disponíveis no workspace. Esta é uma consulta que pode ser executada imediatamente.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      description: "Lista setores do workspace.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
   {
     type: "function",
     function: {
       name: "list_members",
-      description: "Lista membros do workspace com seus nomes. Esta é uma consulta que pode ser executada imediatamente.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-      },
+      description: "Lista membros do workspace com seus nomes.",
+      parameters: { type: "object", properties: {}, required: [] },
     },
   },
 ];
@@ -170,29 +188,59 @@ serve(async (req) => {
 
     const { messages, workspace_id } = await req.json();
 
+    // Get user role
+    const { data: memberData } = await supabase
+      .from("workspace_members")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("workspace_id", workspace_id)
+      .single();
+
+    const userRole = memberData?.role || "membro";
+
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    const systemPrompt = `Você é um assistente de gestão de tarefas e projetos chamado Fluzz AI. Você ajuda o usuário a:
-- Extrair tarefas de resumos de reuniões e textos
-- Criar tarefas e projetos
-- Consultar tarefas atrasadas ou por status
-- Atribuir tarefas a pessoas e setores
+    const roleDescription = userRole === "admin" 
+      ? "Você é ADMIN e tem permissão total para criar tarefas, projetos e atribuir a qualquer pessoa."
+      : userRole === "gestor"
+      ? "Você é GESTOR. Pode consultar tudo, mas só pode criar tarefas para si mesmo."
+      : "Você é MEMBRO. Pode consultar tudo, mas só pode criar tarefas para si mesmo.";
 
-REGRAS IMPORTANTES:
-1. Quando extrair tarefas de um texto, use a função extract_tasks_from_text
-2. Para CONSULTAS (query_overdue_tasks, query_tasks_by_status, list_projects, list_sectors, list_members), execute IMEDIATAMENTE sem pedir confirmação
-3. Para CRIAÇÕES (create_task, create_project), peça confirmação antes de executar
-4. Seja conciso, amigável e objetivo
+    const systemPrompt = `Você é o Fluzz AI, um assistente inteligente de gestão de tarefas e projetos.
+
+CONTEXTO DO USUÁRIO:
+- ID: ${user.id}
+- Role: ${userRole}
+- ${roleDescription}
+
+SUAS CAPACIDADES:
+1. Buscar usuários por nome (busca fuzzy/aproximada) - se alguém mencionar "lucas de angelo", procure por nomes similares
+2. Consultar tarefas de qualquer pessoa por nome
+3. Listar tarefas atrasadas, em andamento, concluídas
+4. Extrair tarefas de textos/resumos de reuniões
+5. Criar tarefas (respeitando permissões)
+6. Listar projetos, setores e membros
+
+REGRAS DE PERMISSÃO PARA CRIAÇÃO:
+- ADMIN: Pode criar tarefas e projetos para qualquer pessoa
+- GESTOR/MEMBRO: Só pode criar tarefas para SI MESMO
+
+REGRAS DE COMPORTAMENTO:
+1. Para CONSULTAS: Execute imediatamente, sem pedir confirmação
+2. Para CRIAÇÕES: Peça confirmação, mas já informe se o usuário não tem permissão
+3. Quando o usuário mencionar um nome, use find_user_by_name ou query_user_tasks para encontrar a pessoa
+4. Seja inteligente: "tarefas do Lucas" → busque usuário Lucas → retorne tarefas dele
 5. Use formatação Markdown para respostas elegantes
 6. Sempre responda em português brasileiro
-7. Quando mostrar listas de tarefas, use formatação clara com emojis apropriados
+7. Seja proativo e inteligente nas interpretações
 
-Quando receber resultados de consultas, apresente-os de forma elegante e conversacional.
-Por exemplo, para tarefas atrasadas:
-- Se houver tarefas: "📋 Encontrei X tarefas atrasadas:\n\n• **Título** - Projeto (prioridade)\n  📅 Venceu em: data"
-- Se não houver: "✨ Ótima notícia! Não há tarefas atrasadas."`;
+FORMATAÇÃO:
+- Use **negrito** para títulos e nomes importantes
+- Use emojis para tornar as respostas mais visuais
+- Liste itens com • ou números
+- Separe seções com linhas em branco`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -214,19 +262,17 @@ Por exemplo, para tarefas atrasadas:
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
+        return new Response(JSON.stringify({ error: "Limite de requisições excedido." }), {
           status: 429,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos para continuar." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
           status: 402,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
       throw new Error(`Erro no gateway de IA: ${response.status}`);
     }
 
@@ -234,13 +280,10 @@ Por exemplo, para tarefas atrasadas:
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (error) {
-    console.error("Erro no assistente de IA:", error);
+    console.error("Erro no assistente:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
