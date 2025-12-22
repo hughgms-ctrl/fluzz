@@ -9,8 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Camera, Save, Mail, User as UserIcon, Building2, ArrowRight } from "lucide-react";
+import { Camera, Save, Mail, User as UserIcon, Building2, ArrowRight, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -19,6 +28,8 @@ export default function Profile() {
   const [fullName, setFullName] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["profile", user?.id],
@@ -99,6 +110,50 @@ export default function Profile() {
       toast.error(error.message || "Erro ao atualizar perfil");
     },
   });
+
+  const createWorkspaceMutation = useMutation({
+    mutationFn: async () => {
+      if (!newWorkspaceName.trim()) {
+        throw new Error("Nome do workspace é obrigatório");
+      }
+
+      // Create workspace
+      const { data: workspace, error: wsError } = await supabase
+        .from("workspaces")
+        .insert({ name: newWorkspaceName.trim(), created_by: user!.id })
+        .select()
+        .single();
+
+      if (wsError) throw wsError;
+
+      // Add user as admin of the workspace
+      const { error: memberError } = await supabase
+        .from("workspace_members")
+        .insert({
+          workspace_id: workspace.id,
+          user_id: user!.id,
+          role: "admin",
+        });
+
+      if (memberError) throw memberError;
+
+      return workspace;
+    },
+    onSuccess: (workspace) => {
+      toast.success("Workspace criado com sucesso!");
+      setNewWorkspaceName("");
+      setIsCreateDialogOpen(false);
+      navigate(`/workspaces`);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao criar workspace");
+    },
+  });
+
+  const handleCreateWorkspace = (e: React.FormEvent) => {
+    e.preventDefault();
+    createWorkspaceMutation.mutate();
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,7 +283,52 @@ export default function Profile() {
               Gerencie seus workspaces e permissões
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Novo Workspace
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <form onSubmit={handleCreateWorkspace}>
+                  <DialogHeader>
+                    <DialogTitle>Criar Novo Workspace</DialogTitle>
+                    <DialogDescription>
+                      Crie um novo workspace para organizar seus projetos e equipe.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <Label htmlFor="workspaceName">Nome do Workspace</Label>
+                    <Input
+                      id="workspaceName"
+                      value={newWorkspaceName}
+                      onChange={(e) => setNewWorkspaceName(e.target.value)}
+                      placeholder="Ex: Minha Empresa"
+                      className="mt-2"
+                      autoFocus
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createWorkspaceMutation.isPending || !newWorkspaceName.trim()}
+                    >
+                      {createWorkspaceMutation.isPending ? "Criando..." : "Criar Workspace"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
             <Button
               variant="outline"
               className="w-full justify-between"
@@ -240,7 +340,7 @@ export default function Profile() {
               </div>
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground">
               Veja todos os workspaces, saia ou exclua workspaces dos quais você é proprietário
             </p>
           </CardContent>
