@@ -259,6 +259,41 @@ export const TimelineView = ({
   const todayPosition = todayIndex * dayWidth;
   const showTodayLine = todayIndex >= 0 && todayIndex < totalDays;
 
+  // Resizable column state
+  const [taskColumnWidth, setTaskColumnWidth] = useState(192); // 12rem = 192px
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartX = useRef(0);
+  const resizeStartWidth = useRef(0);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    resizeStartX.current = e.clientX;
+    resizeStartWidth.current = taskColumnWidth;
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleResizeMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartX.current;
+      const newWidth = Math.max(120, Math.min(400, resizeStartWidth.current + delta));
+      setTaskColumnWidth(newWidth);
+    };
+
+    const handleResizeEnd = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener("mousemove", handleResizeMove);
+    document.addEventListener("mouseup", handleResizeEnd);
+
+    return () => {
+      document.removeEventListener("mousemove", handleResizeMove);
+      document.removeEventListener("mouseup", handleResizeEnd);
+    };
+  }, [isResizing]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -307,10 +342,10 @@ export const TimelineView = ({
       </div>
 
       {/* Timeline Container */}
-      <div className="border rounded-lg overflow-hidden bg-card" ref={containerRef}>
+      <div className={cn("border rounded-lg overflow-hidden bg-card", isResizing && "select-none")} ref={containerRef}>
         <div className="flex">
-          {/* Task names column - fixed */}
-          <div className="w-48 shrink-0 border-r bg-card z-20">
+          {/* Task names column - resizable */}
+          <div className="shrink-0 bg-card z-20 relative" style={{ width: taskColumnWidth }}>
             {/* Header */}
             <div className="h-14 p-2 border-b bg-muted/50 font-medium text-sm flex items-center">
               Tarefa
@@ -332,6 +367,15 @@ export const TimelineView = ({
               ))
             )}
           </div>
+
+          {/* Resize handle */}
+          <div
+            className={cn(
+              "w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition-colors z-30",
+              isResizing ? "bg-primary" : "bg-border"
+            )}
+            onMouseDown={handleResizeStart}
+          />
 
           {/* Scrollable timeline area */}
           <ScrollArea className="flex-1" type="always">
