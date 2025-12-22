@@ -105,10 +105,12 @@ export const TimelineView = ({
       endDateStr = dragInfo.initialEnd;
     }
     
-    let startDate = startDateStr ? new Date(startDateStr) : endDateStr ? new Date(endDateStr) : null;
-    let endDate = endDateStr ? new Date(endDateStr) : startDate;
+    // If we have neither date, return null (ghost bar will be shown instead)
+    if (!startDateStr && !endDateStr) return null;
     
-    if (!startDate || !endDate) return null;
+    // Handle cases with only one date - use that date for both start and end
+    let startDate = startDateStr ? new Date(startDateStr) : new Date(endDateStr!);
+    let endDate = endDateStr ? new Date(endDateStr) : new Date(startDateStr!);
 
     // Apply drag offset based on mode
     if (dragInfo && dragInfo.offset !== 0) {
@@ -170,32 +172,41 @@ export const TimelineView = ({
       return;
     }
 
-    const initialStart = dragState.initialStartDate ? new Date(dragState.initialStartDate) : null;
-    const initialEnd = dragState.initialDueDate ? new Date(dragState.initialDueDate) : null;
+    const initialStartStr = dragState.initialStartDate;
+    const initialEndStr = dragState.initialDueDate;
     const daysDelta = dragState.currentDaysDelta;
+
+    // Handle cases where we only have one date
+    const initialStart = initialStartStr ? new Date(initialStartStr) : initialEndStr ? new Date(initialEndStr) : null;
+    const initialEnd = initialEndStr ? new Date(initialEndStr) : initialStartStr ? new Date(initialStartStr) : null;
+
+    if (!initialStart || !initialEnd) {
+      setDragState(null);
+      return;
+    }
 
     let newStartDate = initialStart;
     let newDueDate = initialEnd;
 
     if (dragState.mode === 'move') {
-      if (initialStart) newStartDate = addDays(initialStart, daysDelta);
-      if (initialEnd) newDueDate = addDays(initialEnd, daysDelta);
-    } else if (dragState.mode === 'resize-start' && initialStart) {
       newStartDate = addDays(initialStart, daysDelta);
-      if (newDueDate && newStartDate > newDueDate) {
+      newDueDate = addDays(initialEnd, daysDelta);
+    } else if (dragState.mode === 'resize-start') {
+      newStartDate = addDays(initialStart, daysDelta);
+      if (newStartDate > newDueDate) {
         newStartDate = newDueDate;
       }
-    } else if (dragState.mode === 'resize-end' && initialEnd) {
+    } else if (dragState.mode === 'resize-end') {
       newDueDate = addDays(initialEnd, daysDelta);
-      if (newStartDate && newDueDate < newStartDate) {
+      if (newDueDate < newStartDate) {
         newDueDate = newStartDate;
       }
     }
 
     onUpdateTaskDates(
       dragState.taskId,
-      newStartDate ? format(newStartDate, 'yyyy-MM-dd') : null,
-      newDueDate ? format(newDueDate, 'yyyy-MM-dd') : null
+      format(newStartDate, 'yyyy-MM-dd'),
+      format(newDueDate, 'yyyy-MM-dd')
     );
 
     setDragState(null);
