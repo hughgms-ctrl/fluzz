@@ -244,11 +244,13 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
             />
           ) : (
             <h3 
-              className="font-medium text-sm text-foreground flex-1"
+              className="font-medium text-sm text-foreground flex-1 cursor-text hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
               onDoubleClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 setIsEditingTitle(true);
               }}
+              title="Clique duplo para editar"
             >
               {task.title}
             </h3>
