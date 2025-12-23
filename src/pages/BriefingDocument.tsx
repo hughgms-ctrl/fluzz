@@ -219,6 +219,7 @@ export default function BriefingDocument() {
                     valor: e.valor
                   })) : []}
                   canSeeFinancialResult={canSeeExtras}
+                  isAdminOrGestor={canSeeExtras}
                 />
               </div>
             </>
