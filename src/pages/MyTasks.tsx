@@ -79,31 +79,44 @@ export default function MyTasks() {
       // Get tasks assigned to me
       const { data: myTasks, error: myTasksError } = await supabase
         .from("tasks")
-        .select("*, projects(id, name, archived)")
+        .select("*, projects(id, name, archived, pending_notifications)")
         .eq("assigned_to", user!.id)
         .order("created_at", { ascending: false });
       if (myTasksError) throw myTasksError;
-      
+
       // Get tasks I need to review (where I'm the approval_reviewer_id)
       const { data: reviewTasks, error: reviewError } = await supabase
         .from("tasks")
-        .select("*, projects(id, name, archived)")
+        .select("*, projects(id, name, archived, pending_notifications)")
         .eq("approval_reviewer_id", user!.id)
         .eq("requires_approval", true)
         .eq("approval_status", "pending")
         .order("created_at", { ascending: false });
       if (reviewError) throw reviewError;
-      
+
       // Combine and deduplicate
       const allTasks = [...(myTasks || [])];
-      reviewTasks?.forEach(task => {
-        if (!allTasks.find(t => t.id === task.id)) {
+      reviewTasks?.forEach((task) => {
+        if (!allTasks.find((t) => t.id === task.id)) {
           allTasks.push(task);
         }
       });
-      
-      // Filter out tasks from archived projects
-      return allTasks?.filter(task => !task.projects?.archived) || [];
+
+      // IMPORTANT: Do NOT show tasks from draft projects (rascunho)
+      // A draft project is identified by pending_notifications === true.
+      return (
+        allTasks?.filter((task) => {
+          // Standalone tasks are always visible
+          if (!task.project_id) return true;
+
+          // If it's a project task, only show when project is published and not archived
+          if (!task.projects) return false;
+          if (task.projects.archived) return false;
+          if (task.projects.pending_notifications === true) return false;
+
+          return true;
+        }) || []
+      );
     },
     enabled: !!user,
   });
@@ -114,11 +127,13 @@ export default function MyTasks() {
       if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name")
+        .select("id, name, archived, pending_notifications")
         .eq("workspace_id", workspace.id)
+        .eq("archived", false)
+        .neq("pending_notifications", true)
         .order("name");
       if (error) throw error;
-      return data;
+      return (data || []).map((p) => ({ id: p.id, name: p.name }));
     },
     enabled: !!workspace,
   });
