@@ -607,6 +607,7 @@ export default function DebriefingForm({ projectId, briefingId }: DebriefingForm
           extras={canSeeExtras ? extras : []}
           currency={currency}
           canSeeFinancialResult={canSeeExtras}
+          isAdminOrGestor={canSeeExtras}
         />
       )}
     </div>
