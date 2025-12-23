@@ -27,7 +27,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn, parseDateOnly } from "@/lib/utils";
+import { cn, parseDateOnly, isTaskOverdue } from "@/lib/utils";
 export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
@@ -366,7 +366,7 @@ export default function ProjectDetail() {
 
       if (dueDate) {
         if (dueDateFilter === "overdue") {
-          matchesDueDate = dueDate < today && task.status !== "completed";
+          matchesDueDate = isTaskOverdue(task.due_date, task.status);
         } else if (dueDateFilter === "today") {
           matchesDueDate = dueDate.toDateString() === today.toDateString();
         } else if (dueDateFilter === "week") {

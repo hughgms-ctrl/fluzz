@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { formatDateBR, parseDateOnly, formatUserName } from "@/lib/utils";
+import { formatDateBR, formatUserName, isTaskOverdue } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -66,11 +66,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
-    const overdue = tasks.filter((task) => {
-      if (!task.due_date || task.status === "completed") return false;
-      const dueDate = parseDateOnly(task.due_date);
-      return dueDate && dueDate < now;
-    });
+    const overdue = tasks.filter((task) => isTaskOverdue(task.due_date, task.status));
 
     const completed = tasks.filter((task) => task.status === "completed");
     const pending = tasks.filter(

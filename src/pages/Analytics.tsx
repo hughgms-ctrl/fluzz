@@ -23,7 +23,7 @@ import {
 } from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
-import { formatDateShort, parseDateOnly, formatUserName } from "@/lib/utils";
+import { formatDateShort, parseDateOnly, formatUserName, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 
 const COLORS = {
   completed: "hsl(142, 76%, 36%)",
@@ -238,11 +238,7 @@ export default function Analytics() {
       case "pending":
         return allTasks.filter(t => t.status !== "completed");
       case "overdue":
-        return allTasks.filter(t => {
-          if (!t.due_date || t.status === "completed") return false;
-          const dueDate = parseDateOnly(t.due_date);
-          return dueDate && dueDate < today;
-        });
+        return allTasks.filter(t => isTaskOverdue(t.due_date, t.status));
       default:
         return allTasks;
     }
@@ -339,18 +335,13 @@ export default function Analytics() {
   const totalTasks = allTasks?.length || 0;
   const completedTasks = allTasks?.filter((t) => t.status === "completed").length || 0;
   const inProgressTasks = allTasks?.filter((t) => t.status === "in_progress").length || 0;
-  const overdueTasks =
-    allTasks?.filter((t) => {
-      if (!t.due_date || t.status === "completed") return false;
-      const dueDate = parseDateOnly(t.due_date);
-      return dueDate && dueDate < new Date();
-    }).length || 0;
+  const overdueTasks = allTasks?.filter(t => isTaskOverdue(t.due_date, t.status)).length || 0;
 
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const TaskItem = ({ task }: { task: any }) => {
-    const taskDueDate = parseDateOnly(task.due_date);
-    const isOverdue = taskDueDate && taskDueDate < new Date() && task.status !== "completed";
+    const isOverdue = isTaskOverdue(task.due_date, task.status);
+    const isDueSoon = isTaskDueSoon(task.due_date, task.status);
     
     const priorityColors = {
       high: "destructive",
@@ -383,7 +374,7 @@ export default function Analytics() {
       >
         <CardContent className="p-4">
           <div className="space-y-2">
-            <h3 className={`font-medium ${isOverdue ? "text-destructive" : "text-foreground"}`}>
+            <h3 className={`font-medium ${isOverdue ? "text-destructive" : isDueSoon ? "text-amber-500 dark:text-amber-400" : "text-foreground"}`}>
               {task.title}
             </h3>
             
@@ -399,7 +390,7 @@ export default function Analytics() {
               </Badge>
               
               {task.due_date && (
-                <div className={`flex items-center gap-1 text-sm ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
+                <div className={`flex items-center gap-1 text-sm ${isOverdue ? "text-destructive" : isDueSoon ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"}`}>
                   <Calendar className="h-4 w-4" />
                   {formatDateShort(task.due_date)}
                 </div>
