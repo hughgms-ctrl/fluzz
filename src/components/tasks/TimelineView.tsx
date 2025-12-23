@@ -584,40 +584,55 @@ export const TimelineView = ({
                   const ghostWidth = dayWidth * 3; // 3 days default width
                   
                   return (
-                    <div key={task.id} className="h-12 relative border-b">
-                      {/* Grid lines */}
-                      <div className="absolute inset-0 flex pointer-events-none">
+                    <div 
+                      key={task.id} 
+                      className="h-12 relative border-b"
+                      onClick={(e) => {
+                        // Only handle click for tasks without dates
+                        if (!hasNoDates || isDragging) return;
+                        
+                        // Get click position relative to the timeline
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const clickedDayIndex = Math.floor(clickX / dayWidth);
+                        const clickedDate = addDays(viewStart, clickedDayIndex);
+                        
+                        // Set dates: clicked date as start, +2 days as end
+                        const startDate = format(clickedDate, 'yyyy-MM-dd');
+                        const endDate = format(addDays(clickedDate, 2), 'yyyy-MM-dd');
+                        onUpdateTaskDates(task.id, startDate, endDate);
+                      }}
+                      style={{ cursor: hasNoDates && !isDragging ? 'pointer' : 'default' }}
+                    >
+                      {/* Grid lines - clickable for tasks without dates */}
+                      <div className={cn(
+                        "absolute inset-0 flex",
+                        hasNoDates && !isDragging ? "pointer-events-auto" : "pointer-events-none"
+                      )}>
                         {days.map((day, i) => (
                           <div 
                             key={i} 
                             className={cn(
-                              "border-r",
-                              isToday(day) && "bg-primary/5"
+                              "border-r transition-colors",
+                              isToday(day) && "bg-primary/5",
+                              hasNoDates && !isDragging && "hover:bg-muted/50"
                             )}
                             style={{ width: dayWidth }}
                           />
                         ))}
                       </div>
 
-                      {/* Ghost bar for tasks without dates */}
+                      {/* Ghost bar indicator for tasks without dates */}
                       {hasNoDates && !isDragging && (
                         <div
-                          className="absolute top-2 h-8 rounded-md flex items-center justify-center cursor-pointer
-                            bg-muted/40 border-2 border-dashed border-muted-foreground/30 
-                            hover:bg-muted/60 hover:border-muted-foreground/50 transition-all"
+                          className="absolute top-2 h-8 rounded-md flex items-center justify-center pointer-events-none
+                            bg-muted/30 border-2 border-dashed border-muted-foreground/20"
                           style={{
                             left: ghostLeft,
                             width: ghostWidth,
                           }}
-                          onClick={() => {
-                            // Set dates starting from today with 3 day duration
-                            const startDate = format(today, 'yyyy-MM-dd');
-                            const endDate = format(addDays(today, 2), 'yyyy-MM-dd');
-                            onUpdateTaskDates(task.id, startDate, endDate);
-                          }}
-                          title="Clique para definir datas"
                         >
-                          <span className="text-xs text-muted-foreground/70 select-none">
+                          <span className="text-xs text-muted-foreground/50 select-none">
                             Clique para definir
                           </span>
                         </div>
