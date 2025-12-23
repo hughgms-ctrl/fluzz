@@ -1,11 +1,27 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { format, addDays, differenceInDays, isToday, startOfDay, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical, GripHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { 
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay, 
+  DragStartEvent, 
+  PointerSensor, 
+  useSensor, 
+  useSensors, 
+  closestCenter,
+} from "@dnd-kit/core";
+import { 
+  SortableContext, 
+  verticalListSortingStrategy, 
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Task {
   id: string;
@@ -15,11 +31,13 @@ interface Task {
   status?: string | null;
   priority?: string | null;
   assigned_to?: string | null;
+  task_order?: number | null;
 }
 
 interface TimelineViewProps {
   tasks: Task[];
   onUpdateTaskDates: (taskId: string, startDate: string | null, dueDate: string | null) => void;
+  onUpdateOrder?: (taskId: string, newOrder: number) => void;
   sortMode?: "az" | "manual";
   onSortModeChange?: (mode: "az" | "manual") => void;
 }
@@ -30,6 +48,63 @@ type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
 const naturalSort = (a: string, b: string) => {
   return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
 };
+
+// Sortable task row component for vertical drag
+function SortableTaskNameRow({ 
+  task, 
+  sortMode, 
+  onClick 
+}: { 
+  task: Task; 
+  sortMode: "az" | "manual";
+  onClick: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: task.id,
+    disabled: sortMode === "az",
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "h-12 p-2 border-b flex items-center gap-2 hover:bg-muted/30 transition-colors",
+        isDragging && "bg-muted shadow-lg"
+      )}
+    >
+      {sortMode === "manual" && (
+        <div 
+          {...attributes}
+          {...listeners}
+          className="cursor-grab hover:text-primary flex-shrink-0"
+        >
+          <GripHorizontal size={14} className="text-muted-foreground" />
+        </div>
+      )}
+      <span 
+        className="text-sm truncate cursor-pointer hover:text-primary flex-1"
+        onClick={onClick}
+      >
+        {task.title}
+      </span>
+    </div>
+  );
+}
 
 const parseTaskDate = (value: string) => {
   // Avoid JS Date UTC parsing for YYYY-MM-DD (causes off-by-one in many timezones)
@@ -42,10 +117,12 @@ const formatTaskDate = (date: Date) => format(startOfDay(date), "yyyy-MM-dd");
 export const TimelineView = ({ 
   tasks, 
   onUpdateTaskDates,
+  onUpdateOrder,
   sortMode = "az",
   onSortModeChange
 }: TimelineViewProps) => {
   const navigate = useNavigate();
+  const [verticalDraggedTask, setVerticalDraggedTask] = useState<Task | null>(null);
   const today = startOfDay(new Date());
   
   // View spans 60 days - 30 before today, 30 after
@@ -76,12 +153,47 @@ export const TimelineView = ({
       if (sortMode === "az") {
         return naturalSort(a.title, b.title);
       }
-      // Manual - by start_date (tasks without dates go to the end)
-      const aStart = a.start_date ? parseTaskDate(a.start_date).getTime() : Infinity;
-      const bStart = b.start_date ? parseTaskDate(b.start_date).getTime() : Infinity;
-      return aStart - bStart;
+      // Manual - by task_order
+      return (a.task_order || 0) - (b.task_order || 0);
     });
   }, [tasks, sortMode]);
+
+  // Vertical drag sensors - for reordering tasks
+  const verticalSensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleVerticalDragStart = (event: DragStartEvent) => {
+    const task = tasks.find((t) => t.id === event.active.id);
+    setVerticalDraggedTask(task || null);
+  };
+
+  const handleVerticalDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setVerticalDraggedTask(null);
+
+    if (!over || active.id === over.id) return;
+
+    if (sortMode === "manual" && onUpdateOrder) {
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      
+      const oldIndex = allTasksSorted.findIndex(t => t.id === activeId);
+      const newIndex = allTasksSorted.findIndex(t => t.id === overId);
+      
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        onUpdateOrder(activeId, newIndex);
+      }
+    }
+  };
+
+  const handleVerticalDragCancel = () => {
+    setVerticalDraggedTask(null);
+  };
 
   // Filter tasks with dates that are visible in current view
   const visibleTasks = useMemo(() => {
@@ -344,27 +456,50 @@ export const TimelineView = ({
       {/* Timeline Container */}
       <div className={cn("border rounded-lg overflow-hidden bg-card", isResizing && "select-none")} ref={containerRef}>
         <div className="flex">
-          {/* Task names column - resizable */}
+          {/* Task names column - resizable with vertical drag support */}
           <div className="shrink-0 bg-card z-20 relative" style={{ width: taskColumnWidth }}>
             {/* Header */}
             <div className="h-14 p-2 border-b bg-muted/50 font-medium text-sm flex items-center">
               Tarefa
             </div>
-            {/* Task rows */}
+            {/* Task rows with drag support */}
             {visibleTasks.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-sm">
                 Nenhuma tarefa
               </div>
             ) : (
-              visibleTasks.map(task => (
-                <div 
-                  key={task.id} 
-                  className="h-12 p-2 border-b flex items-center cursor-pointer hover:bg-muted/30 hover:text-primary transition-colors"
-                  onClick={() => navigate(`/tasks/${task.id}`)}
+              <DndContext
+                sensors={verticalSensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleVerticalDragStart}
+                onDragEnd={handleVerticalDragEnd}
+                onDragCancel={handleVerticalDragCancel}
+              >
+                <SortableContext
+                  items={visibleTasks.map((t) => t.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <span className="text-sm truncate">{task.title}</span>
-                </div>
-              ))
+                  {visibleTasks.map(task => (
+                    <SortableTaskNameRow
+                      key={task.id}
+                      task={task}
+                      sortMode={sortMode}
+                      onClick={() => navigate(`/tasks/${task.id}`)}
+                    />
+                  ))}
+                </SortableContext>
+                <DragOverlay dropAnimation={{
+                  duration: 200,
+                  easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+                }}>
+                  {verticalDraggedTask ? (
+                    <div className="h-12 p-2 border rounded bg-card shadow-xl flex items-center gap-2" style={{ width: taskColumnWidth }}>
+                      <GripHorizontal size={14} className="text-muted-foreground" />
+                      <span className="text-sm truncate">{verticalDraggedTask.title}</span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             )}
           </div>
 
