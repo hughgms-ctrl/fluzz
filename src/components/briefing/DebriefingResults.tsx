@@ -4,10 +4,11 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowDown, ArrowUp, TrendingUp, FileDown, Eye, EyeOff, Plus, Minus } from "lucide-react";
+import { ArrowDown, ArrowUp, TrendingUp, FileDown, Eye, EyeOff, Plus, Minus, Calendar, MapPin, DollarSign, Users } from "lucide-react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { formatDateBR } from "@/lib/utils";
 
 interface Vendedor {
   id: string;
@@ -46,6 +47,7 @@ export default function DebriefingResults({
 }: DebriefingResultsProps) {
   const [showFinancialResult, setShowFinancialResult] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+  const printContainerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const currencySymbol = currency === "BRL" ? "R$" : "$";
@@ -99,7 +101,7 @@ export default function DebriefingResults({
   };
 
   const handleExportPDF = async (includeFinancialResult: boolean) => {
-    if (!contentRef.current) return;
+    if (!printContainerRef.current) return;
 
     setIsExporting(true);
     const previousShowState = showFinancialResult;
@@ -109,9 +111,29 @@ export default function DebriefingResults({
       setShowFinancialResult(includeFinancialResult);
       
       // Wait for React to update the DOM
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Create PDF with jsPDF directly for better control
+      const element = printContainerRef.current;
+      
+      // Capture the visual content
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: null,
+        logging: false,
+        width: element.scrollWidth,
+        height: element.scrollHeight,
+        onclone: (clonedDoc) => {
+          // Ensure styles are properly applied in the cloned document
+          const clonedElement = clonedDoc.querySelector('[data-print-container]');
+          if (clonedElement) {
+            (clonedElement as HTMLElement).style.width = `${element.scrollWidth}px`;
+          }
+        }
+      });
+
+      // Create PDF
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -120,230 +142,66 @@ export default function DebriefingResults({
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 15;
+      const margin = 8;
       const contentWidth = pageWidth - margin * 2;
+      
+      const imgData = canvas.toDataURL("image/png");
+      const imgHeight = (canvas.height * contentWidth) / canvas.width;
+      
+      // Handle multi-page PDF if content is too tall
+      const projectName = briefing?.local || "Evento";
       let yPosition = margin;
-
-      // Helper functions
-      const addTitle = (text: string, size: number = 16) => {
-        pdf.setFontSize(size);
-        pdf.setFont("helvetica", "bold");
-        pdf.text(text, margin, yPosition);
-        yPosition += size / 2 + 4;
-      };
-
-      const addSubtitle = (text: string) => {
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        pdf.text(text, margin, yPosition);
-        yPosition += 8;
-      };
-
-      const addRow = (label: string, value: string) => {
-        pdf.setFontSize(10);
-        pdf.setFont("helvetica", "normal");
-        pdf.text(label, margin, yPosition);
-        pdf.setFont("helvetica", "bold");
-        pdf.text(value, margin + 80, yPosition);
-        yPosition += 6;
-      };
-
-      const addSpacer = (height: number = 8) => {
-        yPosition += height;
-      };
-
-      const checkPageBreak = (neededSpace: number = 30) => {
-        if (yPosition + neededSpace > pageHeight - margin) {
+      let remainingHeight = imgHeight;
+      let sourceY = 0;
+      
+      const pageContentHeight = pageHeight - margin * 2 - 10; // Leave space for footer
+      
+      while (remainingHeight > 0) {
+        const sliceHeight = Math.min(remainingHeight, pageContentHeight);
+        const sourceHeight = (sliceHeight / imgHeight) * canvas.height;
+        
+        // Create a temporary canvas for this slice
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sourceHeight;
+        const ctx = sliceCanvas.getContext('2d');
+        
+        if (ctx) {
+          ctx.drawImage(
+            canvas,
+            0, sourceY,
+            canvas.width, sourceHeight,
+            0, 0,
+            canvas.width, sourceHeight
+          );
+          
+          const sliceImgData = sliceCanvas.toDataURL("image/png");
+          pdf.addImage(sliceImgData, "PNG", margin, yPosition, contentWidth, sliceHeight);
+        }
+        
+        sourceY += sourceHeight;
+        remainingHeight -= sliceHeight;
+        
+        if (remainingHeight > 0) {
           pdf.addPage();
           yPosition = margin;
-          return true;
         }
-        return false;
-      };
-
-      const precos = briefing.precos as any;
-      const projectName = briefing?.local || "Evento";
-
-      // === HEADER ===
-      addTitle(`Relatório ${includeFinancialResult ? "Completo" : "de Marketing"} - ${projectName}`, 18);
-      addSpacer(4);
-
-      // === SEÇÃO 1: BRIEFING ===
-      addSubtitle("BRIEFING - PLANEJAMENTO");
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-      addSpacer(4);
-
-      addRow("Data do Evento:", formatDateBR(briefing.data));
-      addRow("Local:", briefing.local);
-      addRow("Investimento Planejado:", formatCurrency(briefing.investimento_trafego));
-      addRow("Participantes Planejados:", briefing.participantes_pagantes.toString());
-      addSpacer(4);
-
-      addSubtitle("Precos dos Ingressos:");
-      addRow("Normal:", formatCurrency(precos?.normal || 0));
-      addRow("Casal:", formatCurrency(precos?.casal || 0));
-      addRow("Mentorados:", formatCurrency(precos?.mentorados || 0));
-      addRow("Players:", formatCurrency(precos?.players || 0));
-      addRow("Convidados:", formatCurrency(precos?.convidados || 0));
-      addSpacer(10);
-
-      // === SEÇÃO 2: DEBRIEFING ===
-      checkPageBreak(50);
-      addSubtitle("DEBRIEFING - RESULTADOS REALIZADOS");
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-      addSpacer(4);
-
-      addRow("Investimento Realizado:", formatCurrency(debriefing.investimento_trafego));
-      addRow("Leads Gerados:", debriefing.leads.toString());
-      addRow("Vendas de Ingressos (Trafego):", debriefing.vendas_ingressos.toString());
-      addRow("Retorno Vendas Ingressos:", formatCurrency(debriefing.retorno_vendas_ingressos));
-      addRow("Total de Participantes:", debriefing.total_participantes.toString());
-      addSpacer(4);
-
-      addRow("Vendas (Outras Estrategias):", debriefing.participantes_outras_estrategias.toString());
-      addRow("Retorno (Outras Estrategias):", formatCurrency(debriefing.valor_outras_estrategias));
-      addRow("Mentorias Vendidas:", debriefing.mentorias_vendidas.toString());
-      addRow("Valor Mentorias:", formatCurrency(debriefing.valor_vendas_mentorias));
-      addSpacer(10);
-
-      // === SEÇÃO 3: KPIs ===
-      checkPageBreak(40);
-      addSubtitle("INDICADORES DE PERFORMANCE (TRAFEGO)");
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-      addSpacer(4);
-
-      addRow("CPL (Custo por Lead):", formatCurrency(cpl));
-      addRow("CPA (Custo por Aquisicao):", formatCurrency(cpa));
-      addRow("ROAS Ingressos:", roasIngressos.toFixed(2) + "x");
-      addRow("ROAS Mentorias:", roasMentorias.toFixed(2) + "x");
-      addRow("Taxa de Conversao:", formatPercentage(conversaoGeral));
-      addSpacer(10);
-
-      // === SEÇÃO 4: COMPARATIVO ===
-      checkPageBreak(30);
-      addSubtitle("COMPARATIVO: PLANEJADO VS REALIZADO");
-      pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-      addSpacer(4);
-
-      const investimentoVar = briefing.investimento_trafego > 0
-        ? ((debriefing.investimento_trafego - briefing.investimento_trafego) / briefing.investimento_trafego) * 100
-        : 0;
-      const participantesVar = briefing.participantes_pagantes > 0
-        ? ((debriefing.total_participantes - briefing.participantes_pagantes) / briefing.participantes_pagantes) * 100
-        : 0;
-
-      addRow("Investimento (Variacao):", `${investimentoVar >= 0 ? "+" : ""}${investimentoVar.toFixed(1)}%`);
-      addRow("Participantes (Variacao):", `${participantesVar >= 0 ? "+" : ""}${participantesVar.toFixed(1)}%`);
-      addSpacer(10);
-
-      // === SEÇÃO 5: VENDEDORES ===
-      if (vendedores.length > 0) {
-        checkPageBreak(40);
-        addSubtitle("PERFORMANCE POR VENDEDOR");
-        pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-        addSpacer(4);
-
-        vendedores.forEach((vendedor) => {
-          checkPageBreak(20);
-          const conversao = vendedor.leads_recebidos > 0
-            ? (vendedor.vendas_realizadas / vendedor.leads_recebidos) * 100
-            : 0;
-
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(10);
-          pdf.text(vendedor.vendedor_nome, margin, yPosition);
-          pdf.text(`Conversao: ${conversao.toFixed(1)}%`, margin + 100, yPosition);
-          yPosition += 5;
-
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(9);
-          pdf.text(`Leads: ${vendedor.leads_recebidos} | Vendas: ${vendedor.vendas_realizadas} | Outras: ${vendedor.vendas_outras_estrategias || 0}`, margin, yPosition);
-          yPosition += 8;
-        });
-        addSpacer(6);
       }
 
-      // === SEÇÃO 6: OUTRAS DESPESAS E RECEITAS (apenas PDF completo) ===
-      if (includeFinancialResult && extras.length > 0) {
-        checkPageBreak(30);
-        addSubtitle("OUTRAS DESPESAS E RECEITAS");
-        pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-        addSpacer(4);
-
-        const receitas = extras.filter(e => e.tipo === "receita");
-        const despesas = extras.filter(e => e.tipo === "despesa");
-
-        if (receitas.length > 0) {
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(10);
-          pdf.text("Receitas Adicionais:", margin, yPosition);
-          yPosition += 6;
-          receitas.forEach((r) => {
-            pdf.setFont("helvetica", "normal");
-            pdf.text(`+ ${r.nome}:`, margin + 5, yPosition);
-            pdf.text(formatCurrency(r.valor), margin + 100, yPosition);
-            yPosition += 5;
-          });
-          addSpacer(4);
-        }
-
-        if (despesas.length > 0) {
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(10);
-          pdf.text("Despesas Adicionais:", margin, yPosition);
-          yPosition += 6;
-          despesas.forEach((d) => {
-            pdf.setFont("helvetica", "normal");
-            pdf.text(`- ${d.nome}:`, margin + 5, yPosition);
-            pdf.text(formatCurrency(d.valor), margin + 100, yPosition);
-            yPosition += 5;
-          });
-        }
-        addSpacer(10);
-      }
-
-      // === SEÇÃO 7: RESULTADO FINANCEIRO (apenas PDF completo) ===
-      if (includeFinancialResult) {
-        checkPageBreak(50);
-        addSubtitle("RESULTADO FINANCEIRO GERAL");
-        pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-        addSpacer(4);
-
-        addRow("Total de Receitas:", formatCurrency(totalReceitas));
-        addRow("Total de Despesas:", formatCurrency(totalDespesas));
-        addSpacer(4);
-
-        pdf.setFontSize(14);
-        pdf.setFont("helvetica", "bold");
-        const resultLabel = resultadoGeral >= 0 ? "LUCRO:" : "PREJUÍZO:";
-        pdf.text(resultLabel, margin, yPosition);
-        pdf.text(formatCurrency(Math.abs(resultadoGeral)), margin + 50, yPosition);
-        yPosition += 10;
-      }
-
-      // === OBSERVAÇÕES ===
-      if (debriefing.observacoes) {
-        checkPageBreak(30);
-        addSubtitle("OBSERVACOES");
-        pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
-        addSpacer(4);
-        
-        pdf.setFontSize(9);
-        pdf.setFont("helvetica", "normal");
-        const lines = pdf.splitTextToSize(debriefing.observacoes, contentWidth);
-        lines.forEach((line: string) => {
-          checkPageBreak(6);
-          pdf.text(line, margin, yPosition);
-          yPosition += 5;
-        });
-      }
-
-      // === FOOTER ===
+      // Add footer with generation date to all pages
       const now = new Date();
-      pdf.setFontSize(8);
-      pdf.setFont("helvetica", "italic");
-      pdf.text(`Gerado em ${now.toLocaleDateString("pt-BR")} às ${now.toLocaleTimeString("pt-BR")}`, margin, pageHeight - 10);
+      const totalPages = pdf.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setFont("helvetica", "italic");
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(
+          `Gerado em ${now.toLocaleDateString("pt-BR")} as ${now.toLocaleTimeString("pt-BR")} | Pagina ${i} de ${totalPages}`,
+          margin,
+          pageHeight - 5
+        );
+      }
 
       pdf.save(`${projectName}_${includeFinancialResult ? "completo" : "marketing"}.pdf`);
       toast.success("PDF exportado com sucesso!");
@@ -356,13 +214,7 @@ export default function DebriefingResults({
     }
   };
 
-  // Helper function for PDF date formatting
-  const formatDateBR = (dateStr: string) => {
-    if (!dateStr) return "";
-    const parts = dateStr.split("-");
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  };
+  const precos = briefing.precos as any;
 
   return (
     <div className="space-y-6">
@@ -416,7 +268,80 @@ export default function DebriefingResults({
         </div>
       )}
 
-      <div ref={contentRef} className="space-y-6 bg-background">
+      {/* Container para impressão - captura visual do briefing + resultados */}
+      <div ref={printContainerRef} data-print-container className="space-y-6 bg-background">
+        {/* Briefing - Planejamento */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Briefing - Planejamento</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data do Evento</p>
+                    <p className="font-semibold">{formatDateBR(briefing.data)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Local</p>
+                    <p className="font-semibold">{briefing.local}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Investimento em Tráfego</p>
+                    <p className="font-semibold">{formatCurrency(briefing.investimento_trafego)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Participantes Pagantes (Planejado)</p>
+                    <p className="font-semibold">{briefing.participantes_pagantes}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold mb-3">Preços dos Ingressos</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Normal:</span>
+                      <span className="font-medium">{formatCurrency(precos?.normal || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Casal:</span>
+                      <span className="font-medium">{formatCurrency(precos?.casal || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Mentorados:</span>
+                      <span className="font-medium">{formatCurrency(precos?.mentorados || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Players:</span>
+                      <span className="font-medium">{formatCurrency(precos?.players || 0)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Convidados:</span>
+                      <span className="font-medium">{formatCurrency(precos?.convidados || 0)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* 1. Resumo Financeiro - Vendas de Ingressos e Mentorias */}
         <Card>
           <CardHeader>
