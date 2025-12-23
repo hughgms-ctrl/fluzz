@@ -41,6 +41,7 @@ interface TimelineViewProps {
   onUpdateOrder?: (taskId: string, newOrder: number) => void;
   sortMode?: "az" | "manual";
   onSortModeChange?: (mode: "az" | "manual") => void;
+  setorNames?: Record<string, string>;
 }
 
 type DragMode = 'move' | 'resize-start' | 'resize-end' | null;
@@ -54,11 +55,13 @@ const naturalSort = (a: string, b: string) => {
 function SortableTaskNameRow({ 
   task, 
   sortMode, 
-  onClick 
+  onClick,
+  setorNames = {}
 }: { 
   task: Task; 
   sortMode: "az" | "manual";
   onClick: () => void;
+  setorNames?: Record<string, string>;
 }) {
   const {
     attributes,
@@ -78,6 +81,8 @@ function SortableTaskNameRow({
     opacity: isDragging ? 0.4 : 1,
     zIndex: isDragging ? 50 : 1,
   };
+
+  const setorName = task.setor ? (setorNames[task.setor] || task.setor) : null;
 
   return (
     <div 
@@ -104,9 +109,9 @@ function SortableTaskNameRow({
         <span className="text-sm truncate block">
           {task.title}
         </span>
-        {task.setor && (
+        {setorName && (
           <span className="text-[10px] text-muted-foreground/60 truncate block">
-            {task.setor}
+            {setorName}
           </span>
         )}
       </div>
@@ -127,7 +132,8 @@ export const TimelineView = ({
   onUpdateTaskDates,
   onUpdateOrder,
   sortMode = "az",
-  onSortModeChange
+  onSortModeChange,
+  setorNames = {}
 }: TimelineViewProps) => {
   const navigate = useNavigate();
   const [verticalDraggedTask, setVerticalDraggedTask] = useState<Task | null>(null);
@@ -508,6 +514,7 @@ export const TimelineView = ({
                       task={task}
                       sortMode={sortMode}
                       onClick={() => navigate(`/tasks/${task.id}`)}
+                      setorNames={setorNames}
                     />
                   ))}
                 </SortableContext>

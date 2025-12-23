@@ -744,6 +744,7 @@ export default function ProjectDetail() {
                     }
                     sortMode={sortMode}
                     onSortModeChange={handleSortModeChange}
+                    setorNames={positions?.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {}) || {}}
                   />
                 ) : view === "board" && !isMobile ? (
                   <DraggableTaskBoard
