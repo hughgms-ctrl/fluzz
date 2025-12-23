@@ -68,9 +68,9 @@ export default function Home() {
     enabled: !!workspace
   });
 
-  // Filter only active (non-archived) projects that are NOT standalone folders
+  // Filter only active (non-archived) projects that are NOT standalone folders and NOT drafts
   const activeProjectsList = useMemo(() => 
-    projects?.filter(p => !p.archived && !p.is_standalone_folder) || [], 
+    projects?.filter(p => !p.archived && !p.is_standalone_folder && p.status !== "rascunho") || [], 
     [projects]
   );
 
