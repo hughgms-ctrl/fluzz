@@ -364,7 +364,22 @@ export const TimelineView = ({
     return weekDays[dayIndex];
   };
 
-  const goToToday = () => setViewOffset(0);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const goToToday = () => {
+    setViewOffset(0);
+    // Scroll to today after view resets
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          // Today is at index 30 (30 days before today is viewStart, so today is day 30)
+          const todayScrollPosition = 30 * dayWidth - (viewport.clientWidth / 2) + (dayWidth / 2);
+          viewport.scrollTo({ left: Math.max(0, todayScrollPosition), behavior: 'smooth' });
+        }
+      }
+    }, 50);
+  };
 
   // Calculate today indicator position
   const todayIndex = differenceInDays(today, viewStart);
@@ -513,7 +528,7 @@ export const TimelineView = ({
           />
 
           {/* Scrollable timeline area */}
-          <ScrollArea className="flex-1" type="always">
+          <ScrollArea className="flex-1" type="always" ref={scrollAreaRef}>
             <div 
               ref={timelineRef}
               className="relative"
