@@ -93,7 +93,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
         const newTemplateTasks = tasks.map((task, index) => ({
           template_id: newTemplate.id,
           title: task.title,
-          description: null, // NÃO copiar descrição
+          description: task.description, // Copiar descrição
           priority: task.priority,
           setor: task.setor,
           documentation: null, // NÃO copiar documentação
@@ -198,11 +198,11 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
           taskIdToIndex[task.id] = index;
         });
 
-        // Mapear tarefas: copiar apenas título, setor, responsável e processos
-        // NÃO copiar: descrição, due_date, documentation
+        // Mapear tarefas: copiar título, descrição, setor, responsável e processos
+        // NÃO copiar: due_date, documentation
         const newTasks = tasks.map((task) => ({
           title: task.title,
-          description: null, // NÃO copiar descrição
+          description: task.description, // Copiar descrição
           status: 'todo',
           priority: task.priority,
           assigned_to: task.assigned_to,

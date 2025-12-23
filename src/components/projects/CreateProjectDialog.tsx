@@ -176,7 +176,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
         const newTasks = templateTasks.map((task) => ({
           title: task.title,
-          description: null, // NÃO copiar descrição
+          description: task.description, // Copiar descrição do template
           status: "todo",
           priority: task.priority,
           setor: task.setor,
