@@ -32,6 +32,7 @@ interface Task {
   priority?: string | null;
   assigned_to?: string | null;
   task_order?: number | null;
+  setor?: string | null;
 }
 
 interface TimelineViewProps {
@@ -96,12 +97,19 @@ function SortableTaskNameRow({
           <GripHorizontal size={14} className="text-muted-foreground" />
         </div>
       )}
-      <span 
-        className="text-sm truncate cursor-pointer hover:text-primary flex-1"
+      <div 
+        className="flex-1 min-w-0 cursor-pointer hover:text-primary"
         onClick={onClick}
       >
-        {task.title}
-      </span>
+        <span className="text-sm truncate block">
+          {task.title}
+        </span>
+        {task.setor && (
+          <span className="text-[10px] text-muted-foreground/60 truncate block">
+            {task.setor}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
