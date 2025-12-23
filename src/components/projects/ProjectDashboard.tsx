@@ -1,10 +1,12 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
-import { formatDateBR, parseDateOnly } from "@/lib/utils";
+import { formatDateBR, parseDateOnly, formatUserName } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -29,6 +31,36 @@ const COLORS = {
 
 export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps) {
   const navigate = useNavigate();
+
+  // Get unique user IDs from tasks
+  const userIds = useMemo(() => {
+    const ids = tasks
+      .map(t => t.assigned_to)
+      .filter((id): id is string => id !== null);
+    return [...new Set(ids)];
+  }, [tasks]);
+
+  // Fetch profiles for all assigned users
+  const { data: profiles } = useQuery({
+    queryKey: ["task-user-profiles", userIds],
+    enabled: userIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      return data || [];
+    },
+  });
+
+  // Create a map of user ID to formatted name
+  const userNameMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    profiles?.forEach(profile => {
+      map[profile.id] = formatUserName(profile.full_name) || `Usuário`;
+    });
+    return map;
+  }, [profiles]);
 
   const metrics = useMemo(() => {
     const now = new Date();
@@ -76,7 +108,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
     }, {} as Record<string, { todo: number; in_progress: number; completed: number }>);
 
     const userDistribution = Object.entries(tasksByUser).map(([userId, counts]) => ({
-      user: userId === "unassigned" ? "Não atribuído" : `Usuário ${userId.slice(0, 8)}`,
+      user: userId === "unassigned" ? "Não atribuído" : (userNameMap[userId] || "Usuário"),
       "A Fazer": counts.todo,
       "Em Progresso": counts.in_progress,
       Concluído: counts.completed,
@@ -95,7 +127,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
       completionRate,
       total: tasks.length,
     };
-  }, [tasks]);
+  }, [tasks, userNameMap]);
 
   const MetricCard = ({
     title,

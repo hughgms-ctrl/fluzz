@@ -23,7 +23,7 @@ import {
 } from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
-import { formatDateShort, parseDateOnly } from "@/lib/utils";
+import { formatDateShort, parseDateOnly, formatUserName } from "@/lib/utils";
 
 const COLORS = {
   completed: "hsl(142, 76%, 36%)",
@@ -217,7 +217,7 @@ export default function Analytics() {
   const getProfileName = (userId: string | null) => {
     if (!userId) return "Não atribuído";
     const profile = profiles?.find(p => p.id === userId);
-    return profile?.full_name || "Usuário";
+    return formatUserName(profile?.full_name) || "Usuário";
   };
 
   // Get task type helper
@@ -474,7 +474,7 @@ export default function Analytics() {
                 <SelectItem value="all">Todos os membros</SelectItem>
                 {workspaceMembers?.map(member => (
                   <SelectItem key={member.id} value={member.id}>
-                    {member.full_name || "Usuário"}
+                    {formatUserName(member.full_name) || "Usuário"}
                   </SelectItem>
                 ))}
               </SelectContent>

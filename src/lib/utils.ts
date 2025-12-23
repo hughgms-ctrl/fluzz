@@ -64,3 +64,30 @@ export function formatDateWithOptions(
   const date = new Date(dateString + "T12:00:00");
   return date.toLocaleDateString("pt-BR", options);
 }
+
+/**
+ * Formata o nome de um usuário para exibição resumida.
+ * Ex: "Hugo Gomes da Silva" -> "Hugo G."
+ * Ex: "Lucas Alves" -> "Lucas A."
+ */
+export function formatUserName(fullName: string | null | undefined): string {
+  if (!fullName) return "";
+  
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 0) return "";
+  
+  const firstName = parts[0];
+  
+  // Find the last significant name part (ignoring prepositions like "da", "de", "dos")
+  const prepositions = ["da", "de", "do", "das", "dos", "e"];
+  let lastNameInitial = "";
+  
+  for (let i = parts.length - 1; i >= 1; i--) {
+    if (!prepositions.includes(parts[i].toLowerCase())) {
+      lastNameInitial = parts[i].charAt(0).toUpperCase() + ".";
+      break;
+    }
+  }
+  
+  return lastNameInitial ? `${firstName} ${lastNameInitial}` : firstName;
+}
