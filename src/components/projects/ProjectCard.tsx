@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore, Bookmark } from "lucide-react";
+import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore, Bookmark, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ProjectCardProps {
@@ -338,17 +338,25 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
                 autoFocus
               />
             ) : (
-              <h3 
-                className={`font-semibold text-lg text-foreground line-clamp-1 flex-1 ${canEdit ? 'hover:text-primary transition-colors cursor-text' : ''}`}
-                onClick={(e) => {
-                  if (canEdit) {
-                    e.stopPropagation();
-                    setIsEditingName(true);
-                  }
-                }}
-              >
-                {project.name}
-              </h3>
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 
+                  className={`font-semibold text-lg text-foreground line-clamp-1 ${canEdit ? 'hover:text-primary transition-colors cursor-text' : ''}`}
+                  onClick={(e) => {
+                    if (canEdit) {
+                      e.stopPropagation();
+                      setIsEditingName(true);
+                    }
+                  }}
+                >
+                  {project.name}
+                </h3>
+                {project.pending_notifications && (
+                  <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
+                    <FileEdit className="h-3 w-3 mr-1" />
+                    Rascunho
+                  </Badge>
+                )}
+              </div>
             )}
             {canEdit && (
               <DropdownMenu>

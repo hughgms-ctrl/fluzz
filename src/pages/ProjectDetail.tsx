@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -471,12 +472,20 @@ export default function ProjectDetail() {
                   autoFocus
                 />
               ) : (
-                <h1 
-                  className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer break-words"
-                  onClick={() => setIsEditingName(true)}
-                >
-                  {project.name}
-                </h1>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 
+                    className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer break-words"
+                    onClick={() => setIsEditingName(true)}
+                  >
+                    {project.name}
+                  </h1>
+                  {project.pending_notifications && (
+                    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                      <FileEdit className="h-3 w-3 mr-1" />
+                      Rascunho
+                    </Badge>
+                  )}
+                </div>
               )}
               {isEditingDescription ? (
                 <Input
