@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDateBR } from "@/lib/utils";
+import { formatDateBR, parseDateOnly } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface TaskCardProps {
@@ -156,7 +156,7 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
     }
   };
 
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+  const isOverdue = task.due_date && parseDateOnly(task.due_date) && parseDateOnly(task.due_date)! < new Date() && task.status !== "completed";
 
   const handleTitleBlur = () => {
     if (taskTitle.trim() && taskTitle !== task.title) {

@@ -18,6 +18,7 @@ import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } fr
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
+import { parseDateOnly } from "@/lib/utils";
 
 export default function MyTasks() {
   const { user } = useAuth();
@@ -205,22 +206,24 @@ export default function MyTasks() {
 
       let matchesDueDate = true;
       if (dueDateFilter !== "all" && task.due_date) {
-        const dueDate = new Date(task.due_date);
+        const dueDate = parseDateOnly(task.due_date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (dueDateFilter === "overdue") {
-          matchesDueDate = dueDate < today && task.status !== "completed";
-        } else if (dueDateFilter === "today") {
-          matchesDueDate = dueDate.toDateString() === today.toDateString();
-        } else if (dueDateFilter === "week") {
-          const weekFromNow = new Date(today);
-          weekFromNow.setDate(today.getDate() + 7);
-          matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
-        } else if (dueDateFilter === "month") {
-          const monthFromNow = new Date(today);
-          monthFromNow.setMonth(today.getMonth() + 1);
-          matchesDueDate = dueDate >= today && dueDate <= monthFromNow;
+        if (dueDate) {
+          if (dueDateFilter === "overdue") {
+            matchesDueDate = dueDate < today && task.status !== "completed";
+          } else if (dueDateFilter === "today") {
+            matchesDueDate = dueDate.toDateString() === today.toDateString();
+          } else if (dueDateFilter === "week") {
+            const weekFromNow = new Date(today);
+            weekFromNow.setDate(today.getDate() + 7);
+            matchesDueDate = dueDate >= today && dueDate <= weekFromNow;
+          } else if (dueDateFilter === "month") {
+            const monthFromNow = new Date(today);
+            monthFromNow.setMonth(today.getMonth() + 1);
+            matchesDueDate = dueDate >= today && dueDate <= monthFromNow;
+          }
         }
       }
 

@@ -23,8 +23,7 @@ import {
 } from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatDateShort, parseDateOnly } from "@/lib/utils";
 
 const COLORS = {
   completed: "hsl(142, 76%, 36%)",
@@ -239,11 +238,11 @@ export default function Analytics() {
       case "pending":
         return allTasks.filter(t => t.status !== "completed");
       case "overdue":
-        return allTasks.filter(t => 
-          t.due_date && 
-          new Date(t.due_date) < today && 
-          t.status !== "completed"
-        );
+        return allTasks.filter(t => {
+          if (!t.due_date || t.status === "completed") return false;
+          const dueDate = parseDateOnly(t.due_date);
+          return dueDate && dueDate < today;
+        });
       default:
         return allTasks;
     }
@@ -341,17 +340,17 @@ export default function Analytics() {
   const completedTasks = allTasks?.filter((t) => t.status === "completed").length || 0;
   const inProgressTasks = allTasks?.filter((t) => t.status === "in_progress").length || 0;
   const overdueTasks =
-    allTasks?.filter(
-      (t) =>
-        t.due_date &&
-        new Date(t.due_date) < new Date() &&
-        t.status !== "completed"
-    ).length || 0;
+    allTasks?.filter((t) => {
+      if (!t.due_date || t.status === "completed") return false;
+      const dueDate = parseDateOnly(t.due_date);
+      return dueDate && dueDate < new Date();
+    }).length || 0;
 
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   const TaskItem = ({ task }: { task: any }) => {
-    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+    const taskDueDate = parseDateOnly(task.due_date);
+    const isOverdue = taskDueDate && taskDueDate < new Date() && task.status !== "completed";
     
     const priorityColors = {
       high: "destructive",
@@ -402,7 +401,7 @@ export default function Analytics() {
               {task.due_date && (
                 <div className={`flex items-center gap-1 text-sm ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
                   <Calendar className="h-4 w-4" />
-                  {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+                  {formatDateShort(task.due_date)}
                 </div>
               )}
               
