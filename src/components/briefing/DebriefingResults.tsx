@@ -169,7 +169,7 @@ export default function DebriefingResults({
       addSpacer(4);
 
       // === SEÇÃO 1: BRIEFING ===
-      addSubtitle("📋 BRIEFING - PLANEJAMENTO");
+      addSubtitle("BRIEFING - PLANEJAMENTO");
       pdf.setDrawColor(200, 200, 200);
       pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
       addSpacer(4);
@@ -180,7 +180,7 @@ export default function DebriefingResults({
       addRow("Participantes Planejados:", briefing.participantes_pagantes.toString());
       addSpacer(4);
 
-      addSubtitle("Preços dos Ingressos:");
+      addSubtitle("Precos dos Ingressos:");
       addRow("Normal:", formatCurrency(precos?.normal || 0));
       addRow("Casal:", formatCurrency(precos?.casal || 0));
       addRow("Mentorados:", formatCurrency(precos?.mentorados || 0));
@@ -190,39 +190,39 @@ export default function DebriefingResults({
 
       // === SEÇÃO 2: DEBRIEFING ===
       checkPageBreak(50);
-      addSubtitle("📊 DEBRIEFING - RESULTADOS REALIZADOS");
+      addSubtitle("DEBRIEFING - RESULTADOS REALIZADOS");
       pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
       addSpacer(4);
 
       addRow("Investimento Realizado:", formatCurrency(debriefing.investimento_trafego));
       addRow("Leads Gerados:", debriefing.leads.toString());
-      addRow("Vendas de Ingressos (Tráfego):", debriefing.vendas_ingressos.toString());
+      addRow("Vendas de Ingressos (Trafego):", debriefing.vendas_ingressos.toString());
       addRow("Retorno Vendas Ingressos:", formatCurrency(debriefing.retorno_vendas_ingressos));
       addRow("Total de Participantes:", debriefing.total_participantes.toString());
       addSpacer(4);
 
-      addRow("Vendas (Outras Estratégias):", debriefing.participantes_outras_estrategias.toString());
-      addRow("Retorno (Outras Estratégias):", formatCurrency(debriefing.valor_outras_estrategias));
+      addRow("Vendas (Outras Estrategias):", debriefing.participantes_outras_estrategias.toString());
+      addRow("Retorno (Outras Estrategias):", formatCurrency(debriefing.valor_outras_estrategias));
       addRow("Mentorias Vendidas:", debriefing.mentorias_vendidas.toString());
       addRow("Valor Mentorias:", formatCurrency(debriefing.valor_vendas_mentorias));
       addSpacer(10);
 
       // === SEÇÃO 3: KPIs ===
       checkPageBreak(40);
-      addSubtitle("📈 INDICADORES DE PERFORMANCE (TRÁFEGO)");
+      addSubtitle("INDICADORES DE PERFORMANCE (TRAFEGO)");
       pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
       addSpacer(4);
 
       addRow("CPL (Custo por Lead):", formatCurrency(cpl));
-      addRow("CPA (Custo por Aquisição):", formatCurrency(cpa));
+      addRow("CPA (Custo por Aquisicao):", formatCurrency(cpa));
       addRow("ROAS Ingressos:", roasIngressos.toFixed(2) + "x");
       addRow("ROAS Mentorias:", roasMentorias.toFixed(2) + "x");
-      addRow("Taxa de Conversão:", formatPercentage(conversaoGeral));
+      addRow("Taxa de Conversao:", formatPercentage(conversaoGeral));
       addSpacer(10);
 
       // === SEÇÃO 4: COMPARATIVO ===
       checkPageBreak(30);
-      addSubtitle("⚖️ COMPARATIVO: PLANEJADO VS REALIZADO");
+      addSubtitle("COMPARATIVO: PLANEJADO VS REALIZADO");
       pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
       addSpacer(4);
 
@@ -233,14 +233,14 @@ export default function DebriefingResults({
         ? ((debriefing.total_participantes - briefing.participantes_pagantes) / briefing.participantes_pagantes) * 100
         : 0;
 
-      addRow("Investimento (Variação):", `${investimentoVar >= 0 ? "+" : ""}${investimentoVar.toFixed(1)}%`);
-      addRow("Participantes (Variação):", `${participantesVar >= 0 ? "+" : ""}${participantesVar.toFixed(1)}%`);
+      addRow("Investimento (Variacao):", `${investimentoVar >= 0 ? "+" : ""}${investimentoVar.toFixed(1)}%`);
+      addRow("Participantes (Variacao):", `${participantesVar >= 0 ? "+" : ""}${participantesVar.toFixed(1)}%`);
       addSpacer(10);
 
       // === SEÇÃO 5: VENDEDORES ===
       if (vendedores.length > 0) {
         checkPageBreak(40);
-        addSubtitle("👥 PERFORMANCE POR VENDEDOR");
+        addSubtitle("PERFORMANCE POR VENDEDOR");
         pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
         addSpacer(4);
 
@@ -253,12 +253,12 @@ export default function DebriefingResults({
           pdf.setFont("helvetica", "bold");
           pdf.setFontSize(10);
           pdf.text(vendedor.vendedor_nome, margin, yPosition);
-          pdf.text(`Conversão: ${conversao.toFixed(1)}%`, margin + 100, yPosition);
+          pdf.text(`Conversao: ${conversao.toFixed(1)}%`, margin + 100, yPosition);
           yPosition += 5;
 
           pdf.setFont("helvetica", "normal");
           pdf.setFontSize(9);
-          pdf.text(`Leads: ${vendedor.leads_recebidos} | Vendas: ${vendedor.vendas_realizadas} | Outras: ${vendedor.vendas_outras_estrategias || 0} | Convidados: ${vendedor.ingressos_gratuitos || 0}`, margin, yPosition);
+          pdf.text(`Leads: ${vendedor.leads_recebidos} | Vendas: ${vendedor.vendas_realizadas} | Outras: ${vendedor.vendas_outras_estrategias || 0}`, margin, yPosition);
           yPosition += 8;
         });
         addSpacer(6);
@@ -267,7 +267,7 @@ export default function DebriefingResults({
       // === SEÇÃO 6: OUTRAS DESPESAS E RECEITAS (apenas PDF completo) ===
       if (includeFinancialResult && extras.length > 0) {
         checkPageBreak(30);
-        addSubtitle("💰 OUTRAS DESPESAS E RECEITAS");
+        addSubtitle("OUTRAS DESPESAS E RECEITAS");
         pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
         addSpacer(4);
 
@@ -306,7 +306,7 @@ export default function DebriefingResults({
       // === SEÇÃO 7: RESULTADO FINANCEIRO (apenas PDF completo) ===
       if (includeFinancialResult) {
         checkPageBreak(50);
-        addSubtitle("📊 RESULTADO FINANCEIRO GERAL");
+        addSubtitle("RESULTADO FINANCEIRO GERAL");
         pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
         addSpacer(4);
 
@@ -325,7 +325,7 @@ export default function DebriefingResults({
       // === OBSERVAÇÕES ===
       if (debriefing.observacoes) {
         checkPageBreak(30);
-        addSubtitle("📝 OBSERVAÇÕES");
+        addSubtitle("OBSERVACOES");
         pdf.line(margin, yPosition - 2, pageWidth - margin, yPosition - 2);
         addSpacer(4);
         
