@@ -316,6 +316,37 @@ export default function ProjectDetail() {
     },
   });
 
+  // Mutation for simple order updates (TaskList and TimelineView - all tasks, no status filter)
+  const updateSimpleOrderMutation = useMutation({
+    mutationFn: async ({ taskId, newOrder }: { taskId: string; newOrder: number }) => {
+      // Get all filtered tasks and sort by current order
+      const allTasks = filteredTasks || tasks || [];
+      const sortedTasks = [...allTasks].sort((a, b) => (a.task_order || 0) - (b.task_order || 0));
+      
+      const oldIndex = sortedTasks.findIndex(t => t.id === taskId);
+      if (oldIndex === -1) return;
+      
+      const movedTask = sortedTasks[oldIndex];
+      sortedTasks.splice(oldIndex, 1);
+      sortedTasks.splice(newOrder, 0, movedTask);
+      
+      // Update all task orders
+      for (let i = 0; i < sortedTasks.length; i++) {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ task_order: i })
+          .eq("id", sortedTasks[i].id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao reordenar tarefa");
+    },
+  });
+
   // Apply filters
   const filteredTasks = tasks?.filter((task) => {
     const matchesSearch =
@@ -708,6 +739,9 @@ export default function ProjectDetail() {
                         queryClient.invalidateQueries({ queryKey: ["tasks", id] });
                       }
                     }}
+                    onUpdateOrder={(taskId, newOrder) =>
+                      updateSimpleOrderMutation.mutate({ taskId, newOrder })
+                    }
                     sortMode={sortMode}
                     onSortModeChange={handleSortModeChange}
                   />
@@ -728,6 +762,9 @@ export default function ProjectDetail() {
                   <TaskList
                     tasks={filteredTasks || []}
                     onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                    onUpdateOrder={(taskId, newOrder) =>
+                      updateSimpleOrderMutation.mutate({ taskId, newOrder })
+                    }
                     sortMode={sortMode}
                     onSortModeChange={handleSortModeChange}
                   />
