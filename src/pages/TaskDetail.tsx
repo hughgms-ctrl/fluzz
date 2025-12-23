@@ -45,7 +45,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatDateBR, parseDateOnly } from "@/lib/utils";
+import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Select,
@@ -947,7 +947,8 @@ export default function TaskDetail() {
     completed: "Concluído",
   };
 
-  const isOverdue = task.due_date && parseDateOnly(task.due_date) && parseDateOnly(task.due_date)! < new Date() && task.status !== "completed";
+  const isOverdue = isTaskOverdue(task.due_date, task.status);
+  const isDueSoon = isTaskDueSoon(task.due_date, task.status);
 
   return (
     <AppLayout>
@@ -1355,7 +1356,10 @@ export default function TaskDetail() {
                     ) : (
                       <div className="mt-2">
                         {task.due_date ? (
-                          <Badge variant={isOverdue ? "destructive" : "secondary"}>
+                          <Badge 
+                            variant={isOverdue ? "destructive" : isDueSoon ? "default" : "secondary"}
+                            className={isDueSoon && !isOverdue ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-400 border-amber-300" : ""}
+                          >
                             <Calendar size={12} className="mr-1" />
                             {formatDateBR(task.due_date)}
                           </Badge>

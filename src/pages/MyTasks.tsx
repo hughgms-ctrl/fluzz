@@ -18,7 +18,7 @@ import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } fr
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
-import { parseDateOnly } from "@/lib/utils";
+import { parseDateOnly, isTaskOverdue } from "@/lib/utils";
 
 export default function MyTasks() {
   const { user } = useAuth();
@@ -212,7 +212,7 @@ export default function MyTasks() {
 
         if (dueDate) {
           if (dueDateFilter === "overdue") {
-            matchesDueDate = dueDate < today && task.status !== "completed";
+            matchesDueDate = isTaskOverdue(task.due_date, task.status);
           } else if (dueDateFilter === "today") {
             matchesDueDate = dueDate.toDateString() === today.toDateString();
           } else if (dueDateFilter === "week") {

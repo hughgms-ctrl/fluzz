@@ -91,3 +91,48 @@ export function formatUserName(fullName: string | null | undefined): string {
   
   return lastNameInitial ? `${firstName} ${lastNameInitial}` : firstName;
 }
+
+/**
+ * Verifica se uma tarefa está atrasada.
+ * Atrasada = dia seguinte ao vencimento (due_date < hoje à meia-noite)
+ */
+export function isTaskOverdue(dueDate: string | null | undefined, status?: string | null): boolean {
+  if (!dueDate || status === "completed") return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const dueDateParsed = parseDateOnly(dueDate);
+  if (!dueDateParsed) return false;
+  
+  dueDateParsed.setHours(0, 0, 0, 0);
+  
+  // Atrasada: due_date é anterior a hoje (dia seguinte ao vencimento)
+  return dueDateParsed < today;
+}
+
+/**
+ * Verifica se uma tarefa está "a vencer em breve".
+ * A vencer em breve = 3 dias antes até o dia do vencimento (inclusive)
+ */
+export function isTaskDueSoon(dueDate: string | null | undefined, status?: string | null): boolean {
+  if (!dueDate || status === "completed") return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const dueDateParsed = parseDateOnly(dueDate);
+  if (!dueDateParsed) return false;
+  
+  dueDateParsed.setHours(0, 0, 0, 0);
+  
+  // Se já está atrasada, não é "a vencer em breve"
+  if (dueDateParsed < today) return false;
+  
+  // Calcular 3 dias antes de hoje
+  const threeDaysFromNow = new Date(today);
+  threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+  
+  // A vencer em breve: due_date está entre hoje e 3 dias à frente (inclusive)
+  return dueDateParsed >= today && dueDateParsed <= threeDaysFromNow;
+}

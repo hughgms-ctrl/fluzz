@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDateBR, parseDateOnly } from "@/lib/utils";
+import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface TaskCardProps {
@@ -156,7 +156,8 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
     }
   };
 
-  const isOverdue = task.due_date && parseDateOnly(task.due_date) && parseDateOnly(task.due_date)! < new Date() && task.status !== "completed";
+  const isOverdue = isTaskOverdue(task.due_date, task.status);
+  const isDueSoon = isTaskDueSoon(task.due_date, task.status);
 
   const handleTitleBlur = () => {
     if (taskTitle.trim() && taskTitle !== task.title) {
@@ -323,7 +324,7 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
           </DropdownMenu>
 
           {task.due_date && (
-            <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : "text-muted-foreground"}`}>
+            <div className={`flex items-center gap-1 text-xs ${isOverdue ? "text-destructive" : isDueSoon ? "text-amber-500 dark:text-amber-400" : "text-muted-foreground"}`}>
               <Calendar size={10} />
               {formatDateBR(task.due_date).slice(0, 5)}
             </div>
