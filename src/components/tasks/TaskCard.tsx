@@ -31,6 +31,7 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   const [taskTitle, setTaskTitle] = useState(task.title);
   const [isDragging, setIsDragging] = useState(false);
   const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
+  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
 
   const { data: subtasks } = useQuery({
     queryKey: ["subtasks", task.id],
@@ -177,7 +178,8 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
       target.tagName === 'BUTTON' ||
       target.closest('[role="menu"]') ||
       target.closest('button') ||
-      target.closest('[data-radix-popper-content-wrapper]')
+      target.closest('[data-radix-popper-content-wrapper]') ||
+      target.closest('[data-title-area]')
     ) {
       e.stopPropagation();
       return;
@@ -189,6 +191,27 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
     }
     
     navigate(`/tasks/${task.id}`);
+  };
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Clear any existing timeout
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      setClickTimeout(null);
+      // This is a double click - enter edit mode
+      setIsEditingTitle(true);
+    } else {
+      // Set a timeout for single click
+      const timeout = setTimeout(() => {
+        setClickTimeout(null);
+        // Single click - navigate to task
+        navigate(`/tasks/${task.id}`);
+      }, 250);
+      setClickTimeout(timeout);
+    }
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -244,12 +267,9 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
             />
           ) : (
             <h3 
+              data-title-area
               className="font-medium text-sm text-foreground flex-1 cursor-text hover:bg-muted/50 rounded px-1 -mx-1 transition-colors"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                setIsEditingTitle(true);
-              }}
+              onClick={handleTitleClick}
               title="Clique duplo para editar"
             >
               {task.title}
