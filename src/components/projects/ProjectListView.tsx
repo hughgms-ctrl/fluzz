@@ -158,7 +158,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto SEM copiar descrição (notas) e com pending_notifications = true
+      // Criar novo projeto SEM copiar descrição (notas) e com is_draft = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -168,6 +168,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
             status: 'active',
             user_id: user.id,
             workspace_id: project.workspace_id,
+            is_draft: true, // Sempre começa como rascunho
             pending_notifications: true, // Notificações pendentes
           },
         ])
@@ -310,7 +311,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                     {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
                     {project.name}
                     {isStandaloneFolder && <Badge variant="outline" className="text-xs">Avulso</Badge>}
-                    {project.pending_notifications && (
+                    {project.is_draft && (
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                         <FileEdit className="h-3 w-3 mr-1" />
                         Rascunho
