@@ -170,7 +170,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto com status ativo, SEM copiar a descrição e com pending_notifications = true
+      // Criar novo projeto com status ativo, SEM copiar a descrição e com is_draft = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -180,7 +180,8 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
             status: 'active',
             user_id: user.id,
             workspace_id: project.workspace_id,
-            pending_notifications: true, // Notificações pendentes - usuário deve clicar para notificar
+            is_draft: true, // Sempre começa como rascunho
+            pending_notifications: true, // Notificações pendentes - usuário deve clicar para publicar
           },
         ])
         .select()
@@ -350,7 +351,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
                 >
                   {project.name}
                 </h3>
-                {project.pending_notifications && (
+                {project.is_draft && (
                   <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30 shrink-0">
                     <FileEdit className="h-3 w-3 mr-1" />
                     Rascunho

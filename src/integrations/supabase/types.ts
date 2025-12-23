@@ -833,6 +833,7 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          is_draft: boolean
           is_standalone_folder: boolean
           is_template: boolean
           name: string
@@ -849,6 +850,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_draft?: boolean
           is_standalone_folder?: boolean
           is_template?: boolean
           name: string
@@ -865,6 +867,7 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_draft?: boolean
           is_standalone_folder?: boolean
           is_template?: boolean
           name?: string

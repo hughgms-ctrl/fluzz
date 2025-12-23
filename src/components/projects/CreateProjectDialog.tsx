@@ -88,6 +88,8 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
             description,
             status: "active",
             is_standalone_folder: isStandaloneFolder,
+            is_draft: true, // Sempre começa como rascunho
+            pending_notifications: true, // Notificações pendentes até publicar
             start_date: startDate || null,
             end_date: startDate || null,
           },
@@ -102,11 +104,15 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
       
       return data;
     },
-    onSuccess: async (_, isStandaloneFolder) => {
+    onSuccess: async (data, isStandaloneFolder) => {
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       await queryClient.refetchQueries({ queryKey: ["projects"] });
-      toast.success(isStandaloneFolder ? "Pasta de tarefas avulsas criada com sucesso!" : "Projeto criado com sucesso!");
+      toast.success(isStandaloneFolder ? "Rascunho criado! Edite e publique quando estiver pronto." : "Rascunho criado! Edite e publique quando estiver pronto.");
       handleClose();
+      // Navegar para o novo projeto para edição
+      if (data) {
+        window.location.href = `/projects/${data.id}`;
+      }
     },
     onError: (error) => {
       console.error("Erro na mutation:", error);
@@ -129,7 +135,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
       if (templateError) throw templateError;
 
-      // Create new project based on template with pending_notifications = true
+      // Create new project based on template with is_draft = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -139,6 +145,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
             status: "active",
             user_id: user.id,
             workspace_id: workspace.id,
+            is_draft: true, // Sempre começa como rascunho
             pending_notifications: true, // Notificações pendentes
           },
         ])

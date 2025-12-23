@@ -158,10 +158,13 @@ export default function ProjectDetail() {
         if (notifError) throw notifError;
       }
 
-      // Marcar projeto como notificado (pending_notifications = false)
+      // Marcar projeto como publicado (is_draft = false, pending_notifications = false)
       const { error: updateError } = await supabase
         .from("projects")
-        .update({ pending_notifications: false })
+        .update({ 
+          pending_notifications: false,
+          is_draft: false 
+        })
         .eq("id", id);
 
       if (updateError) throw updateError;
@@ -512,7 +515,7 @@ export default function ProjectDetail() {
                   >
                     {project.name}
                   </h1>
-                  {project.pending_notifications && (
+                  {project.is_draft && (
                     <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                       <FileEdit className="h-3 w-3 mr-1" />
                       Rascunho
@@ -576,8 +579,8 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Botão de Notificar Responsáveis - só aparece quando pending_notifications = true */}
-            {project.pending_notifications && (
+            {/* Botão de Publicar - só aparece quando is_draft = true */}
+            {project.is_draft && (
               <Button
                 onClick={() => notifyResponsiblesMutation.mutate()}
                 disabled={notifyResponsiblesMutation.isPending}
