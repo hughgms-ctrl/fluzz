@@ -45,7 +45,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { formatDateBR } from "@/lib/utils";
+import { formatDateBR, parseDateOnly } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Select,
@@ -947,7 +947,7 @@ export default function TaskDetail() {
     completed: "Concluído",
   };
 
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+  const isOverdue = task.due_date && parseDateOnly(task.due_date) && parseDateOnly(task.due_date)! < new Date() && task.status !== "completed";
 
   return (
     <AppLayout>
