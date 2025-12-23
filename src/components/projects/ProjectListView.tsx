@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical, Folder, Copy, Trash2, Archive, ArchiveRestore, Bookmark } from "lucide-react";
+import { MoreVertical, Folder, Copy, Trash2, Archive, ArchiveRestore, Bookmark, FileEdit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -310,6 +310,12 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                     {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
                     {project.name}
                     {isStandaloneFolder && <Badge variant="outline" className="text-xs">Avulso</Badge>}
+                    {project.pending_notifications && (
+                      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                        <FileEdit className="h-3 w-3 mr-1" />
+                        Rascunho
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
