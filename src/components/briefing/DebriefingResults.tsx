@@ -124,85 +124,30 @@ export default function DebriefingResults({
         logging: false,
         width: element.scrollWidth,
         height: element.scrollHeight,
-        onclone: (clonedDoc) => {
-          // Ensure styles are properly applied in the cloned document
-          const clonedElement = clonedDoc.querySelector('[data-print-container]');
-          if (clonedElement) {
-            (clonedElement as HTMLElement).style.width = `${element.scrollWidth}px`;
-          }
-        }
       });
 
-      // Create PDF
+      // Calculate dimensions - create custom page size to fit all content
+      const imgWidthPx = canvas.width;
+      const imgHeightPx = canvas.height;
+      
+      // Convert to mm (assuming 96 DPI, scaled by 2)
+      const pxToMm = 25.4 / (96 * 2);
+      const imgWidthMm = imgWidthPx * pxToMm;
+      const imgHeightMm = imgHeightPx * pxToMm;
+
+      // Create PDF with custom page size matching content exactly
       const pdf = new jsPDF({
-        orientation: "portrait",
+        orientation: imgWidthMm > imgHeightMm ? "landscape" : "portrait",
         unit: "mm",
-        format: "a4",
+        format: [imgWidthMm, imgHeightMm],
       });
 
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const margin = 8;
-      const contentWidth = pageWidth - margin * 2;
-      
       const imgData = canvas.toDataURL("image/png");
-      const imgHeight = (canvas.height * contentWidth) / canvas.width;
       
-      // Handle multi-page PDF if content is too tall
+      // Add image with no margins - fills entire page
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidthMm, imgHeightMm);
+
       const projectName = briefing?.local || "Evento";
-      let yPosition = margin;
-      let remainingHeight = imgHeight;
-      let sourceY = 0;
-      
-      const pageContentHeight = pageHeight - margin * 2 - 10; // Leave space for footer
-      
-      while (remainingHeight > 0) {
-        const sliceHeight = Math.min(remainingHeight, pageContentHeight);
-        const sourceHeight = (sliceHeight / imgHeight) * canvas.height;
-        
-        // Create a temporary canvas for this slice
-        const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sourceHeight;
-        const ctx = sliceCanvas.getContext('2d');
-        
-        if (ctx) {
-          ctx.drawImage(
-            canvas,
-            0, sourceY,
-            canvas.width, sourceHeight,
-            0, 0,
-            canvas.width, sourceHeight
-          );
-          
-          const sliceImgData = sliceCanvas.toDataURL("image/png");
-          pdf.addImage(sliceImgData, "PNG", margin, yPosition, contentWidth, sliceHeight);
-        }
-        
-        sourceY += sourceHeight;
-        remainingHeight -= sliceHeight;
-        
-        if (remainingHeight > 0) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-      }
-
-      // Add footer with generation date to all pages
-      const now = new Date();
-      const totalPages = pdf.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(8);
-        pdf.setFont("helvetica", "italic");
-        pdf.setTextColor(128, 128, 128);
-        pdf.text(
-          `Gerado em ${now.toLocaleDateString("pt-BR")} as ${now.toLocaleTimeString("pt-BR")} | Pagina ${i} de ${totalPages}`,
-          margin,
-          pageHeight - 5
-        );
-      }
-
       pdf.save(`${projectName}_${includeFinancialResult ? "completo" : "marketing"}.pdf`);
       toast.success("PDF exportado com sucesso!");
     } catch (error) {
