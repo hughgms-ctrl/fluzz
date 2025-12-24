@@ -26,7 +26,7 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: "Home", url: "/home", icon: Home },
   { title: "Workspace", url: "/workspace", icon: Briefcase },
-  { title: "Assistente IA", url: "/ai-assistant", icon: Bot, adminOnly: true }, // Admin only, or gestor/membro with permission
+  { title: "Fluzz AI", url: "/ai-assistant", icon: Bot, adminOnly: true }, // Admin only, or gestor/membro with permission
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
   { title: "Workload View", url: "/workload", icon: Layers, adminOnly: true }, // Admin/gestor with team permission only
