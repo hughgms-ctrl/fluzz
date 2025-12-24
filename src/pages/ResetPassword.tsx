@@ -53,6 +53,16 @@ const ResetPassword = () => {
   useEffect(() => {
     document.title = "Redefinir senha | Fluzz";
 
+    // If the email link lands on the editor/preview domain via the auth bridge,
+    // bounce to the published app keeping the same query/hash tokens.
+    const PUBLISHED_APP_ORIGIN = "https://fluzz.lovable.app";
+    const isPreviewDomain = window.location.hostname.includes("lovableproject.com");
+    if (isPreviewDomain && window.location.origin !== PUBLISHED_APP_ORIGIN) {
+      const target = `${PUBLISHED_APP_ORIGIN}${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
+      return;
+    }
+
     let mounted = true;
 
     const init = async () => {
