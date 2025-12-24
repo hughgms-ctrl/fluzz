@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { TasksCalendarView } from "@/components/tasks/TasksCalendarView";
+
 import { 
   AlertTriangle, 
   Calendar, 
@@ -358,9 +358,8 @@ export default function WorkloadOverview() {
         </div>
 
         <Tabs defaultValue="members" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-xs grid-cols-2">
             <TabsTrigger value="members">Por Membro</TabsTrigger>
-            <TabsTrigger value="calendar">Calendário</TabsTrigger>
             <TabsTrigger value="list">Lista</TabsTrigger>
           </TabsList>
 
@@ -491,13 +490,6 @@ export default function WorkloadOverview() {
             </Card>
           </TabsContent>
 
-          {/* Calendar View */}
-          <TabsContent value="calendar" className="mt-4">
-            <TasksCalendarView 
-              tasks={filteredTasks} 
-              members={members || []} 
-            />
-          </TabsContent>
 
           {/* Task List View */}
           <TabsContent value="list" className="mt-4">
