@@ -133,7 +133,8 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
   );
 
   return (
-    <div className="space-y-6">
+    <ScrollArea className="h-[calc(100vh-280px)] pr-4">
+      <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
@@ -419,6 +420,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </ScrollArea>
   );
 }
