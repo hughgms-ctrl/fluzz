@@ -1523,6 +1523,7 @@ export type Database = {
           can_edit_projects: boolean | null
           can_edit_tasks: boolean | null
           can_edit_vision: boolean | null
+          can_view_ai: boolean | null
           can_view_analytics: boolean
           can_view_briefings: boolean
           can_view_culture: boolean
@@ -1532,6 +1533,7 @@ export type Database = {
           can_view_projects: boolean
           can_view_tasks: boolean
           can_view_vision: boolean
+          can_view_workload: boolean | null
           created_at: string
           id: string
           updated_at: string
@@ -1548,6 +1550,7 @@ export type Database = {
           can_edit_projects?: boolean | null
           can_edit_tasks?: boolean | null
           can_edit_vision?: boolean | null
+          can_view_ai?: boolean | null
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
@@ -1557,6 +1560,7 @@ export type Database = {
           can_view_projects?: boolean
           can_view_tasks?: boolean
           can_view_vision?: boolean
+          can_view_workload?: boolean | null
           created_at?: string
           id?: string
           updated_at?: string
@@ -1573,6 +1577,7 @@ export type Database = {
           can_edit_projects?: boolean | null
           can_edit_tasks?: boolean | null
           can_edit_vision?: boolean | null
+          can_view_ai?: boolean | null
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
@@ -1582,6 +1587,7 @@ export type Database = {
           can_view_projects?: boolean
           can_view_tasks?: boolean
           can_view_vision?: boolean
+          can_view_workload?: boolean | null
           created_at?: string
           id?: string
           updated_at?: string
