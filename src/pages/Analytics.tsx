@@ -553,7 +553,7 @@ export default function Analytics() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[300px] overflow-auto">
+              <div className="max-h-[300px] overflow-y-auto scrollbar-discrete">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-background border-b">
                     <tr>
@@ -601,7 +601,7 @@ export default function Analytics() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[300px] overflow-auto">
+              <div className="max-h-[300px] overflow-y-auto scrollbar-discrete">
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-background border-b">
                     <tr>

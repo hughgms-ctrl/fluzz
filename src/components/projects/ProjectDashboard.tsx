@@ -280,7 +280,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[300px]">
+            <div className="max-h-[300px] overflow-y-auto scrollbar-discrete">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-background border-b">
                   <tr>
@@ -322,7 +322,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                   )}
                 </tbody>
               </table>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       </div>
