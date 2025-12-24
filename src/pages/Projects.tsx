@@ -211,6 +211,7 @@ export default function Projects() {
                   setIsCreateOpen(true);
                 }}
                 canEdit={isAdmin || isGestor}
+                canSeeDrafts={isAdmin || isGestor}
               />
             ) : activeProjects.length === 0 ? (
               <div className="text-center py-16">

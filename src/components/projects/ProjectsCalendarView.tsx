@@ -15,12 +15,15 @@ interface Project {
   end_date?: string | null;
   status?: string | null;
   is_standalone_folder?: boolean;
+  is_draft?: boolean;
+  pending_notifications?: boolean;
 }
 
 interface ProjectsCalendarViewProps {
   projects: Project[];
   onCreateProject?: (date: Date) => void;
   canEdit?: boolean;
+  canSeeDrafts?: boolean;
 }
 
 // Parse date string to Date object avoiding timezone issues
@@ -46,7 +49,8 @@ const getProjectColor = (index: number) => {
 export const ProjectsCalendarView = ({ 
   projects, 
   onCreateProject,
-  canEdit = false 
+  canEdit = false,
+  canSeeDrafts = false
 }: ProjectsCalendarViewProps) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -63,6 +67,8 @@ export const ProjectsCalendarView = ({
   const processedProjects = useMemo(() => {
     return projects
       .filter(p => !p.is_standalone_folder && (p.start_date || p.end_date))
+      // Filter out drafts for non-admin/gestor users
+      .filter(p => canSeeDrafts || (!p.is_draft && !p.pending_notifications))
       .map((project, index) => {
         const startDate = project.start_date ? parseDateOnly(project.start_date) : null;
         const endDate = project.end_date ? parseDateOnly(project.end_date) : null;
@@ -74,6 +80,9 @@ export const ProjectsCalendarView = ({
         const duration = differenceInDays(effectiveEnd, effectiveStart) + 1;
         const isMultiDay = duration > 1;
         
+        // Check if this is a draft project
+        const isDraft = project.is_draft || project.pending_notifications;
+        
         return {
           ...project,
           effectiveStart,
@@ -81,9 +90,10 @@ export const ProjectsCalendarView = ({
           duration,
           isMultiDay,
           colorIndex: index,
+          isDraft,
         };
       });
-  }, [projects]);
+  }, [projects, canSeeDrafts]);
 
   // Get projects for a specific day
   const getProjectsForDay = (day: Date) => {
@@ -183,12 +193,15 @@ export const ProjectsCalendarView = ({
                     const isStart = isProjectStart(project, day);
                     const isEnd = isProjectEnd(project, day);
                     const isSingleDay = !project.isMultiDay;
+                    // Draft projects are not clickable for users who can't see them fully
+                    const isClickable = !project.isDraft || canSeeDrafts;
                     
                     return (
                       <div
                         key={`${project.id}-${format(day, 'yyyy-MM-dd')}`}
                         className={cn(
-                          "text-[10px] sm:text-xs truncate py-0.5 cursor-pointer transition-colors",
+                          "text-[10px] sm:text-xs truncate py-0.5 transition-colors",
+                          isClickable ? "cursor-pointer" : "cursor-default opacity-60",
                           colors.bg,
                           colors.text,
                           // Single day: full rounded
@@ -198,11 +211,13 @@ export const ProjectsCalendarView = ({
                           !isSingleDay && isStart && "rounded-l ml-0.5 sm:ml-1 pl-1 sm:pl-1.5",
                           !isSingleDay && isEnd && "rounded-r mr-0.5 sm:mr-1 pr-1 sm:pr-1.5",
                           !isSingleDay && !isStart && !isEnd && "-mx-0.5 sm:-mx-1",
-                          `hover:${colors.bg.replace('/20', '/30')}`
+                          isClickable && `hover:${colors.bg.replace('/20', '/30')}`
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/projects/${project.id}`);
+                          if (isClickable) {
+                            navigate(`/projects/${project.id}`);
+                          }
                         }}
                       >
                         {/* Show name only on start day or single day */}
