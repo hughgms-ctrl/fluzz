@@ -27,6 +27,15 @@ function parseRecoveryFromHash() {
   };
 }
 
+function parseRecoveryFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+
+  return {
+    type: params.get("type"),
+    tokenHash: params.get("token_hash") ?? params.get("token"),
+  };
+}
+
 const ResetPassword = () => {
   const navigate = useNavigate();
 
@@ -60,7 +69,22 @@ const ResetPassword = () => {
           return;
         }
 
-        // 2) Implicit flow: #access_token=...&refresh_token=...&type=recovery
+        // 2) Token hash flow: ?token_hash=...&type=recovery
+        const { type: queryType, tokenHash } = parseRecoveryFromQuery();
+        if (queryType === "recovery" && tokenHash) {
+          const { data, error } = await supabase.auth.verifyOtp({
+            type: "recovery",
+            token_hash: tokenHash,
+          });
+          if (error) throw error;
+          if (mounted) {
+            setIsValidSession(Boolean(data.session));
+            setCheckingSession(false);
+          }
+          return;
+        }
+
+        // 3) Implicit flow: #access_token=...&refresh_token=...&type=recovery
         const { type, accessToken, refreshToken } = parseRecoveryFromHash();
         if (type === "recovery" && accessToken && refreshToken) {
           const { data, error } = await supabase.auth.setSession({
