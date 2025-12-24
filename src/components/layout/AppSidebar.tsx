@@ -92,8 +92,8 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/home" || item.url === "/workspace"}
-                      className="hover:bg-sidebar-accent/80 transition-all duration-200 rounded-lg"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
+                      className="hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg"
+                      activeClassName="bg-primary/15 text-primary font-medium"
                     >
                       <item.icon className={cn("transition-all duration-200", isCollapsed ? "mx-auto" : "mr-3")} size={18} />
                       {!isCollapsed && <span className="text-sm">{item.title}</span>}
@@ -116,8 +116,8 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      className="hover:bg-sidebar-accent/80 transition-all duration-200 rounded-lg"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
+                      className="hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg"
+                      activeClassName="bg-primary/15 text-primary font-medium"
                     >
                       <item.icon className={cn("transition-all duration-200", isCollapsed ? "mx-auto" : "mr-3")} size={18} />
                       {!isCollapsed && <span className="text-sm">{item.title}</span>}
