@@ -280,7 +280,7 @@ export default function WorkloadOverview() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Visão de Carga</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Workload View</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
               Visualize a carga de trabalho por membro da equipe
             </p>

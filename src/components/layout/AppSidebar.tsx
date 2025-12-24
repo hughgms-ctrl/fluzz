@@ -29,7 +29,7 @@ const menuItems: MenuItem[] = [
   { title: "Assistente IA", url: "/ai-assistant", icon: Bot, adminOnly: true }, // Admin only, or gestor/membro with permission
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
-  { title: "Visão de Carga", url: "/workload", icon: Layers, adminOnly: true }, // Admin/gestor with team permission only
+  { title: "Workload View", url: "/workload", icon: Layers, adminOnly: true }, // Admin/gestor with team permission only
   { title: "Analytics", url: "/analytics", icon: BarChart3, permission: "can_view_analytics" },
 ];
 
