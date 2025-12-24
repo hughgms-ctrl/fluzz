@@ -3,6 +3,7 @@ import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -78,9 +79,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar className={isCollapsed ? "w-16" : "w-64"}>
-      <SidebarContent>
+      <SidebarContent className="py-4">
         <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "text-center" : ""}>
+          <SidebarGroupLabel className={cn("text-xs uppercase tracking-wider font-medium", isCollapsed && "text-center")}>
             Menu Principal
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -91,11 +92,11 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end={item.url === "/home" || item.url === "/workspace"}
-                      className="hover:bg-accent transition-colors"
-                      activeClassName="bg-accent text-accent-foreground font-medium"
+                      className="hover:bg-sidebar-accent/80 transition-all duration-200 rounded-lg"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
                     >
-                      <item.icon className={isCollapsed ? "mx-auto" : "mr-3"} size={20} />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className={cn("transition-all duration-200", isCollapsed ? "mx-auto" : "mr-3")} size={18} />
+                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -105,7 +106,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "text-center" : ""}>
+          <SidebarGroupLabel className={cn("text-xs uppercase tracking-wider font-medium", isCollapsed && "text-center")}>
             Empresa
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -115,11 +116,11 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      className="hover:bg-accent transition-colors"
-                      activeClassName="bg-accent text-accent-foreground font-medium"
+                      className="hover:bg-sidebar-accent/80 transition-all duration-200 rounded-lg"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium shadow-sm"
                     >
-                      <item.icon className={isCollapsed ? "mx-auto" : "mr-3"} size={20} />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      <item.icon className={cn("transition-all duration-200", isCollapsed ? "mx-auto" : "mr-3")} size={18} />
+                      {!isCollapsed && <span className="text-sm">{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -128,13 +129,16 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
+        <SidebarGroup className="mt-auto">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={signOut}>
-                  <LogOut className={isCollapsed ? "mx-auto" : "mr-3"} size={20} />
-                  {!isCollapsed && <span>Sair</span>}
+                <SidebarMenuButton 
+                  onClick={signOut}
+                  className="hover:bg-destructive/10 hover:text-destructive transition-all duration-200 rounded-lg"
+                >
+                  <LogOut className={cn("transition-all duration-200", isCollapsed ? "mx-auto" : "mr-3")} size={18} />
+                  {!isCollapsed && <span className="text-sm">Sair</span>}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
