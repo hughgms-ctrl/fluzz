@@ -44,15 +44,17 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [step, setStep] = useState<DialogStep>("choose");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
 
-  // Set default date when provided
+  // Set default date when provided (for calendar click)
   useEffect(() => {
     if (defaultDate && open) {
       const dateStr = defaultDate.toISOString().split('T')[0];
       setStartDate(dateStr);
+      setEndDate(dateStr);
     }
   }, [defaultDate, open]);
 
@@ -88,10 +90,10 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
             description,
             status: "active",
             is_standalone_folder: isStandaloneFolder,
-            is_draft: true, // Sempre começa como rascunho
-            pending_notifications: true, // Notificações pendentes até publicar
+            is_draft: true,
+            pending_notifications: true,
             start_date: startDate || null,
-            end_date: startDate || null,
+            end_date: endDate || startDate || null,
           },
         ])
         .select()
@@ -261,6 +263,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
     setName("");
     setDescription("");
     setStartDate("");
+    setEndDate("");
     setStep("choose");
     setSelectedTemplate(null);
     onOpenChange(false);
@@ -424,8 +427,35 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Descreva o objetivo do projeto..."
-                  rows={4}
+                  rows={3}
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="startDate">Data de Início</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      // Se a data de fim for anterior, ajusta
+                      if (endDate && e.target.value > endDate) {
+                        setEndDate(e.target.value);
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">Data de Fim</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    min={startDate || undefined}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button

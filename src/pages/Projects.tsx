@@ -43,9 +43,25 @@ export default function Projects() {
   });
 
   // Separate projects vs standalone folders
+  // Sort projects by event date (end_date or start_date), undated projects at the end
+  const sortByEventDate = (projects: any[]) => {
+    return [...projects].sort((a, b) => {
+      const dateA = a.end_date || a.start_date;
+      const dateB = b.end_date || b.start_date;
+      
+      // Undated projects go to the end
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+      
+      // Sort by date ascending (closest dates first)
+      return new Date(dateA).getTime() - new Date(dateB).getTime();
+    });
+  };
+
   const { activeProjects, archivedProjects, standaloneFolders } = useMemo(() => {
-    const active = projects?.filter(p => !p.archived && !p.is_standalone_folder) || [];
-    const archived = projects?.filter(p => p.archived && !p.is_standalone_folder) || [];
+    const active = sortByEventDate(projects?.filter(p => !p.archived && !p.is_standalone_folder) || []);
+    const archived = sortByEventDate(projects?.filter(p => p.archived && !p.is_standalone_folder) || []);
     const standalone = projects?.filter(p => p.is_standalone_folder) || [];
     return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone };
   }, [projects]);

@@ -78,10 +78,16 @@ export default function ProjectDetail() {
   });
 
   const updateProjectMutation = useMutation({
-    mutationFn: async ({ name, description, end_date }: { name?: string; description?: string; end_date?: string | null }) => {
+    mutationFn: async ({ name, description, start_date, end_date }: { 
+      name?: string; 
+      description?: string; 
+      start_date?: string | null;
+      end_date?: string | null 
+    }) => {
       const updates: any = {};
       if (name !== undefined) updates.name = name;
       if (description !== undefined) updates.description = description || null;
+      if (start_date !== undefined) updates.start_date = start_date;
       if (end_date !== undefined) updates.end_date = end_date;
       
       const { error } = await supabase
@@ -190,12 +196,29 @@ export default function ProjectDetail() {
     return new Date(y, (m || 1) - 1, d || 1);
   };
 
-  const handleDateChange = (date: Date | undefined) => {
+  const handleStartDateChange = (date: Date | undefined) => {
+    if (!date) {
+      updateProjectMutation.mutate({ start_date: null });
+      return;
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+    
+    // If end_date is before new start_date, update end_date too
+    if (project?.end_date && dateStr > project.end_date) {
+      updateProjectMutation.mutate({ start_date: dateStr, end_date: dateStr });
+    } else {
+      updateProjectMutation.mutate({ start_date: dateStr });
+    }
+  };
+
+  const handleEndDateChange = (date: Date | undefined) => {
     if (!date) {
       updateProjectMutation.mutate({ end_date: null });
       return;
     }
-    // Format date using local timezone to avoid off-by-one errors
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -548,34 +571,65 @@ export default function ProjectDetail() {
                 </p>
               )}
               
-              {/* Project Date */}
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                      "gap-2 text-xs justify-start mt-2 h-7 px-2",
-                      !project.end_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarDays size={14} />
-                    {project.end_date
-                      ? format(parseDateOnly(project.end_date), "dd/MM/yyyy", { locale: ptBR })
-                      : "Definir data do projeto"
-                    }
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={project.end_date ? parseDateOnly(project.end_date) : undefined}
-                    onSelect={handleDateChange}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              {/* Project Dates */}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "gap-1.5 text-xs justify-start h-7 px-2",
+                        !project.start_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays size={14} />
+                      {project.start_date
+                        ? format(parseDateOnly(project.start_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Início"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={project.start_date ? parseDateOnly(project.start_date) : undefined}
+                      onSelect={handleStartDateChange}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs text-muted-foreground">→</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "gap-1.5 text-xs justify-start h-7 px-2",
+                        !project.end_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarDays size={14} />
+                      {project.end_date
+                        ? format(parseDateOnly(project.end_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Fim"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={project.end_date ? parseDateOnly(project.end_date) : undefined}
+                      onSelect={handleEndDateChange}
+                      disabled={(date) => project.start_date ? date < parseDateOnly(project.start_date) : false}
+                      locale={ptBR}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
