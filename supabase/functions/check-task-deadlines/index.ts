@@ -18,6 +18,7 @@ interface TaskWithProject {
     name: string;
     workspace_id: string;
     archived: boolean;
+    is_draft: boolean;
   };
 }
 
@@ -61,7 +62,8 @@ const handler = async (req: Request): Promise<Response> => {
         projects:project_id (
           name,
           workspace_id,
-          archived
+          archived,
+          is_draft
         )
       `)
       .not("due_date", "is", null)
@@ -87,9 +89,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Process each task
     for (const task of (tasks as TaskWithProject[]) || []) {
-      // Skip tasks from archived projects
-      if (task.projects?.archived === true) {
-        console.log(`Skipping task "${task.title}" - project is archived`);
+      // Skip tasks from archived or draft projects
+      if (task.projects?.archived === true || task.projects?.is_draft === true) {
+        console.log(`Skipping task "${task.title}" - project is archived or draft`);
         continue;
       }
 
