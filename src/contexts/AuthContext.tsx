@@ -106,13 +106,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      // If the user requested the reset from the editor/preview domain, force the redirect
-      // to the published app URL so the email link always opens the right website.
-      const PUBLISHED_APP_ORIGIN = "https://fluzz.lovable.app";
-      const isPreviewDomain = window.location.hostname.includes("lovableproject.com");
-      const baseOrigin = isPreviewDomain ? PUBLISHED_APP_ORIGIN : window.location.origin;
-
-      const redirectUrl = `${baseOrigin}/reset-password`;
+      // Always send recovery users to the published app URL (not the editor/preview).
+      const redirectUrl = "https://fluzz.lovable.app/reset-password";
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
