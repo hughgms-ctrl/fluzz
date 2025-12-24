@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { MoreVertical, Folder, Copy, Trash2, Archive, ArchiveRestore, Bookmark, FileEdit } from "lucide-react";
+import { MoreVertical, Folder, Copy, Trash2, Archive, ArchiveRestore, Bookmark, FileEdit, CalendarDays } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent } from "@/components/ui/card";
+import { formatDateBR, formatDateShort } from "@/lib/utils";
 
 interface ProjectListViewProps {
   projects: any[];
@@ -39,6 +42,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
   const { isAdmin, isGestor } = useWorkspace();
   const queryClient = useQueryClient();
   const navigateHook = useNavigate();
+  const isMobile = useIsMobile();
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
 
   const getProgress = (project: any) => {
@@ -50,6 +54,19 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
       total: tasks.length,
       percentage: Math.round((completed / tasks.length) * 100),
     };
+  };
+
+  const formatEventDates = (project: any) => {
+    if (!project.start_date && !project.end_date) return null;
+    
+    const start = project.start_date;
+    const end = project.end_date;
+    
+    if (start && end && start !== end) {
+      return `${formatDateShort(start)} - ${formatDateShort(end)}`;
+    }
+    
+    return formatDateBR(end || start);
   };
 
   const saveAsTemplateMutation = useMutation({
@@ -93,10 +110,10 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
         const newTemplateTasks = tasks.map((task, index) => ({
           template_id: newTemplate.id,
           title: task.title,
-          description: task.description, // Copiar descrição
+          description: task.description,
           priority: task.priority,
           setor: task.setor,
-          documentation: null, // NÃO copiar documentação
+          documentation: null,
           process_id: task.process_id,
           task_order: index,
         }));
@@ -158,7 +175,6 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto SEM copiar descrição (notas) e com is_draft = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -168,8 +184,8 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
             status: 'active',
             user_id: user.id,
             workspace_id: project.workspace_id,
-            is_draft: true, // Sempre começa como rascunho
-            pending_notifications: true, // Notificações pendentes
+            is_draft: true,
+            pending_notifications: true,
           },
         ])
         .select()
@@ -177,7 +193,6 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
 
       if (projectError) throw projectError;
 
-      // Buscar tarefas com subtasks
       const { data: tasks, error: tasksError } = await supabase
         .from("tasks")
         .select("*, subtasks(*)")
@@ -185,7 +200,6 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
 
       if (tasksError) throw tasksError;
 
-      // Buscar task_processes
       const { data: taskProcesses, error: tpError } = await supabase
         .from("task_processes")
         .select("*")
@@ -199,21 +213,19 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
           taskIdToIndex[task.id] = index;
         });
 
-        // Mapear tarefas: copiar título, descrição, setor, responsável e processos
-        // NÃO copiar: due_date, documentation
         const newTasks = tasks.map((task) => ({
           title: task.title,
-          description: task.description, // Copiar descrição
+          description: task.description,
           status: 'todo',
           priority: task.priority,
           assigned_to: task.assigned_to,
           setor: task.setor,
-          documentation: null, // NÃO copiar documentação
+          documentation: null,
           process_id: task.process_id,
           completed_verified: false,
           project_id: newProject.id,
-          due_date: null, // NÃO copiar datas
-          start_date: null, // NÃO copiar datas
+          due_date: null,
+          start_date: null,
         }));
 
         const { data: insertedTasks, error: insertError } = await supabase
@@ -265,8 +277,6 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
               if (tpInsertError) console.warn("Erro ao copiar task_processes:", tpInsertError);
             }
           }
-
-          // NÃO criar notificações imediatamente
         }
       }
 
@@ -275,7 +285,6 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
     onSuccess: (newProject) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success("Rascunho criado! Edite e clique em 'Publicar' quando estiver pronto.");
-      // Navegar para o novo projeto
       if (newProject) {
         navigateHook(`/projects/${newProject.id}`);
       }
@@ -286,20 +295,177 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
     },
   });
 
+  const renderActionsDropdown = (project: any, e?: React.MouseEvent) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <Button variant="ghost" size="icon" className="h-8 w-8">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="z-50 bg-popover">
+        <DropdownMenuItem 
+          onClick={(e) => {
+            e.stopPropagation();
+            duplicateMutation.mutate(project);
+          }}
+          disabled={duplicateMutation.isPending}
+        >
+          <Copy className="mr-2 h-4 w-4" />
+          {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
+        </DropdownMenuItem>
+        {!isStandaloneFolder && (
+          <DropdownMenuItem 
+            onClick={(e) => {
+              e.stopPropagation();
+              saveAsTemplateMutation.mutate(project);
+            }}
+            disabled={saveAsTemplateMutation.isPending}
+          >
+            <Bookmark className="mr-2 h-4 w-4" />
+            {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+          </DropdownMenuItem>
+        )}
+        {!isStandaloneFolder && (
+          <DropdownMenuItem 
+            onClick={(e) => {
+              e.stopPropagation();
+              onArchive(project.id);
+            }}
+          >
+            {isArchived ? (
+              <>
+                <ArchiveRestore className="mr-2 h-4 w-4" />
+                Restaurar Projeto
+              </>
+            ) : (
+              <>
+                <Archive className="mr-2 h-4 w-4" />
+                Arquivar Projeto
+              </>
+            )}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem 
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDeleteDialog(project.id);
+          }}
+          className="text-destructive focus:text-destructive"
+        >
+          <Trash2 className="mr-2 h-4 w-4" />
+          Excluir Projeto
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  // Mobile Card View
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {projects.map((project) => {
+          const progress = getProgress(project);
+          const eventDates = formatEventDates(project);
+          
+          return (
+            <Card 
+              key={project.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => navigate(`/projects/${project.id}`)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      {isStandaloneFolder && <Folder className="h-4 w-4 text-primary flex-shrink-0" />}
+                      <h3 className="font-medium text-foreground truncate">{project.name}</h3>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {isStandaloneFolder && (
+                        <Badge variant="outline" className="text-xs">Avulso</Badge>
+                      )}
+                      {project.is_draft && (
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                          <FileEdit className="h-3 w-3 mr-1" />
+                          Rascunho
+                        </Badge>
+                      )}
+                      {eventDates && (
+                        <Badge variant="secondary" className="text-xs gap-1">
+                          <CalendarDays className="h-3 w-3" />
+                          {eventDates}
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Progresso</span>
+                        <span>{progress.completed}/{progress.total} tarefas</span>
+                      </div>
+                      <Progress value={progress.percentage} className="h-2" />
+                    </div>
+                  </div>
+                  
+                  {(isAdmin || isGestor) && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      {renderActionsDropdown(project)}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+
+        <AlertDialog open={!!showDeleteDialog} onOpenChange={() => setShowDeleteDialog(null)}>
+          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Projeto</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza de que deseja excluir permanentemente este projeto? Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (showDeleteDialog) {
+                    onDelete(showDeleteDialog);
+                  }
+                  setShowDeleteDialog(null);
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir Permanentemente
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    );
+  }
+
+  // Desktop Table View
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">{isStandaloneFolder ? "Pasta" : "Projeto"}</TableHead>
-            <TableHead className="w-[40%]">Progresso</TableHead>
-            <TableHead className="w-[20%] text-right">Tarefas</TableHead>
+            <TableHead className="w-[35%]">{isStandaloneFolder ? "Pasta" : "Projeto"}</TableHead>
+            <TableHead className="w-[20%]">Data</TableHead>
+            <TableHead className="w-[30%]">Progresso</TableHead>
+            <TableHead className="w-[15%] text-right">Tarefas</TableHead>
             {(isAdmin || isGestor) && <TableHead className="w-[50px]"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {projects.map((project) => {
             const progress = getProgress(project);
+            const eventDates = formatEventDates(project);
+            
             return (
               <TableRow
                 key={project.id}
@@ -309,7 +475,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-                    {project.name}
+                    <span className="truncate">{project.name}</span>
                     {isStandaloneFolder && <Badge variant="outline" className="text-xs">Avulso</Badge>}
                     {project.is_draft && (
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
@@ -320,6 +486,16 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                   </div>
                 </TableCell>
                 <TableCell>
+                  {eventDates ? (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {eventDates}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   <Progress value={progress.percentage} className="h-2" />
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground">
@@ -327,67 +503,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                 </TableCell>
                 {(isAdmin || isGestor) && (
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="z-50 bg-popover">
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            duplicateMutation.mutate(project);
-                          }}
-                          disabled={duplicateMutation.isPending}
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
-                        </DropdownMenuItem>
-                        {!isStandaloneFolder && (
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              saveAsTemplateMutation.mutate(project);
-                            }}
-                            disabled={saveAsTemplateMutation.isPending}
-                          >
-                            <Bookmark className="mr-2 h-4 w-4" />
-                            {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
-                          </DropdownMenuItem>
-                        )}
-                        {!isStandaloneFolder && (
-                          <DropdownMenuItem 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onArchive(project.id);
-                            }}
-                          >
-                            {isArchived ? (
-                              <>
-                                <ArchiveRestore className="mr-2 h-4 w-4" />
-                                Restaurar Projeto
-                              </>
-                            ) : (
-                              <>
-                                <Archive className="mr-2 h-4 w-4" />
-                                Arquivar Projeto
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDeleteDialog(project.id);
-                          }}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir Projeto
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {renderActionsDropdown(project)}
                   </TableCell>
                 )}
               </TableRow>
