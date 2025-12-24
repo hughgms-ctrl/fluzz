@@ -796,6 +796,7 @@ export default function ProjectDetail() {
                         toast.error("Erro ao atualizar datas");
                       } else {
                         queryClient.invalidateQueries({ queryKey: ["tasks", id] });
+                        queryClient.invalidateQueries({ queryKey: ["task", taskId] });
                       }
                     }}
                     onUpdateOrder={(taskId, newOrder) =>
