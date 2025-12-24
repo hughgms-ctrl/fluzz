@@ -618,11 +618,10 @@ export const TimelineView = ({
                         onUpdateTaskDates(task.id, startDate, endDate);
                       }}
                       style={{ cursor: hasNoDates && !isDragging ? 'pointer' : 'default' }}
-                    >
+                      >
                       {/* Grid lines - clickable for tasks without dates */}
                       <div className={cn(
-                        "absolute inset-0 flex",
-                        hasNoDates && !isDragging ? "pointer-events-auto" : "pointer-events-none"
+                        "absolute inset-0 flex pointer-events-none"
                       )}>
                         {days.map((day, i) => (
                           <div 
@@ -657,7 +656,7 @@ export const TimelineView = ({
                       {bar && (
                         <div
                           className={cn(
-                            "absolute top-2 h-8 rounded-md flex items-center group transition-all duration-75",
+                            "absolute top-2 h-8 rounded-md flex items-center group transition-all duration-75 pointer-events-auto",
                             getStatusColor(task.status),
                             isDragging 
                               ? "shadow-xl ring-2 ring-primary/50 opacity-90 scale-[1.02]" 
@@ -666,25 +665,26 @@ export const TimelineView = ({
                           style={{
                             left: bar.left,
                             width: Math.max(bar.width, dayWidth),
+                            zIndex: isDragging ? 40 : 20,
                           }}
                         >
                           {/* Resize handle - start */}
                           <div
                             className={cn(
-                              "absolute left-0 top-0 bottom-0 w-3 cursor-col-resize rounded-l-md transition-all z-10",
+                              "absolute left-0 top-0 bottom-0 w-4 cursor-col-resize rounded-l-md transition-all z-10",
                               "flex items-center justify-center",
-                              "bg-black/20 hover:bg-white/40",
-                              isDragging && dragInfo?.mode === 'resize-start' && "bg-white/50"
+                              "hover:bg-white/30",
+                              isDragging && dragInfo?.mode === 'resize-start' && "bg-white/40"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-start')}
                           >
-                            <div className="w-[2px] h-4 bg-white/90 rounded-full" />
+                            <div className="w-[2px] h-4 bg-white/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
 
                           {/* Move handle - main area */}
                           <div 
                             className={cn(
-                              "flex-1 h-full flex items-center justify-center px-4 cursor-grab",
+                              "flex-1 h-full flex items-center justify-center px-5 cursor-grab",
                               isDragging && dragInfo?.mode === 'move' && "cursor-grabbing"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
@@ -697,14 +697,14 @@ export const TimelineView = ({
                           {/* Resize handle - end */}
                           <div
                             className={cn(
-                              "absolute right-0 top-0 bottom-0 w-3 cursor-col-resize rounded-r-md transition-all z-10",
+                              "absolute right-0 top-0 bottom-0 w-4 cursor-col-resize rounded-r-md transition-all z-10",
                               "flex items-center justify-center",
-                              "bg-black/20 hover:bg-white/40",
-                              isDragging && dragInfo?.mode === 'resize-end' && "bg-white/50"
+                              "hover:bg-white/30",
+                              isDragging && dragInfo?.mode === 'resize-end' && "bg-white/40"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'resize-end')}
                           >
-                            <div className="w-[2px] h-4 bg-white/90 rounded-full" />
+                            <div className="w-[2px] h-4 bg-white/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
                         </div>
                       )}
