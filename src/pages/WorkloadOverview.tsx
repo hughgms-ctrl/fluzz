@@ -1,14 +1,15 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
 import { 
   AlertTriangle, 
   Calendar, 
@@ -17,258 +18,240 @@ import {
   Clock, 
   Flame, 
   TrendingUp,
+  Users,
+  User,
   CheckCircle2,
-  AlertCircle,
-  FolderKanban
+  Circle,
+  ArrowUpRight
 } from "lucide-react";
 import { 
   format, 
-  startOfMonth, 
-  endOfMonth, 
+  startOfWeek,
+  endOfWeek,
   eachDayOfInterval, 
   isSameDay, 
   isToday, 
-  isPast, 
-  addMonths, 
-  subMonths,
-  startOfWeek,
-  endOfWeek,
   addWeeks,
   subWeeks,
-  differenceInDays,
-  parseISO,
-  isWithinInterval
+  parseISO
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { parseDateOnly, isTaskOverdue } from "@/lib/utils";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  Cell,
-  Legend
-} from "recharts";
+import { parseDateOnly, isTaskOverdue, formatUserName } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-interface TaskWithProject {
+interface TaskWithAssignee {
   id: string;
   title: string;
   status: string;
   priority: string;
   due_date: string | null;
-  start_date: string | null;
+  assigned_to: string | null;
   project_id: string | null;
   projects: {
     id: string;
     name: string;
-    start_date: string | null;
-    end_date: string | null;
   } | null;
 }
 
-// Project colors for timeline
-const PROJECT_COLORS = [
-  "hsl(220, 70%, 50%)",
-  "hsl(160, 60%, 45%)",
-  "hsl(280, 65%, 55%)",
-  "hsl(30, 80%, 55%)",
-  "hsl(340, 70%, 50%)",
-  "hsl(190, 70%, 45%)",
-  "hsl(60, 70%, 45%)",
-  "hsl(120, 50%, 45%)",
-];
+interface MemberWorkload {
+  userId: string;
+  name: string;
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  overdueTasks: number;
+  highPriorityTasks: number;
+  tasksByDay: { [date: string]: number };
+  overloadedDays: number;
+}
 
 export default function WorkloadOverview() {
-  const { user } = useAuth();
-  const { workspace } = useWorkspace();
+  const { workspace, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
-  const [viewMode, setViewMode] = useState<"month" | "week">("week");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedMember, setSelectedMember] = useState<string>("all");
 
-  // Fetch all tasks from all projects
-  const { data: allTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ["all-workspace-tasks", workspace?.id],
+  // Check access - only admin and gestor can access
+  if (!isAdmin && !isGestor) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Fetch workspace members
+  const { data: members } = useQuery({
+    queryKey: ["workload-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      const { data, error } = await supabase
-        .from("tasks")
-        .select(`
-          id, title, status, priority, due_date, start_date, project_id,
-          projects(id, name, start_date, end_date, archived, pending_notifications)
-        `)
-        .order("due_date", { ascending: true });
       
-      if (error) throw error;
+      const { data: workspaceMembers } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspace.id);
       
-      // Filter out tasks from archived/draft projects
-      return (data || []).filter((task: any) => {
-        if (!task.project_id) return true; // Standalone tasks
-        if (!task.projects) return false;
-        if (task.projects.archived) return false;
-        if (task.projects.pending_notifications === true) return false;
-        return true;
-      }) as TaskWithProject[];
+      if (!workspaceMembers?.length) return [];
+      
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", workspaceMembers.map(m => m.user_id));
+      
+      return profiles || [];
     },
     enabled: !!workspace,
   });
 
-  // Fetch all projects for timeline
-  const { data: allProjects } = useQuery({
-    queryKey: ["all-workspace-projects-timeline", workspace?.id],
+  // Fetch all tasks (excluding draft projects)
+  const { data: allTasks, isLoading } = useQuery({
+    queryKey: ["workload-tasks", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      const { data, error } = await supabase
+      
+      // Get non-draft, non-archived project IDs
+      const { data: activeProjects } = await supabase
         .from("projects")
-        .select("id, name, start_date, end_date, status")
+        .select("id")
         .eq("workspace_id", workspace.id)
         .eq("archived", false)
-        .neq("pending_notifications", true)
-        .order("end_date", { ascending: true, nullsFirst: false });
+        .neq("pending_notifications", true);
       
-      if (error) throw error;
-      return data || [];
+      const projectIds = activeProjects?.map(p => p.id) || [];
+      
+      // Fetch project tasks
+      let projectTasks: TaskWithAssignee[] = [];
+      if (projectIds.length > 0) {
+        const { data } = await supabase
+          .from("tasks")
+          .select(`
+            id, title, status, priority, due_date, assigned_to, project_id,
+            projects(id, name)
+          `)
+          .in("project_id", projectIds);
+        projectTasks = (data || []) as TaskWithAssignee[];
+      }
+      
+      // Get workspace member IDs
+      const { data: workspaceMembers } = await supabase
+        .from("workspace_members")
+        .select("user_id")
+        .eq("workspace_id", workspace.id);
+      
+      const memberIds = workspaceMembers?.map(m => m.user_id) || [];
+      
+      // Fetch standalone tasks
+      const { data: standaloneTasks } = await supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_date, assigned_to, project_id")
+        .is("project_id", null)
+        .is("routine_id", null)
+        .in("assigned_to", memberIds);
+      
+      // Fetch routine tasks
+      const { data: routineTasks } = await supabase
+        .from("tasks")
+        .select("id, title, status, priority, due_date, assigned_to, project_id")
+        .not("routine_id", "is", null)
+        .in("assigned_to", memberIds);
+      
+      return [
+        ...projectTasks,
+        ...((standaloneTasks || []).map(t => ({ ...t, projects: null })) as TaskWithAssignee[]),
+        ...((routineTasks || []).map(t => ({ ...t, projects: null })) as TaskWithAssignee[])
+      ];
     },
     enabled: !!workspace,
   });
 
-  // Calculate date range based on view mode
+  // Calculate date range for current week
   const dateRange = useMemo(() => {
-    if (viewMode === "week") {
-      const start = startOfWeek(currentDate, { locale: ptBR });
-      const end = endOfWeek(currentDate, { locale: ptBR });
-      return eachDayOfInterval({ start, end });
-    } else {
-      const start = startOfMonth(currentDate);
-      const end = endOfMonth(currentDate);
-      return eachDayOfInterval({ start, end });
-    }
-  }, [currentDate, viewMode]);
+    const start = startOfWeek(currentDate, { locale: ptBR });
+    const end = endOfWeek(currentDate, { locale: ptBR });
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
 
-  // Group tasks by date for workload chart
-  const workloadData = useMemo(() => {
-    if (!allTasks) return [];
+  // Calculate workload per member
+  const memberWorkloads = useMemo((): MemberWorkload[] => {
+    if (!allTasks || !members) return [];
     
-    return dateRange.map((date) => {
-      const tasksOnDate = allTasks.filter((task) => {
-        if (!task.due_date) return false;
-        const dueDate = parseDateOnly(task.due_date);
-        return dueDate && isSameDay(dueDate, date);
-      });
-
-      const pendingTasks = tasksOnDate.filter(t => t.status !== "completed");
-      const completedTasks = tasksOnDate.filter(t => t.status === "completed");
+    return members.map(member => {
+      const memberTasks = allTasks.filter(t => t.assigned_to === member.id);
+      const pendingTasks = memberTasks.filter(t => t.status !== "completed");
+      const completedTasks = memberTasks.filter(t => t.status === "completed");
+      const overdueTasks = memberTasks.filter(t => isTaskOverdue(t.due_date, t.status));
       const highPriorityTasks = pendingTasks.filter(t => t.priority === "high");
-
+      
+      // Calculate tasks by day for the week
+      const tasksByDay: { [date: string]: number } = {};
+      let overloadedDays = 0;
+      
+      dateRange.forEach(date => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        const tasksOnDay = pendingTasks.filter(t => {
+          if (!t.due_date) return false;
+          const dueDate = parseDateOnly(t.due_date);
+          return dueDate && isSameDay(dueDate, date);
+        }).length;
+        tasksByDay[dateStr] = tasksOnDay;
+        if (tasksOnDay >= 5) overloadedDays++;
+      });
+      
       return {
-        date: format(date, "dd/MM", { locale: ptBR }),
-        fullDate: date,
-        total: tasksOnDate.length,
-        pending: pendingTasks.length,
-        completed: completedTasks.length,
-        highPriority: highPriorityTasks.length,
-        isToday: isToday(date),
-        isOverloaded: pendingTasks.length >= 5,
+        userId: member.id,
+        name: formatUserName(member.full_name) || "Usuário",
+        totalTasks: memberTasks.length,
+        completedTasks: completedTasks.length,
+        pendingTasks: pendingTasks.length,
+        overdueTasks: overdueTasks.length,
+        highPriorityTasks: highPriorityTasks.length,
+        tasksByDay,
+        overloadedDays,
       };
-    });
-  }, [allTasks, dateRange]);
+    }).sort((a, b) => b.pendingTasks - a.pendingTasks); // Sort by pending tasks desc
+  }, [allTasks, members, dateRange]);
 
-  // Calculate summary stats
-  const stats = useMemo(() => {
-    if (!allTasks) return { overdue: 0, today: 0, thisWeek: 0, conflicts: 0 };
+  // Global stats
+  const globalStats = useMemo(() => {
+    const totalOverdue = memberWorkloads.reduce((acc, m) => acc + m.overdueTasks, 0);
+    const totalPending = memberWorkloads.reduce((acc, m) => acc + m.pendingTasks, 0);
+    const totalOverloadedDays = memberWorkloads.reduce((acc, m) => acc + m.overloadedDays, 0);
+    const membersWithOverload = memberWorkloads.filter(m => m.overloadedDays > 0).length;
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(today);
-    weekEnd.setDate(today.getDate() + 7);
-
-    const overdue = allTasks.filter(task => 
-      task.due_date && 
-      isTaskOverdue(task.due_date, task.status)
-    ).length;
-
-    const todayTasks = allTasks.filter(task => {
-      if (!task.due_date) return false;
-      const dueDate = parseDateOnly(task.due_date);
-      return dueDate && isSameDay(dueDate, today) && task.status !== "completed";
-    }).length;
-
-    const thisWeekTasks = allTasks.filter(task => {
-      if (!task.due_date) return false;
-      const dueDate = parseDateOnly(task.due_date);
-      return dueDate && dueDate >= today && dueDate <= weekEnd && task.status !== "completed";
-    }).length;
-
-    // Count days with 5+ pending tasks as conflicts
-    const conflicts = workloadData.filter(d => d.isOverloaded).length;
-
-    return { overdue, today: todayTasks, thisWeek: thisWeekTasks, conflicts };
-  }, [allTasks, workloadData]);
-
-  // Group tasks by project for timeline
-  const projectGroups = useMemo(() => {
-    if (!allTasks) return [];
-    
-    const groups = new Map<string, { 
-      project: { id: string; name: string; start_date: string | null; end_date: string | null } | null; 
-      tasks: TaskWithProject[];
-      color: string;
-    }>();
-
-    allTasks.forEach((task, index) => {
-      const key = task.project_id || "standalone";
-      if (!groups.has(key)) {
-        groups.set(key, {
-          project: task.projects,
-          tasks: [],
-          color: task.project_id 
-            ? PROJECT_COLORS[groups.size % PROJECT_COLORS.length]
-            : "hsl(0, 0%, 50%)",
-        });
-      }
-      groups.get(key)!.tasks.push(task);
-    });
-
-    return Array.from(groups.entries())
-      .filter(([key]) => key !== "standalone")
-      .map(([key, value]) => ({ projectId: key, ...value }));
-  }, [allTasks]);
+    return { totalOverdue, totalPending, totalOverloadedDays, membersWithOverload };
+  }, [memberWorkloads]);
 
   // Navigation handlers
-  const navigatePrev = () => {
-    if (viewMode === "week") {
-      setCurrentDate(subWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(subMonths(currentDate, 1));
-    }
-  };
+  const navigatePrev = () => setCurrentDate(subWeeks(currentDate, 1));
+  const navigateNext = () => setCurrentDate(addWeeks(currentDate, 1));
+  const goToToday = () => setCurrentDate(new Date());
 
-  const navigateNext = () => {
-    if (viewMode === "week") {
-      setCurrentDate(addWeeks(currentDate, 1));
-    } else {
-      setCurrentDate(addMonths(currentDate, 1));
-    }
-  };
-
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
-  // Get tasks for a specific day
-  const getTasksForDay = (date: Date) => {
+  // Get filtered tasks for the selected member or all
+  const filteredTasks = useMemo(() => {
     if (!allTasks) return [];
-    return allTasks.filter(task => {
-      if (!task.due_date) return false;
-      const dueDate = parseDateOnly(task.due_date);
-      return dueDate && isSameDay(dueDate, date);
-    });
-  };
+    if (selectedMember === "all") return allTasks;
+    return allTasks.filter(t => t.assigned_to === selectedMember);
+  }, [allTasks, selectedMember]);
 
-  if (tasksLoading) {
+  // Tasks grouped by due date for list view
+  const tasksByDate = useMemo(() => {
+    const grouped: { [date: string]: TaskWithAssignee[] } = {};
+    
+    filteredTasks.forEach(task => {
+      if (!task.due_date) return;
+      const dateKey = task.due_date;
+      if (!grouped[dateKey]) grouped[dateKey] = [];
+      grouped[dateKey].push(task);
+    });
+    
+    return Object.entries(grouped)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, tasks]) => ({ date, tasks }));
+  }, [filteredTasks]);
+
+  if (isLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-64">
@@ -278,15 +261,37 @@ export default function WorkloadOverview() {
     );
   }
 
+  const getMemberName = (userId: string | null) => {
+    if (!userId) return "Não atribuído";
+    const member = members?.find(m => m.id === userId);
+    return formatUserName(member?.full_name) || "Usuário";
+  };
+
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">Visão de Carga</h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Visualize a distribuição de tarefas entre todos os projetos
-          </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Visão de Carga</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Visualize a carga de trabalho por membro da equipe
+            </p>
+          </div>
+          
+          <Select value={selectedMember} onValueChange={setSelectedMember}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por membro" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os membros</SelectItem>
+              {members?.map(member => (
+                <SelectItem key={member.id} value={member.id}>
+                  {formatUserName(member.full_name) || "Usuário"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Summary Cards */}
@@ -295,391 +300,337 @@ export default function WorkloadOverview() {
             <CardContent className="p-3 sm:p-4 flex items-center gap-3">
               <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-destructive flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.overdue}</p>
+                <p className="text-xl sm:text-2xl font-bold">{globalStats.totalOverdue}</p>
                 <p className="text-xs sm:text-sm text-muted-foreground">Atrasadas</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-warning">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
-              <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.today}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Para Hoje</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-primary">
             <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.thisWeek}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Esta Semana</p>
+                <p className="text-xl sm:text-2xl font-bold">{globalStats.totalPending}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Pendentes</p>
               </div>
             </CardContent>
           </Card>
-          <Card className={`border-l-4 ${stats.conflicts > 0 ? 'border-l-orange-500' : 'border-l-green-500'}`}>
+          <Card className="border-l-4 border-l-orange-500">
             <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <Flame className={`h-6 w-6 sm:h-8 sm:w-8 flex-shrink-0 ${stats.conflicts > 0 ? 'text-orange-500' : 'text-green-500'}`} />
+              <Flame className="h-6 w-6 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{stats.conflicts}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Dias Cheios</p>
+                <p className="text-xl sm:text-2xl font-bold">{globalStats.membersWithOverload}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Sobrecarregados</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-green-500">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
+              <Users className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
+              <div>
+                <p className="text-xl sm:text-2xl font-bold">{members?.length || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Membros</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={navigatePrev}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" onClick={goToToday}>
-              Hoje
-            </Button>
-            <Button variant="outline" size="icon" onClick={navigateNext}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <span className="font-medium ml-2 capitalize">
-              {viewMode === "week" 
-                ? `Semana de ${format(dateRange[0], "dd MMM", { locale: ptBR })} - ${format(dateRange[dateRange.length - 1], "dd MMM", { locale: ptBR })}`
-                : format(currentDate, "MMMM yyyy", { locale: ptBR })
-              }
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant={viewMode === "week" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setViewMode("week")}
-            >
-              Semana
-            </Button>
-            <Button 
-              variant={viewMode === "month" ? "default" : "outline"} 
-              size="sm"
-              onClick={() => setViewMode("month")}
-            >
-              Mês
-            </Button>
-          </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={navigatePrev}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" onClick={goToToday}>
+            Hoje
+          </Button>
+          <Button variant="outline" size="icon" onClick={navigateNext}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <span className="font-medium ml-2">
+            Semana de {format(dateRange[0], "dd MMM", { locale: ptBR })} - {format(dateRange[dateRange.length - 1], "dd MMM yyyy", { locale: ptBR })}
+          </span>
         </div>
 
-        <Tabs defaultValue="chart" className="w-full">
+        <Tabs defaultValue="members" className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="chart">Gráfico</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="members">Por Membro</TabsTrigger>
+            <TabsTrigger value="calendar">Calendário</TabsTrigger>
             <TabsTrigger value="list">Lista</TabsTrigger>
           </TabsList>
 
-          {/* Chart View */}
-          <TabsContent value="chart" className="mt-4">
+          {/* Members Table View - Main view like ClickUp */}
+          <TabsContent value="members" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Distribuição de Tarefas</CardTitle>
+                <CardTitle className="text-lg">Carga de Trabalho por Membro</CardTitle>
+                <CardDescription>
+                  Visualize quantas tarefas cada membro tem pendentes, atrasadas e por dia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Membro</TableHead>
+                      <TableHead className="text-center">Pendentes</TableHead>
+                      <TableHead className="text-center">Atrasadas</TableHead>
+                      <TableHead className="text-center">Alta Prior.</TableHead>
+                      {dateRange.map(date => (
+                        <TableHead 
+                          key={date.toISOString()} 
+                          className={`text-center min-w-[60px] ${isToday(date) ? 'bg-primary/10' : ''}`}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs uppercase">{format(date, "EEE", { locale: ptBR })}</span>
+                            <span className="font-medium">{format(date, "dd")}</span>
+                          </div>
+                        </TableHead>
+                      ))}
+                      <TableHead className="text-center">Progresso</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {memberWorkloads.map(member => {
+                      const completionRate = member.totalTasks > 0 
+                        ? Math.round((member.completedTasks / member.totalTasks) * 100) 
+                        : 0;
+                      
+                      return (
+                        <TableRow 
+                          key={member.userId}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedMember(member.userId)}
+                        >
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-4 w-4 text-primary" />
+                              </div>
+                              <span>{member.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={member.pendingTasks > 10 ? "destructive" : "secondary"}>
+                              {member.pendingTasks}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {member.overdueTasks > 0 ? (
+                              <Badge variant="destructive">{member.overdueTasks}</Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-green-600">0</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {member.highPriorityTasks > 0 ? (
+                              <Badge variant="destructive">{member.highPriorityTasks}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          {dateRange.map(date => {
+                            const dateStr = format(date, "yyyy-MM-dd");
+                            const count = member.tasksByDay[dateStr] || 0;
+                            const isOverloaded = count >= 5;
+                            
+                            return (
+                              <TableCell 
+                                key={date.toISOString()} 
+                                className={`text-center ${isToday(date) ? 'bg-primary/10' : ''}`}
+                              >
+                                {count > 0 ? (
+                                  <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-medium ${
+                                    isOverloaded 
+                                      ? 'bg-destructive text-destructive-foreground' 
+                                      : count >= 3 
+                                        ? 'bg-orange-500/20 text-orange-600' 
+                                        : 'bg-muted'
+                                  }`}>
+                                    {count}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="min-w-[120px]">
+                            <div className="flex items-center gap-2">
+                              <Progress value={completionRate} className="h-2 flex-1" />
+                              <span className="text-xs text-muted-foreground w-8">{completionRate}%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+                
+                {memberWorkloads.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum membro encontrado no workspace
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Calendar Heat Map View */}
+          <TabsContent value="calendar" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Distribuição por Dia</CardTitle>
+                <CardDescription>
+                  Veja quais dias têm mais tarefas concentradas
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[300px] md:h-[400px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={workloadData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                      <XAxis 
-                        dataKey="date" 
-                        tick={{ fontSize: 12 }}
-                        interval={viewMode === "month" ? 2 : 0}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip 
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="bg-background border rounded-lg shadow-lg p-3">
-                                <p className="font-medium mb-2">{label}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  Pendentes: <span className="text-foreground font-medium">{data.pending}</span>
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  Concluídas: <span className="text-foreground font-medium">{data.completed}</span>
-                                </p>
-                                {data.highPriority > 0 && (
-                                  <p className="text-sm text-destructive">
-                                    Alta prioridade: {data.highPriority}
-                                  </p>
-                                )}
-                                {data.isOverloaded && (
-                                  <Badge variant="destructive" className="mt-2">Sobrecarga</Badge>
-                                )}
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Legend />
-                      <Bar 
-                        dataKey="pending" 
-                        name="Pendentes" 
-                        stackId="a"
-                        radius={[0, 0, 0, 0]}
+                <div className="grid grid-cols-7 gap-2">
+                  {dateRange.map(date => {
+                    const dateStr = format(date, "yyyy-MM-dd");
+                    const totalOnDay = memberWorkloads.reduce((acc, m) => acc + (m.tasksByDay[dateStr] || 0), 0);
+                    const isOverloaded = totalOnDay >= 10;
+                    
+                    return (
+                      <Card 
+                        key={date.toISOString()} 
+                        className={`${isToday(date) ? 'ring-2 ring-primary' : ''} ${
+                          isOverloaded ? 'bg-destructive/10 border-destructive' : ''
+                        }`}
                       >
-                        {workloadData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.isOverloaded ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
-                          />
-                        ))}
-                      </Bar>
-                      <Bar 
-                        dataKey="completed" 
-                        name="Concluídas" 
-                        stackId="a"
-                        fill="hsl(var(--muted))"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                        <CardContent className="p-3 text-center">
+                          <p className="text-xs uppercase text-muted-foreground">
+                            {format(date, "EEE", { locale: ptBR })}
+                          </p>
+                          <p className="text-lg font-bold">{format(date, "dd")}</p>
+                          <div className={`text-2xl font-bold mt-2 ${
+                            isOverloaded ? 'text-destructive' : totalOnDay > 5 ? 'text-orange-500' : 'text-foreground'
+                          }`}>
+                            {totalOnDay}
+                          </div>
+                          <p className="text-xs text-muted-foreground">tarefas</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
-                <div className="flex items-center justify-center gap-4 mt-4 text-sm">
+                
+                {/* Legend */}
+                <div className="flex items-center justify-center gap-6 mt-6 text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-primary" />
+                    <div className="w-4 h-4 rounded bg-muted" />
                     <span className="text-muted-foreground">Normal</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded bg-destructive" />
-                    <span className="text-muted-foreground">Sobrecarga (5+ tarefas)</span>
+                    <div className="w-4 h-4 rounded bg-orange-500/20" />
+                    <span className="text-muted-foreground">Atenção (5+)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded bg-destructive/20" />
+                    <span className="text-muted-foreground">Sobrecarga (10+)</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Timeline View */}
-          <TabsContent value="timeline" className="mt-4">
+          {/* Task List View */}
+          <TabsContent value="list" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Timeline por Projeto</CardTitle>
+                <CardTitle className="text-lg">Lista de Tarefas por Data</CardTitle>
+                <CardDescription>
+                  {selectedMember === "all" 
+                    ? "Todas as tarefas ordenadas por prazo"
+                    : `Tarefas de ${getMemberName(selectedMember)}`
+                  }
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <ScrollArea className="w-full">
-                  <div className="min-w-[800px]">
-                    {/* Timeline Header */}
-                    <div className="flex border-b">
-                      <div className="w-48 flex-shrink-0 p-2 font-medium text-sm">
-                        Projeto
-                      </div>
-                      <div className="flex-1 flex">
-                        {dateRange.map((date) => (
-                          <div 
-                            key={date.toISOString()} 
-                            className={`flex-1 text-center p-2 text-xs border-l ${
-                              isToday(date) ? 'bg-primary/10 font-bold' : ''
-                            }`}
-                          >
-                            <div>{format(date, "EEE", { locale: ptBR })}</div>
-                            <div>{format(date, "dd")}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Project Rows */}
-                    {projectGroups.map((group) => (
-                      <div key={group.projectId} className="flex border-b hover:bg-muted/50">
-                        <div 
-                          className="w-48 flex-shrink-0 p-2 text-sm font-medium truncate flex items-center gap-2 cursor-pointer hover:text-primary"
-                          onClick={() => navigate(`/projects/${group.projectId}`)}
-                        >
-                          <div 
-                            className="w-3 h-3 rounded-full flex-shrink-0" 
-                            style={{ backgroundColor: group.color }}
-                          />
-                          <span className="truncate">{group.project?.name || "Projeto"}</span>
+                <div className="space-y-6">
+                  {tasksByDate.map(({ date, tasks }) => {
+                    const parsedDate = parseDateOnly(date);
+                    const isOverdue = parsedDate && parsedDate < new Date() && tasks.some(t => t.status !== "completed");
+                    
+                    return (
+                      <div key={date}>
+                        <div className={`flex items-center gap-2 mb-3 ${isOverdue ? 'text-destructive' : ''}`}>
+                          <Calendar className="h-4 w-4" />
+                          <span className="font-medium">
+                            {parsedDate ? format(parsedDate, "EEEE, dd 'de' MMMM", { locale: ptBR }) : date}
+                          </span>
+                          <Badge variant={isOverdue ? "destructive" : "secondary"}>
+                            {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
+                          </Badge>
                         </div>
-                        <div className="flex-1 flex relative h-12">
-                          {/* Project bar (if has dates) */}
-                          {group.project?.start_date && group.project?.end_date && (
-                            (() => {
-                              const projectStart = parseISO(group.project.start_date);
-                              const projectEnd = parseISO(group.project.end_date);
-                              const rangeStart = dateRange[0];
-                              const rangeEnd = dateRange[dateRange.length - 1];
-                              
-                              // Check if project overlaps with visible range
-                              if (projectEnd < rangeStart || projectStart > rangeEnd) return null;
-                              
-                              const visibleStart = projectStart < rangeStart ? rangeStart : projectStart;
-                              const visibleEnd = projectEnd > rangeEnd ? rangeEnd : projectEnd;
-                              
-                              const startIdx = dateRange.findIndex(d => isSameDay(d, visibleStart) || d > visibleStart);
-                              const endIdx = dateRange.findIndex(d => isSameDay(d, visibleEnd) || d > visibleEnd);
-                              const adjustedEndIdx = endIdx === -1 ? dateRange.length : endIdx + 1;
-                              
-                              const left = `${(startIdx / dateRange.length) * 100}%`;
-                              const width = `${((adjustedEndIdx - startIdx) / dateRange.length) * 100}%`;
-                              
-                              return (
-                                <div 
-                                  className="absolute top-1/2 -translate-y-1/2 h-6 rounded opacity-30"
-                                  style={{ 
-                                    left, 
-                                    width,
-                                    backgroundColor: group.color,
-                                  }}
-                                />
-                              );
-                            })()
-                          )}
-                          
-                          {/* Task dots */}
-                          {dateRange.map((date, idx) => {
-                            const tasksOnDate = group.tasks.filter(task => {
-                              if (!task.due_date) return false;
-                              const dueDate = parseDateOnly(task.due_date);
-                              return dueDate && isSameDay(dueDate, date);
-                            });
-                            
-                            if (tasksOnDate.length === 0) return (
-                              <div 
-                                key={date.toISOString()} 
-                                className={`flex-1 border-l ${isToday(date) ? 'bg-primary/10' : ''}`}
-                              />
-                            );
-                            
-                            const hasOverdue = tasksOnDate.some(t => isTaskOverdue(t.due_date!, t.status));
-                            const allCompleted = tasksOnDate.every(t => t.status === "completed");
-                            
-                            return (
-                              <div 
-                                key={date.toISOString()} 
-                                className={`flex-1 border-l flex items-center justify-center ${isToday(date) ? 'bg-primary/10' : ''}`}
+                        
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[40px]">Status</TableHead>
+                              <TableHead>Tarefa</TableHead>
+                              <TableHead>Responsável</TableHead>
+                              <TableHead>Projeto</TableHead>
+                              <TableHead className="w-[80px]">Prioridade</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {tasks.map(task => (
+                              <TableRow 
+                                key={task.id} 
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => navigate(`/tasks/${task.id}`)}
                               >
-                                <div 
-                                  className={`relative w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-transform hover:scale-110`}
-                                  style={{ 
-                                    backgroundColor: hasOverdue 
-                                      ? "hsl(var(--destructive))" 
-                                      : allCompleted 
-                                        ? "hsl(142, 76%, 36%)" 
-                                        : group.color 
-                                  }}
-                                  title={`${tasksOnDate.length} tarefa(s)`}
-                                >
-                                  {tasksOnDate.length}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+                                <TableCell>
+                                  {task.status === "completed" ? (
+                                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                  ) : (
+                                    <Circle className={`h-5 w-5 ${
+                                      isTaskOverdue(task.due_date, task.status) ? 'text-destructive' : 'text-muted-foreground'
+                                    }`} />
+                                  )}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-2">
+                                    {task.title}
+                                    <ArrowUpRight className="h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <User className="h-3 w-3 text-primary" />
+                                    </div>
+                                    {getMemberName(task.assigned_to)}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">
+                                  {task.projects?.name || "Avulsa"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant={
+                                    task.priority === "high" ? "destructive" :
+                                    task.priority === "medium" ? "default" : "secondary"
+                                  }>
+                                    {task.priority === "high" ? "Alta" :
+                                     task.priority === "medium" ? "Média" : "Baixa"}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
                       </div>
-                    ))}
-
-                    {projectGroups.length === 0 && (
-                      <div className="p-8 text-center text-muted-foreground">
-                        Nenhum projeto com tarefas encontrado
-                      </div>
-                    )}
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+                    );
+                  })}
+                  
+                  {tasksByDate.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Nenhuma tarefa com prazo definido
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* List View */}
-          <TabsContent value="list" className="mt-4">
-            <div className="space-y-4">
-              {dateRange.map((date) => {
-                const tasksForDay = getTasksForDay(date);
-                const pendingTasks = tasksForDay.filter(t => t.status !== "completed");
-                const isOverloaded = pendingTasks.length >= 5;
-                
-                if (tasksForDay.length === 0) return null;
-                
-                return (
-                  <Card key={date.toISOString()} className={isOverloaded ? "border-destructive" : ""}>
-                    <CardHeader className="py-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {format(date, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                          {isToday(date) && <Badge>Hoje</Badge>}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          {isOverloaded && (
-                            <Badge variant="destructive" className="gap-1">
-                              <Flame className="h-3 w-3" />
-                              Sobrecarga
-                            </Badge>
-                          )}
-                          <Badge variant="outline">{tasksForDay.length} tarefas</Badge>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="py-2">
-                      <div className="space-y-2">
-                        {tasksForDay.map((task) => {
-                          const isOverdue = isTaskOverdue(task.due_date!, task.status);
-                          
-                          return (
-                            <div 
-                              key={task.id}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                              onClick={() => navigate(`/tasks/${task.id}`)}
-                            >
-                              <div className="flex items-center gap-3">
-                                {task.status === "completed" ? (
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                ) : isOverdue ? (
-                                  <AlertCircle className="h-4 w-4 text-destructive" />
-                                ) : (
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                )}
-                                <div>
-                                  <p className={`text-sm font-medium ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>
-                                    {task.title}
-                                  </p>
-                                  {task.projects && (
-                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <FolderKanban className="h-3 w-3" />
-                                      {task.projects.name}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {task.priority === "high" && (
-                                  <Badge variant="destructive" className="text-xs">Alta</Badge>
-                                )}
-                                <Badge 
-                                  variant={
-                                    task.status === "completed" ? "secondary" :
-                                    task.status === "in_progress" ? "default" : "outline"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {task.status === "completed" ? "Concluída" :
-                                   task.status === "in_progress" ? "Em Progresso" : "A Fazer"}
-                                </Badge>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              {workloadData.filter(d => d.total > 0).length === 0 && (
-                <Card>
-                  <CardContent className="py-8 text-center text-muted-foreground">
-                    Nenhuma tarefa com prazo neste período
-                  </CardContent>
-                </Card>
-              )}
-            </div>
           </TabsContent>
         </Tabs>
       </div>

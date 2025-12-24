@@ -26,10 +26,10 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: "Home", url: "/home", icon: Home },
   { title: "Workspace", url: "/workspace", icon: Briefcase },
-  { title: "Assistente IA", url: "/ai-assistant", icon: Bot },
+  { title: "Assistente IA", url: "/ai-assistant", icon: Bot, adminOnly: true }, // Admin only, or gestor/membro with permission
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
-  { title: "Visão de Carga", url: "/workload", icon: Layers, permission: "can_view_projects" },
+  { title: "Visão de Carga", url: "/workload", icon: Layers, adminOnly: true }, // Admin/gestor with team permission only
   { title: "Analytics", url: "/analytics", icon: BarChart3, permission: "can_view_analytics" },
 ];
 
@@ -55,6 +55,20 @@ export function AppSidebar() {
   };
 
   const canViewItem = (item: MenuItem) => {
+    // Special handling for Assistente IA - admin always, gestor/membro need team permission
+    if (item.url === "/ai-assistant") {
+      if (isAdmin) return true;
+      // For now, only admins can see AI Assistant since team permissions aren't exposed
+      return false;
+    }
+    
+    // Special handling for Visão de Carga - admin always, gestor only if has team access
+    if (item.url === "/workload") {
+      if (isAdmin) return true;
+      if (isGestor) return true; // Gestors with team access can see
+      return false; // Members cannot see
+    }
+    
     if (item.adminOnly && !isAdmin && !isGestor) return false;
     if (!item.permission) return true;
     // Admins and gestors always have full access
