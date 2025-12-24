@@ -67,8 +67,6 @@ export const ProjectsCalendarView = ({
   const processedProjects = useMemo(() => {
     return projects
       .filter(p => !p.is_standalone_folder && (p.start_date || p.end_date))
-      // Filter out drafts for non-admin/gestor users
-      .filter(p => canSeeDrafts || (!p.is_draft && !p.pending_notifications))
       .map((project, index) => {
         const startDate = project.start_date ? parseDateOnly(project.start_date) : null;
         const endDate = project.end_date ? parseDateOnly(project.end_date) : null;
