@@ -175,3 +175,25 @@ All colors MUST be HSL.
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
 }
+
+/* Discrete vertical scrollbar */
+.scrollbar-discrete {
+  scrollbar-width: thin;
+}
+
+.scrollbar-discrete::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-discrete::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-discrete::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 4px;
+}
+
+.scrollbar-discrete::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.4);
+}
