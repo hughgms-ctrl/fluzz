@@ -1,4 +1,4 @@
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,7 @@ const menuItems: MenuItem[] = [
   { title: "Assistente IA", url: "/ai-assistant", icon: Bot },
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
+  { title: "Visão de Carga", url: "/workload", icon: Layers, permission: "can_view_projects" },
   { title: "Analytics", url: "/analytics", icon: BarChart3, permission: "can_view_analytics" },
 ];
 
