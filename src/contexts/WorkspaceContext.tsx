@@ -30,6 +30,8 @@ interface UserPermissions {
   can_view_vision: boolean;
   can_view_processes: boolean;
   can_view_inventory: boolean;
+  can_view_ai: boolean;
+  can_view_workload: boolean;
 }
 
 interface WorkspaceContextType {
@@ -65,6 +67,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     can_view_vision: false,
     can_view_processes: false,
     can_view_inventory: false,
+    can_view_ai: false,
+    can_view_workload: false,
   });
 
   const fetchWorkspace = async (preferredWorkspaceId?: string) => {
@@ -184,6 +188,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             can_view_vision: true,
             can_view_processes: true,
             can_view_inventory: true,
+            can_view_ai: true,
+            can_view_workload: true,
           });
         } else {
           // Membros precisam de permissão explícita
@@ -205,6 +211,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               can_view_vision: permissionsData.can_view_vision,
               can_view_processes: permissionsData.can_view_processes,
               can_view_inventory: permissionsData.can_view_inventory ?? false,
+              can_view_ai: permissionsData.can_view_ai ?? false,
+              can_view_workload: permissionsData.can_view_workload ?? false,
             });
           } else {
             // Se não há registro de permissão, negar tudo para membros
@@ -218,6 +226,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               can_view_vision: false,
               can_view_processes: false,
               can_view_inventory: false,
+              can_view_ai: false,
+              can_view_workload: false,
             });
           }
         }

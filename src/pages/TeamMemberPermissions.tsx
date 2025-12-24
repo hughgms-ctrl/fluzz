@@ -50,6 +50,8 @@ interface UserPermissions {
   can_view_vision: boolean;
   can_view_processes: boolean;
   can_view_inventory: boolean;
+  can_view_ai: boolean;
+  can_view_workload: boolean;
   can_edit_projects: boolean;
   can_edit_tasks: boolean;
   can_edit_positions: boolean;
@@ -66,8 +68,9 @@ type PermissionKey = keyof Omit<UserPermissions, "id" | "user_id" | "workspace_i
 interface PermissionConfig {
   key: string;
   label: string;
-  viewKey: PermissionKey;
-  editKey: PermissionKey;
+  viewKey?: PermissionKey;
+  editKey?: PermissionKey;
+  viewOnly?: boolean;
 }
 
 const permissionConfigs: PermissionConfig[] = [
@@ -80,6 +83,8 @@ const permissionConfigs: PermissionConfig[] = [
   { key: "vision", label: "Visão", viewKey: "can_view_vision", editKey: "can_edit_vision" },
   { key: "processes", label: "Processos", viewKey: "can_view_processes", editKey: "can_edit_processes" },
   { key: "inventory", label: "Inventário", viewKey: "can_view_inventory", editKey: "can_edit_inventory" },
+  { key: "ai", label: "Fluzz AI", viewKey: "can_view_ai", viewOnly: true },
+  { key: "workload", label: "Workload View", viewKey: "can_view_workload", viewOnly: true },
 ];
 
 export default function TeamMemberPermissions() {
@@ -207,17 +212,19 @@ export default function TeamMemberPermissions() {
   });
 
   const handleViewChange = (config: PermissionConfig, checked: boolean) => {
+    if (!config.viewKey) return;
     updatePermissionMutation.mutate({ permission: config.viewKey, value: checked });
-    // If unchecking view, also uncheck edit
-    if (!checked) {
+    // If unchecking view, also uncheck edit (only if editKey exists)
+    if (!checked && config.editKey) {
       updatePermissionMutation.mutate({ permission: config.editKey, value: false });
     }
   };
 
   const handleEditChange = (config: PermissionConfig, checked: boolean) => {
+    if (!config.editKey) return;
     updatePermissionMutation.mutate({ permission: config.editKey, value: checked });
     // If checking edit, also check view
-    if (checked) {
+    if (checked && config.viewKey) {
       updatePermissionMutation.mutate({ permission: config.viewKey, value: true });
     }
   };
@@ -254,11 +261,13 @@ export default function TeamMemberPermissions() {
 
   const getViewValue = (config: PermissionConfig): boolean => {
     if (member.role === "admin") return true;
-    return Boolean(permissions?.[config.viewKey] ?? true);
+    if (!config.viewKey) return false;
+    return Boolean(permissions?.[config.viewKey] ?? false);
   };
 
   const getEditValue = (config: PermissionConfig): boolean => {
     if (member.role === "admin") return true;
+    if (!config.editKey) return false;
     return Boolean(permissions?.[config.editKey] ?? false);
   };
 
@@ -362,20 +371,24 @@ export default function TeamMemberPermissions() {
                     <div key={config.key} className="grid grid-cols-[1fr_80px_80px] gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors items-center">
                       <div className="text-base font-normal">{config.label}</div>
                       <div className="flex justify-center">
-                        <Checkbox
-                          id={`view-${config.key}`}
-                          checked={getViewValue(config)}
-                          onCheckedChange={(checked) => handleViewChange(config, checked === true)}
-                          disabled={member.role === "admin"}
-                        />
+                        {config.viewKey && (
+                          <Checkbox
+                            id={`view-${config.key}`}
+                            checked={getViewValue(config)}
+                            onCheckedChange={(checked) => handleViewChange(config, checked === true)}
+                            disabled={member.role === "admin"}
+                          />
+                        )}
                       </div>
                       <div className="flex justify-center">
-                        <Checkbox
-                          id={`edit-${config.key}`}
-                          checked={getEditValue(config)}
-                          onCheckedChange={(checked) => handleEditChange(config, checked === true)}
-                          disabled={member.role === "admin"}
-                        />
+                        {!config.viewOnly && config.editKey && (
+                          <Checkbox
+                            id={`edit-${config.key}`}
+                            checked={getEditValue(config)}
+                            onCheckedChange={(checked) => handleEditChange(config, checked === true)}
+                            disabled={member.role === "admin"}
+                          />
+                        )}
                       </div>
                     </div>
                   ))}

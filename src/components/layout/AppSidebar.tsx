@@ -55,18 +55,18 @@ export function AppSidebar() {
   };
 
   const canViewItem = (item: MenuItem) => {
-    // Special handling for Assistente IA - admin always, gestor/membro need team permission
+    // Special handling for Fluzz AI - admin always, gestor/membro need permission
     if (item.url === "/ai-assistant") {
       if (isAdmin) return true;
-      // For now, only admins can see AI Assistant since team permissions aren't exposed
-      return false;
+      if (isGestor) return permissions?.can_view_ai === true;
+      return permissions?.can_view_ai === true;
     }
     
-    // Special handling for Visão de Carga - admin always, gestor only if has team access
+    // Special handling for Workload View - admin always, gestor/membro need permission
     if (item.url === "/workload") {
       if (isAdmin) return true;
-      if (isGestor) return true; // Gestors with team access can see
-      return false; // Members cannot see
+      if (isGestor) return permissions?.can_view_workload === true;
+      return permissions?.can_view_workload === true;
     }
     
     if (item.adminOnly && !isAdmin && !isGestor) return false;
