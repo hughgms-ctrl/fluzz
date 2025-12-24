@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, Clock, TrendingUp } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { AlertCircle, CheckCircle2, Clock, TrendingUp, User } from "lucide-react";
 import { formatDateBR, formatUserName, isTaskOverdue } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Task {
   id: string;
@@ -21,13 +21,6 @@ interface ProjectDashboardProps {
   tasks: Task[];
   onFilterClick: (filterType: string, filterValue: string) => void;
 }
-
-const COLORS = {
-  todo: "hsl(var(--chart-1))",
-  in_progress: "hsl(var(--chart-2))",
-  completed: "hsl(var(--chart-3))",
-  overdue: "hsl(var(--destructive))",
-};
 
 export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps) {
   const navigate = useNavigate();
@@ -73,24 +66,6 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
       (task) => task.status === "todo" || task.status === "in_progress"
     );
 
-    const statusDistribution = [
-      {
-        name: "A Fazer",
-        value: tasks.filter((t) => t.status === "todo").length,
-        status: "todo",
-      },
-      {
-        name: "Em Progresso",
-        value: tasks.filter((t) => t.status === "in_progress").length,
-        status: "in_progress",
-      },
-      {
-        name: "Concluído",
-        value: tasks.filter((t) => t.status === "completed").length,
-        status: "completed",
-      },
-    ].filter((item) => item.value > 0);
-
     // Group tasks by assigned user
     const tasksByUser = tasks.reduce((acc, task) => {
       const userId = task.assigned_to || "unassigned";
@@ -104,10 +79,11 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
     }, {} as Record<string, { todo: number; in_progress: number; completed: number }>);
 
     const userDistribution = Object.entries(tasksByUser).map(([userId, counts]) => ({
-      user: userId === "unassigned" ? "Não atribuído" : (userNameMap[userId] || "Usuário"),
-      "A Fazer": counts.todo,
-      "Em Progresso": counts.in_progress,
-      Concluído: counts.completed,
+      userId,
+      userName: userId === "unassigned" ? "Não atribuído" : (userNameMap[userId] || "Usuário"),
+      todo: counts.todo,
+      inProgress: counts.in_progress,
+      completed: counts.completed,
       total: counts.todo + counts.in_progress + counts.completed,
     }));
 
@@ -118,10 +94,11 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
       overdue,
       completed,
       pending,
-      statusDistribution,
       userDistribution,
       completionRate,
       total: tasks.length,
+      todoCount: tasks.filter((t) => t.status === "todo").length,
+      inProgressCount: tasks.filter((t) => t.status === "in_progress").length,
     };
   }, [tasks, userNameMap]);
 
@@ -181,7 +158,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
         />
         <MetricCard
           title="Em Andamento"
-          value={tasks.filter((t) => t.status === "in_progress").length}
+          value={metrics.inProgressCount}
           icon={TrendingUp}
           color="text-blue-600"
           description="Tarefas em execução"
@@ -189,7 +166,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
         />
         <MetricCard
           title="A Fazer"
-          value={tasks.filter((t) => t.status === "todo").length}
+          value={metrics.todoCount}
           icon={Clock}
           color="text-orange-600"
           description="Aguardando início"
@@ -197,74 +174,154 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
         />
       </div>
 
-      {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Status Distribution */}
+      {/* Data Tables Section */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Status Distribution - Table */}
         <Card>
           <CardHeader>
             <CardTitle>Distribuição por Status</CardTitle>
+            <CardDescription>
+              Quantidade de tarefas em cada estado
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {metrics.statusDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={metrics.statusDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                    onClick={(data) => onFilterClick("status", data.status)}
-                    className="cursor-pointer"
+            <div className="space-y-4">
+              <table className="w-full text-sm">
+                <thead className="border-b">
+                  <tr>
+                    <th className="text-left py-2 px-2">Status</th>
+                    <th className="text-center py-2 px-2">Quantidade</th>
+                    <th className="text-center py-2 px-2">Porcentagem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={() => onFilterClick("status", "todo")}
                   >
-                    {metrics.statusDistribution.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[entry.status as keyof typeof COLORS]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Nenhuma tarefa no projeto
+                    <td className="py-3 px-2 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-blue-500" />
+                        A Fazer
+                      </div>
+                    </td>
+                    <td className="text-center py-3 px-2">
+                      <Badge variant="secondary" className="bg-blue-500/20 text-blue-600">{metrics.todoCount}</Badge>
+                    </td>
+                    <td className="text-center py-3 px-2 text-muted-foreground">
+                      {metrics.total > 0 ? Math.round((metrics.todoCount / metrics.total) * 100) : 0}%
+                    </td>
+                  </tr>
+                  <tr 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={() => onFilterClick("status", "in_progress")}
+                  >
+                    <td className="py-3 px-2 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-yellow-500" />
+                        Em Progresso
+                      </div>
+                    </td>
+                    <td className="text-center py-3 px-2">
+                      <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600">{metrics.inProgressCount}</Badge>
+                    </td>
+                    <td className="text-center py-3 px-2 text-muted-foreground">
+                      {metrics.total > 0 ? Math.round((metrics.inProgressCount / metrics.total) * 100) : 0}%
+                    </td>
+                  </tr>
+                  <tr 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={() => onFilterClick("status", "completed")}
+                  >
+                    <td className="py-3 px-2 font-medium">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-3 rounded-full bg-green-500" />
+                        Concluído
+                      </div>
+                    </td>
+                    <td className="text-center py-3 px-2">
+                      <Badge variant="secondary" className="bg-green-500/20 text-green-600">{metrics.completed.length}</Badge>
+                    </td>
+                    <td className="text-center py-3 px-2 text-muted-foreground">
+                      {metrics.total > 0 ? Math.round((metrics.completed.length / metrics.total) * 100) : 0}%
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              {/* Progress Bar */}
+              <div className="pt-2">
+                <div className="w-full bg-secondary rounded-full h-3 overflow-hidden flex">
+                  <div 
+                    className="h-full bg-blue-500 transition-all duration-500"
+                    style={{ width: `${metrics.total > 0 ? (metrics.todoCount / metrics.total) * 100 : 0}%` }}
+                  />
+                  <div 
+                    className="h-full bg-yellow-500 transition-all duration-500"
+                    style={{ width: `${metrics.total > 0 ? (metrics.inProgressCount / metrics.total) * 100 : 0}%` }}
+                  />
+                  <div 
+                    className="h-full bg-green-500 transition-all duration-500"
+                    style={{ width: `${metrics.total > 0 ? (metrics.completed.length / metrics.total) * 100 : 0}%` }}
+                  />
+                </div>
               </div>
-            )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* User Distribution */}
+        {/* User Distribution - Table */}
         <Card>
           <CardHeader>
             <CardTitle>Distribuição por Responsável</CardTitle>
+            <CardDescription>
+              Quantidade de tarefas por status para cada membro
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {metrics.userDistribution.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={metrics.userDistribution}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="user" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="A Fazer" fill={COLORS.todo} />
-                  <Bar dataKey="Em Progresso" fill={COLORS.in_progress} />
-                  <Bar dataKey="Concluído" fill={COLORS.completed} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Nenhuma tarefa atribuída
-              </div>
-            )}
+            <ScrollArea className="max-h-[300px]">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-background border-b">
+                  <tr>
+                    <th className="text-left py-2 px-2">Responsável</th>
+                    <th className="text-center py-2 px-2">A Fazer</th>
+                    <th className="text-center py-2 px-2">Fazendo</th>
+                    <th className="text-center py-2 px-2">Concluído</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.userDistribution.length > 0 ? (
+                    metrics.userDistribution.map((user) => (
+                      <tr key={user.userId} className="border-b hover:bg-muted/50">
+                        <td className="py-2 px-2 font-medium">
+                          <div className="flex items-center gap-2">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                              <User className="h-3 w-3 text-primary" />
+                            </div>
+                            {user.userName}
+                          </div>
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          <Badge variant={user.todo > 0 ? "default" : "outline"} className="bg-blue-500/80">{user.todo}</Badge>
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          <Badge variant={user.inProgress > 0 ? "default" : "outline"} className="bg-yellow-500/80">{user.inProgress}</Badge>
+                        </td>
+                        <td className="text-center py-2 px-2">
+                          <Badge variant="outline" className="text-green-600">{user.completed}</Badge>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="text-center py-4 text-muted-foreground">
+                        Nenhuma tarefa atribuída
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>
@@ -343,13 +400,13 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
               <div className="text-center">
                 <div className="text-sm text-muted-foreground">A Fazer</div>
                 <div className="text-lg font-semibold">
-                  {tasks.filter((t) => t.status === "todo").length}
+                  {metrics.todoCount}
                 </div>
               </div>
               <div className="text-center">
                 <div className="text-sm text-muted-foreground">Em Progresso</div>
                 <div className="text-lg font-semibold">
-                  {tasks.filter((t) => t.status === "in_progress").length}
+                  {metrics.inProgressCount}
                 </div>
               </div>
               <div className="text-center">
