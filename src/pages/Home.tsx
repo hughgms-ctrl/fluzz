@@ -92,12 +92,13 @@ export default function Home() {
       if (!members || members.length === 0) return [];
       const memberIds = members.map(m => m.user_id);
 
-      // Get active projects (non-archived)
+      // Get active projects (non-archived, not drafts)
       const { data: projectsData } = await supabase
         .from("projects")
         .select("id")
         .eq("workspace_id", workspace.id)
-        .eq("archived", false);
+        .eq("archived", false)
+        .neq("pending_notifications", true); // Exclude drafts
       
       const projectIds = projectsData?.map(p => p.id) || [];
 

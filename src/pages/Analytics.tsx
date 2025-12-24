@@ -63,7 +63,7 @@ export default function Analytics() {
     }
   }, [urlFilter]);
 
-  // Fetch all project tasks
+  // Fetch all project tasks (excluding drafts)
   const { data: projectTasks, isLoading: tasksLoading } = useQuery({
     queryKey: ["analytics-project-tasks", workspace?.id],
     queryFn: async () => {
@@ -73,10 +73,11 @@ export default function Analytics() {
         .from("tasks")
         .select(`
           *,
-          projects!inner(id, name, workspace_id, archived, is_standalone_folder)
+          projects!inner(id, name, workspace_id, archived, is_standalone_folder, pending_notifications)
         `)
         .eq("projects.workspace_id", workspace.id)
-        .eq("projects.archived", false);
+        .eq("projects.archived", false)
+        .neq("projects.pending_notifications", true); // Exclude drafts
       
       if (error) throw error;
       return data;
@@ -194,7 +195,8 @@ export default function Analytics() {
         .select("*")
         .eq("workspace_id", workspace.id)
         .eq("archived", false)
-        .eq("is_standalone_folder", false);
+        .eq("is_standalone_folder", false)
+        .neq("pending_notifications", true); // Exclude drafts
       
       if (error) throw error;
       return data;
@@ -540,91 +542,112 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* Charts */}
+        {/* Data Tables - Replacing Charts */}
         <div className="grid gap-6 md:grid-cols-2">
+          {/* Tasks by Project - Table instead of Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Tarefas por Status</CardTitle>
+              <CardTitle>Tarefas por Projeto</CardTitle>
               <CardDescription>
-                Distribuição das tarefas por status atual
+                Quantidade de tarefas pendentes e concluídas por projeto
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={statusData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background border-b">
+                    <tr>
+                      <th className="text-left py-2 px-2">Projeto</th>
+                      <th className="text-center py-2 px-2">Total</th>
+                      <th className="text-center py-2 px-2">Pendentes</th>
+                      <th className="text-center py-2 px-2">Concluídas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects?.map(project => {
+                      const projTasks = projectTasks?.filter(t => t.project_id === project.id) || [];
+                      const pending = projTasks.filter(t => t.status !== "completed").length;
+                      const completed = projTasks.filter(t => t.status === "completed").length;
+                      return (
+                        <tr key={project.id} className="border-b hover:bg-muted/50">
+                          <td className="py-2 px-2 font-medium truncate max-w-[200px]" title={project.name}>
+                            {project.name}
+                          </td>
+                          <td className="text-center py-2 px-2">{projTasks.length}</td>
+                          <td className="text-center py-2 px-2">
+                            <Badge variant={pending > 0 ? "secondary" : "outline"}>{pending}</Badge>
+                          </td>
+                          <td className="text-center py-2 px-2">
+                            <Badge variant="outline" className="text-green-600">{completed}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {(!projects || projects.length === 0) && (
+                  <p className="text-center text-muted-foreground py-4">Nenhum projeto encontrado</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
+          {/* Tasks by Member - Table instead of Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>Tarefas por Prioridade</CardTitle>
+              <CardTitle>Distribuição por Responsável</CardTitle>
               <CardDescription>
-                Distribuição das tarefas por nível de prioridade
+                Quantidade de tarefas por status para cada membro
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={priorityData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {priorityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-background border-b">
+                    <tr>
+                      <th className="text-left py-2 px-2">Responsável</th>
+                      <th className="text-center py-2 px-2">A Fazer</th>
+                      <th className="text-center py-2 px-2">Fazendo</th>
+                      <th className="text-center py-2 px-2">Concluído</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workspaceMembers?.map(member => {
+                      const memberTasks = allTasks.filter(t => t.assigned_to === member.id);
+                      const todo = memberTasks.filter(t => t.status === "todo").length;
+                      const inProgress = memberTasks.filter(t => t.status === "in_progress").length;
+                      const completed = memberTasks.filter(t => t.status === "completed").length;
+                      return (
+                        <tr key={member.id} className="border-b hover:bg-muted/50">
+                          <td className="py-2 px-2 font-medium">
+                            <div className="flex items-center gap-2">
+                              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-3 w-3 text-primary" />
+                              </div>
+                              {formatUserName(member.full_name) || "Usuário"}
+                            </div>
+                          </td>
+                          <td className="text-center py-2 px-2">
+                            <Badge variant={todo > 0 ? "default" : "outline"} className="bg-blue-500/80">{todo}</Badge>
+                          </td>
+                          <td className="text-center py-2 px-2">
+                            <Badge variant={inProgress > 0 ? "default" : "outline"} className="bg-yellow-500/80">{inProgress}</Badge>
+                          </td>
+                          <td className="text-center py-2 px-2">
+                            <Badge variant="outline" className="text-green-600">{completed}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {(!workspaceMembers || workspaceMembers.length === 0) && (
+                  <p className="text-center text-muted-foreground py-4">Nenhum membro encontrado</p>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tarefas por Projeto</CardTitle>
-            <CardDescription>
-              Quantidade de tarefas em cada projeto
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={projectStats}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="tarefas" fill="hsl(24.6, 95%, 53.1%)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
 
         {/* Task List Section */}
         <Card>
