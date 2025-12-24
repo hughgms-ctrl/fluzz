@@ -70,17 +70,8 @@ export default function WorkloadOverview() {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedMember, setSelectedMember] = useState<string>("all");
-
-  // Check access - only admin and gestor can access
-  if (!isAdmin && !isGestor) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
-        </div>
-      </AppLayout>
-    );
-  }
+  
+  // NOTE: All hooks must be called before any conditional returns!
 
   // Fetch workspace members
   const { data: members } = useQuery({
@@ -253,6 +244,17 @@ export default function WorkloadOverview() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, tasks]) => ({ date, tasks }));
   }, [filteredTasks]);
+
+  // Check access - only admin and gestor can access (must be after all hooks)
+  if (!isAdmin && !isGestor) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (isLoading) {
     return (
