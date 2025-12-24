@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { TasksCalendarView } from "@/components/tasks/TasksCalendarView";
 import { 
   AlertTriangle, 
   Calendar, 
@@ -490,63 +491,12 @@ export default function WorkloadOverview() {
             </Card>
           </TabsContent>
 
-          {/* Calendar Heat Map View */}
+          {/* Calendar View */}
           <TabsContent value="calendar" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Distribuição por Dia</CardTitle>
-                <CardDescription>
-                  Veja quais dias têm mais tarefas concentradas
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-7 gap-2">
-                  {dateRange.map(date => {
-                    const dateStr = format(date, "yyyy-MM-dd");
-                    const totalOnDay = memberWorkloads.reduce((acc, m) => acc + (m.tasksByDay[dateStr] || 0), 0);
-                    const isOverloaded = totalOnDay >= 10;
-                    
-                    return (
-                      <Card 
-                        key={date.toISOString()} 
-                        className={`${isToday(date) ? 'ring-2 ring-primary' : ''} ${
-                          isOverloaded ? 'bg-destructive/10 border-destructive' : ''
-                        }`}
-                      >
-                        <CardContent className="p-3 text-center">
-                          <p className="text-xs uppercase text-muted-foreground">
-                            {format(date, "EEE", { locale: ptBR })}
-                          </p>
-                          <p className="text-lg font-bold">{format(date, "dd")}</p>
-                          <div className={`text-2xl font-bold mt-2 ${
-                            isOverloaded ? 'text-destructive' : totalOnDay > 5 ? 'text-orange-500' : 'text-foreground'
-                          }`}>
-                            {totalOnDay}
-                          </div>
-                          <p className="text-xs text-muted-foreground">tarefas</p>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-                
-                {/* Legend */}
-                <div className="flex items-center justify-center gap-6 mt-6 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-muted" />
-                    <span className="text-muted-foreground">Normal</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-orange-500/20" />
-                    <span className="text-muted-foreground">Atenção (5+)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded bg-destructive/20" />
-                    <span className="text-muted-foreground">Sobrecarga (10+)</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <TasksCalendarView 
+              tasks={filteredTasks} 
+              members={members || []} 
+            />
           </TabsContent>
 
           {/* Task List View */}
