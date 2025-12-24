@@ -59,8 +59,8 @@ export default function Projects() {
     });
   };
 
-  const { activeProjects, archivedProjects, standaloneFolders } = useMemo(() => {
-    // Members (non-admin/gestor) should not see draft projects
+  const { activeProjects, archivedProjects, standaloneFolders, calendarProjects } = useMemo(() => {
+    // Members (non-admin/gestor) should not see draft projects in list/grid views
     const canSeeDrafts = isAdmin || isGestor;
     
     const filterDrafts = (projectList: any[]) => {
@@ -69,10 +69,14 @@ export default function Projects() {
       return projectList.filter(p => !p.is_draft && !p.pending_notifications);
     };
     
-    const active = sortByEventDate(filterDrafts(projects?.filter(p => !p.archived && !p.is_standalone_folder) || []));
+    // All active projects (including drafts) for calendar view - members can see but not click
+    const allActiveProjects = projects?.filter(p => !p.archived && !p.is_standalone_folder) || [];
+    const calendarProjectsList = sortByEventDate(allActiveProjects);
+    
+    const active = sortByEventDate(filterDrafts(allActiveProjects));
     const archived = sortByEventDate(filterDrafts(projects?.filter(p => p.archived && !p.is_standalone_folder) || []));
     const standalone = filterDrafts(projects?.filter(p => p.is_standalone_folder) || []);
-    return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone };
+    return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone, calendarProjects: calendarProjectsList };
   }, [projects, isAdmin, isGestor]);
 
   const deleteMutation = useMutation({
@@ -203,9 +207,9 @@ export default function Projects() {
           </TabsList>
 
           <TabsContent value="active" className="mt-6">
-            {viewMode === "calendar" ? (
+          {viewMode === "calendar" ? (
               <ProjectsCalendarView
-                projects={activeProjects}
+                projects={calendarProjects}
                 onCreateProject={(date) => {
                   setDefaultProjectDate(date);
                   setIsCreateOpen(true);
