@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   AlertTriangle, 
   Calendar, 
@@ -30,9 +30,8 @@ import {
   eachDayOfInterval, 
   isSameDay, 
   isToday, 
-  addWeeks,
-  subWeeks,
   addDays,
+  startOfDay,
   parseISO
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -69,7 +68,8 @@ interface MemberWorkload {
 export default function WorkloadOverview() {
   const { workspace, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const today = startOfDay(new Date());
+  const [viewOffset, setViewOffset] = useState(0);
   const [selectedMember, setSelectedMember] = useState<string>("all");
   
   // NOTE: All hooks must be called before any conditional returns!
@@ -158,12 +158,12 @@ export default function WorkloadOverview() {
     enabled: !!workspace,
   });
 
-  // Calculate date range for 21 days (3 weeks) for better visibility
+  // Calculate date range - 90 days total (30 before today + 60 after) with offset navigation
+  const totalDays = 90;
+  const viewStart = addDays(today, -30 + viewOffset);
   const dateRange = useMemo(() => {
-    const start = startOfWeek(currentDate, { locale: ptBR });
-    const end = addDays(start, 20); // 21 days total (3 weeks)
-    return eachDayOfInterval({ start, end });
-  }, [currentDate]);
+    return Array.from({ length: totalDays }, (_, i) => addDays(viewStart, i));
+  }, [viewStart, totalDays]);
 
   // Calculate workload per member
   const memberWorkloads = useMemo((): MemberWorkload[] => {
@@ -218,10 +218,10 @@ export default function WorkloadOverview() {
     return { totalOverdue, totalPending, totalOverloadedDays, membersWithOverload };
   }, [memberWorkloads]);
 
-  // Navigation handlers
-  const navigatePrev = () => setCurrentDate(subWeeks(currentDate, 1));
-  const navigateNext = () => setCurrentDate(addWeeks(currentDate, 1));
-  const goToToday = () => setCurrentDate(new Date());
+  // Navigation handlers - move by 7 days (1 week)
+  const navigatePrev = () => setViewOffset(prev => prev - 7);
+  const navigateNext = () => setViewOffset(prev => prev + 7);
+  const goToToday = () => setViewOffset(0);
 
   // Get filtered tasks for the selected member or all
   const filteredTasks = useMemo(() => {
@@ -354,9 +354,6 @@ export default function WorkloadOverview() {
           <span className="font-medium ml-2">
             {format(dateRange[0], "dd MMM", { locale: ptBR })} - {format(dateRange[dateRange.length - 1], "dd MMM yyyy", { locale: ptBR })}
           </span>
-          <span className="text-sm text-muted-foreground ml-2">
-            (role a tabela para ver mais dias →)
-          </span>
         </div>
 
         <Tabs defaultValue="members" className="w-full">
@@ -376,7 +373,8 @@ export default function WorkloadOverview() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent pb-2" style={{ maxWidth: '100%' }}>
+                <ScrollArea className="w-full" type="always">
+                  <div className="min-w-max">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -479,7 +477,9 @@ export default function WorkloadOverview() {
                       })}
                     </TableBody>
                   </Table>
-                </div>
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
                 
                 {memberWorkloads.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
