@@ -17,7 +17,6 @@ import {
   ChevronRight, 
   Clock, 
   Flame, 
-  TrendingUp,
   Users,
   User,
   CheckCircle2,
@@ -56,6 +55,7 @@ interface TaskWithAssignee {
 interface MemberWorkload {
   userId: string;
   name: string;
+  fullName: string;
   totalTasks: number;
   completedTasks: number;
   pendingTasks: number;
@@ -177,6 +177,8 @@ export default function WorkloadOverview() {
   const memberWorkloads = useMemo((): MemberWorkload[] => {
     if (!allTasks || !members) return [];
     
+    const OVERLOAD_THRESHOLD = 4; // >4 tasks = overload
+    
     return members.map(member => {
       const memberTasks = allTasks.filter(t => t.assigned_to === member.id);
       const pendingTasks = memberTasks.filter(t => t.status !== "completed");
@@ -196,12 +198,13 @@ export default function WorkloadOverview() {
           return dueDate && isSameDay(dueDate, date);
         }).length;
         tasksByDay[dateStr] = tasksOnDay;
-        if (tasksOnDay >= 5) overloadedDays++;
+        if (tasksOnDay > OVERLOAD_THRESHOLD) overloadedDays++;
       });
       
       return {
         userId: member.id,
         name: formatUserName(member.full_name) || "Usuário",
+        fullName: member.full_name || "Usuário",
         totalTasks: memberTasks.length,
         completedTasks: completedTasks.length,
         pendingTasks: pendingTasks.length,
@@ -363,107 +366,114 @@ export default function WorkloadOverview() {
               <CardHeader>
                 <CardTitle className="text-lg">Carga de Trabalho por Membro</CardTitle>
                 <CardDescription>
-                  Visualize quantas tarefas cada membro tem pendentes, atrasadas e por dia
+                  Visualize quantas tarefas cada membro tem pendentes, atrasadas e por dia. Células em laranja indicam sobrecarga (&gt;4 tarefas).
                 </CardDescription>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px]">Membro</TableHead>
-                      <TableHead className="text-center">Pendentes</TableHead>
-                      <TableHead className="text-center">Atrasadas</TableHead>
-                      <TableHead className="text-center">Alta Prior.</TableHead>
-                      {dateRange.map(date => (
-                        <TableHead 
-                          key={date.toISOString()} 
-                          className={`text-center min-w-[60px] ${isToday(date) ? 'bg-primary/10' : ''}`}
-                        >
-                          <div className="flex flex-col items-center">
-                            <span className="text-xs uppercase">{format(date, "EEE", { locale: ptBR })}</span>
-                            <span className="font-medium">{format(date, "dd")}</span>
-                          </div>
-                        </TableHead>
-                      ))}
-                      <TableHead className="text-center">Progresso</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {memberWorkloads.map(member => {
-                      const completionRate = member.totalTasks > 0 
-                        ? Math.round((member.completedTasks / member.totalTasks) * 100) 
-                        : 0;
-                      
-                      return (
-                        <TableRow 
-                          key={member.userId}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => setSelectedMember(member.userId)}
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                <User className="h-4 w-4 text-primary" />
-                              </div>
-                              <span>{member.name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant={member.pendingTasks > 10 ? "destructive" : "secondary"}>
-                              {member.pendingTasks}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {member.overdueTasks > 0 ? (
-                              <Badge variant="destructive">{member.overdueTasks}</Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-green-600">0</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {member.highPriorityTasks > 0 ? (
-                              <Badge variant="destructive">{member.highPriorityTasks}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                          {dateRange.map(date => {
-                            const dateStr = format(date, "yyyy-MM-dd");
-                            const count = member.tasksByDay[dateStr] || 0;
-                            const isOverloaded = count >= 5;
-                            
-                            return (
-                              <TableCell 
-                                key={date.toISOString()} 
-                                className={`text-center ${isToday(date) ? 'bg-primary/10' : ''}`}
-                              >
-                                {count > 0 ? (
-                                  <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-medium ${
-                                    isOverloaded 
-                                      ? 'bg-destructive text-destructive-foreground' 
-                                      : count >= 3 
-                                        ? 'bg-orange-500/20 text-orange-600' 
-                                        : 'bg-muted'
-                                  }`}>
-                                    {count}
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[180px] sticky left-0 bg-background z-10">Membro</TableHead>
+                        <TableHead className="text-center min-w-[80px]">Pendentes</TableHead>
+                        <TableHead className="text-center min-w-[80px]">Atrasadas</TableHead>
+                        {dateRange.map(date => {
+                          const dateStr = format(date, "yyyy-MM-dd");
+                          // Find members with overload on this day
+                          const overloadedMembers = memberWorkloads.filter(m => (m.tasksByDay[dateStr] || 0) > 4);
+                          
+                          return (
+                            <TableHead 
+                              key={date.toISOString()} 
+                              className={`text-center min-w-[100px] ${isToday(date) ? 'bg-primary/10' : ''}`}
+                            >
+                              <div className="flex flex-col items-center gap-1">
+                                <span className="text-xs uppercase">{format(date, "EEE", { locale: ptBR })}</span>
+                                <span className="font-medium">{format(date, "dd")}</span>
+                                {overloadedMembers.length > 0 && (
+                                  <div className="flex flex-col gap-0.5 mt-1">
+                                    {overloadedMembers.slice(0, 3).map(m => (
+                                      <Badge 
+                                        key={m.userId} 
+                                        variant="outline" 
+                                        className="text-[10px] px-1 py-0 bg-orange-500/20 text-orange-600 border-orange-500/30 whitespace-nowrap"
+                                      >
+                                        ⚠ {m.name}
+                                      </Badge>
+                                    ))}
+                                    {overloadedMembers.length > 3 && (
+                                      <span className="text-[10px] text-orange-500">+{overloadedMembers.length - 3}</span>
+                                    )}
+                                  </div>
                                 )}
-                              </TableCell>
-                            );
-                          })}
-                          <TableCell className="min-w-[120px]">
-                            <div className="flex items-center gap-2">
-                              <Progress value={completionRate} className="h-2 flex-1" />
-                              <span className="text-xs text-muted-foreground w-8">{completionRate}%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                              </div>
+                            </TableHead>
+                          );
+                        })}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {memberWorkloads.map(member => {
+                        return (
+                          <TableRow 
+                            key={member.userId}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setSelectedMember(member.userId)}
+                          >
+                            <TableCell className="font-medium sticky left-0 bg-background z-10">
+                              <div className="flex items-center gap-2">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                  <User className="h-4 w-4 text-primary" />
+                                </div>
+                                <span className="whitespace-nowrap">{member.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={member.pendingTasks > 10 ? "destructive" : "secondary"}>
+                                {member.pendingTasks}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {member.overdueTasks > 0 ? (
+                                <Badge variant="destructive">{member.overdueTasks}</Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-green-600">0</Badge>
+                              )}
+                            </TableCell>
+                            {dateRange.map(date => {
+                              const dateStr = format(date, "yyyy-MM-dd");
+                              const count = member.tasksByDay[dateStr] || 0;
+                              const isOverloaded = count > 4;
+                              
+                              return (
+                                <TableCell 
+                                  key={date.toISOString()} 
+                                  className={`text-center ${isToday(date) ? 'bg-primary/10' : ''} ${
+                                    isOverloaded ? 'bg-orange-500/20' : ''
+                                  }`}
+                                >
+                                  {count > 0 ? (
+                                    <span className={`inline-flex items-center justify-center h-7 w-7 rounded-full text-sm font-medium ${
+                                      isOverloaded 
+                                        ? 'bg-orange-500 text-white' 
+                                        : count >= 3 
+                                          ? 'bg-muted-foreground/20 text-foreground' 
+                                          : 'bg-muted'
+                                    }`}>
+                                      {count}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
                 
                 {memberWorkloads.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">

@@ -67,8 +67,10 @@ export function formatDateWithOptions(
 
 /**
  * Formata o nome de um usuário para exibição resumida.
- * Ex: "Hugo Gomes da Silva" -> "Hugo G."
- * Ex: "Lucas Alves" -> "Lucas A."
+ * Usa mais caracteres do sobrenome para diferenciação.
+ * Ex: "Hugo Gomes da Silva" -> "Hugo Gomes"
+ * Ex: "Lucas Alves" -> "Lucas Alves"
+ * Ex: "Lucas de Angelo" -> "Lucas Angelo"
  */
 export function formatUserName(fullName: string | null | undefined): string {
   if (!fullName) return "";
@@ -80,16 +82,16 @@ export function formatUserName(fullName: string | null | undefined): string {
   
   // Find the last significant name part (ignoring prepositions like "da", "de", "dos")
   const prepositions = ["da", "de", "do", "das", "dos", "e"];
-  let lastNameInitial = "";
+  let lastName = "";
   
   for (let i = parts.length - 1; i >= 1; i--) {
     if (!prepositions.includes(parts[i].toLowerCase())) {
-      lastNameInitial = parts[i].charAt(0).toUpperCase() + ".";
+      lastName = parts[i];
       break;
     }
   }
   
-  return lastNameInitial ? `${firstName} ${lastNameInitial}` : firstName;
+  return lastName ? `${firstName} ${lastName}` : firstName;
 }
 
 /**
