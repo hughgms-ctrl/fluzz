@@ -60,11 +60,20 @@ export default function Projects() {
   };
 
   const { activeProjects, archivedProjects, standaloneFolders } = useMemo(() => {
-    const active = sortByEventDate(projects?.filter(p => !p.archived && !p.is_standalone_folder) || []);
-    const archived = sortByEventDate(projects?.filter(p => p.archived && !p.is_standalone_folder) || []);
-    const standalone = projects?.filter(p => p.is_standalone_folder) || [];
+    // Members (non-admin/gestor) should not see draft projects
+    const canSeeDrafts = isAdmin || isGestor;
+    
+    const filterDrafts = (projectList: any[]) => {
+      if (canSeeDrafts) return projectList;
+      // Filter out drafts (is_draft = true or pending_notifications = true)
+      return projectList.filter(p => !p.is_draft && !p.pending_notifications);
+    };
+    
+    const active = sortByEventDate(filterDrafts(projects?.filter(p => !p.archived && !p.is_standalone_folder) || []));
+    const archived = sortByEventDate(filterDrafts(projects?.filter(p => p.archived && !p.is_standalone_folder) || []));
+    const standalone = filterDrafts(projects?.filter(p => p.is_standalone_folder) || []);
     return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone };
-  }, [projects]);
+  }, [projects, isAdmin, isGestor]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
