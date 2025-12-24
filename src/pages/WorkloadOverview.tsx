@@ -32,6 +32,7 @@ import {
   isToday, 
   addWeeks,
   subWeeks,
+  addDays,
   parseISO
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -157,10 +158,10 @@ export default function WorkloadOverview() {
     enabled: !!workspace,
   });
 
-  // Calculate date range for current week
+  // Calculate date range for 21 days (3 weeks) for better visibility
   const dateRange = useMemo(() => {
     const start = startOfWeek(currentDate, { locale: ptBR });
-    const end = endOfWeek(currentDate, { locale: ptBR });
+    const end = addDays(start, 20); // 21 days total (3 weeks)
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
@@ -351,7 +352,10 @@ export default function WorkloadOverview() {
             <ChevronRight className="h-4 w-4" />
           </Button>
           <span className="font-medium ml-2">
-            Semana de {format(dateRange[0], "dd MMM", { locale: ptBR })} - {format(dateRange[dateRange.length - 1], "dd MMM yyyy", { locale: ptBR })}
+            {format(dateRange[0], "dd MMM", { locale: ptBR })} - {format(dateRange[dateRange.length - 1], "dd MMM yyyy", { locale: ptBR })}
+          </span>
+          <span className="text-sm text-muted-foreground ml-2">
+            (role a tabela para ver mais dias →)
           </span>
         </div>
 
@@ -372,7 +376,7 @@ export default function WorkloadOverview() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent pb-2" style={{ maxWidth: '100%' }}>
                   <Table>
                     <TableHeader>
                       <TableRow>
