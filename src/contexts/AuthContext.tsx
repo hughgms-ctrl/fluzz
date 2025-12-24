@@ -44,23 +44,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      // Get published app URL - ALWAYS use production URL
       const hostname = window.location.hostname;
-      let redirectUrl;
-
-      if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
-        // Lovable hosted environment - always construct production URL
-        const parts = hostname.split('.');
-        const projectId = parts[0].replace(/^(edit-|preview-)/, '');
-        redirectUrl = `https://${projectId}.lovableproject.com/`;
-      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
-        // For localhost, we cannot determine production URL automatically
-        throw new Error("Cadastro deve ser feito a partir do app publicado, não de localhost. Por favor, acesse seu app publicado.");
-      } else {
-        // Custom domain
-        redirectUrl = `${window.location.origin}/`;
+      if (hostname === "localhost" || hostname === "127.0.0.1") {
+        throw new Error(
+          "Cadastro deve ser feito a partir do app publicado, não de localhost. Por favor, acesse seu app publicado."
+        );
       }
-      
+
+      // Always redirect back to the same origin the user is using
+      const redirectUrl = `${window.location.origin}/`;
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -73,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (error) throw error;
-      
+
       toast.success("Conta criada com sucesso!");
       navigate("/my-tasks");
     } catch (error: any) {
@@ -113,8 +106,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const resetPassword = async (email: string) => {
     try {
-      // Use current origin so it works in preview, published URL, and custom domains
-      const redirectUrl = `${window.location.origin}/reset-password`;
+      // If the user requested the reset from the editor/preview domain, force the redirect
+      // to the published app URL so the email link always opens the right website.
+      const PUBLISHED_APP_ORIGIN = "https://fluzz.lovable.app";
+      const isPreviewDomain = window.location.hostname.includes("lovableproject.com");
+      const baseOrigin = isPreviewDomain ? PUBLISHED_APP_ORIGIN : window.location.origin;
+
+      const redirectUrl = `${baseOrigin}/reset-password`;
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
