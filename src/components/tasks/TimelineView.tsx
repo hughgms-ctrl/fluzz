@@ -361,14 +361,32 @@ export const TimelineView = ({
     }
   }, [dragState, handleMouseMove, handleMouseUp]);
 
-  // Get status color
-  const getStatusColor = (status: string | null | undefined) => {
-    switch (status) {
-      case 'completed': return 'bg-green-500';
-      case 'in_progress': return 'bg-blue-500';
-      case 'blocked': return 'bg-red-500';
-      default: return 'bg-primary';
+  // Get status color - considers overdue and due today
+  const getTaskColor = (task: Task) => {
+    // Completed tasks are always green
+    if (task.status === 'completed') return 'bg-green-500';
+    
+    // Check due date for overdue or due today
+    if (task.due_date) {
+      const dueDate = parseTaskDate(task.due_date);
+      const todayStart = startOfDay(new Date());
+      
+      // Due today - golden yellow
+      if (dueDate.getTime() === todayStart.getTime()) {
+        return 'bg-amber-500';
+      }
+      
+      // Overdue - red
+      if (dueDate < todayStart) {
+        return 'bg-red-500';
+      }
     }
+    
+    // In progress - blue
+    if (task.status === 'in_progress') return 'bg-blue-500';
+    
+    // Default - primary color
+    return 'bg-primary';
   };
 
   // Get day of week abbreviation in Portuguese
@@ -657,7 +675,7 @@ export const TimelineView = ({
                         <div
                           className={cn(
                             "absolute top-2 h-8 rounded-md flex items-center group transition-all duration-75 pointer-events-auto",
-                            getStatusColor(task.status),
+                            getTaskColor(task),
                             isDragging 
                               ? "shadow-xl ring-2 ring-primary/50 opacity-90 scale-[1.02]" 
                               : "shadow-sm hover:shadow-md"
