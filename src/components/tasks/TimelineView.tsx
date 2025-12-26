@@ -385,8 +385,8 @@ export const TimelineView = ({
     // In progress - blue
     if (task.status === 'in_progress') return 'bg-blue-500';
     
-    // Default - primary color
-    return 'bg-primary';
+    // Default (pending/todo) - slate gray (works in both light and dark modes)
+    return 'bg-slate-500';
   };
 
   // Get day of week abbreviation in Portuguese
