@@ -707,7 +707,7 @@ export const TimelineView = ({
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
                           >
-                            <span className="text-xs font-medium text-white truncate select-none">
+                            <span className="text-xs font-medium text-white truncate select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
                               {task.title}
                             </span>
                           </div>
