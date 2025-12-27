@@ -73,7 +73,7 @@ const ResizableImage = Image.extend({
 
 export default function ProcessForm() {
   const { user } = useAuth();
-  const { workspace } = useWorkspace();
+  const { workspace, permissions, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
@@ -84,6 +84,16 @@ export default function ProcessForm() {
   const [title, setTitle] = useState("");
   const [selectedImage, setSelectedImage] = useState<{ node: any; pos: number } | null>(null);
   const [imageWidth, setImageWidth] = useState(100);
+
+  const canViewProcesses = isAdmin || isGestor || permissions.can_view_processes;
+
+  // Redirect if user doesn't have permission to view/edit processes
+  useEffect(() => {
+    if (workspace && !canViewProcesses) {
+      toast.error("Você não tem permissão para acessar esta página");
+      navigate("/");
+    }
+  }, [workspace, canViewProcesses, navigate]);
 
   const { data: process, isLoading: isLoadingProcess } = useQuery({
     queryKey: ["process", id],

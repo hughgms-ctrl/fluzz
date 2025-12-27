@@ -23,7 +23,7 @@ interface Process {
 }
 
 export default function Processes() {
-  const { workspace } = useWorkspace();
+  const { workspace, permissions, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -32,6 +32,16 @@ export default function Processes() {
   const [selectedProcess, setSelectedProcess] = useState<Process | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [highlightedProcess, setHighlightedProcess] = useState<string | null>(null);
+
+  const canViewProcesses = isAdmin || isGestor || permissions.can_view_processes;
+
+  // Redirect if user doesn't have permission to view processes
+  useEffect(() => {
+    if (workspace && !canViewProcesses) {
+      toast.error("Você não tem permissão para acessar esta página");
+      navigate("/");
+    }
+  }, [workspace, canViewProcesses, navigate]);
 
   const { data: processes, isLoading } = useQuery({
     queryKey: ["process-documentation", workspace?.id],
