@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,6 +99,10 @@ function SortableTableRow({
   onNavigate: (taskId: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const {
     attributes,
     listeners,
@@ -126,6 +130,40 @@ function SortableTableRow({
   const isOverdue = isTaskOverdue(task.due_date, task.status);
   const isDueSoon = isTaskDueSoon(task.due_date, task.status);
 
+  const handleTitleSave = async () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      try {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ title: editedTitle.trim() })
+          .eq("id", task.id);
+        
+        if (error) throw error;
+        toast.success("Título atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      } catch (err) {
+        toast.error("Erro ao atualizar título");
+        setEditedTitle(task.title);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      setIsEditing(true);
+    } else {
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        onNavigate(task.id);
+      }, 250);
+    }
+  };
+
   return (
     <TableRow 
       ref={setNodeRef} 
@@ -141,11 +179,31 @@ function SortableTableRow({
       </TableCell>
 
       {/* Title column */}
-      <TableCell 
-        className="font-medium cursor-pointer hover:text-primary transition-colors min-w-[200px]"
-        onClick={() => onNavigate(task.id)}
-      >
-        <span className="line-clamp-1">{task.title}</span>
+      <TableCell className="min-w-[200px]">
+        {isEditing ? (
+          <Input
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleTitleSave();
+              if (e.key === "Escape") {
+                setEditedTitle(task.title);
+                setIsEditing(false);
+              }
+            }}
+            autoFocus
+            className="h-7 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span 
+            className="font-medium cursor-pointer hover:text-primary transition-colors line-clamp-1"
+            onClick={handleTitleClick}
+          >
+            {task.title}
+          </span>
+        )}
       </TableCell>
 
       {/* Person column */}
