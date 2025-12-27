@@ -442,13 +442,11 @@ function ProjectRow({
   return (
     <>
       {/* Project Row */}
-      <TableRow className="bg-card hover:bg-muted/50 border-b border-border relative">
-        {/* Color accent bar */}
-        <td 
-          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-sm"
-          style={{ backgroundColor: projectColor }}
-        />
-        <TableCell className="px-2 align-top pt-4 pl-3">
+      <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
+        <TableCell 
+          className="px-2 align-top pt-4 border-l-4 rounded-l-sm"
+          style={{ borderLeftColor: projectColor }}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -468,12 +466,12 @@ function ProjectRow({
         </TableCell>
 
         <TableCell
-          className="font-semibold cursor-pointer hover:text-primary transition-colors py-4"
+          className="font-semibold cursor-pointer hover:opacity-80 transition-opacity py-4"
           onClick={() => navigate(`/projects/${project.id}`)}
         >
           <div className="flex items-center gap-2 flex-wrap">
-            {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-            <span className="text-primary text-base">{project.name}</span>
+            {isStandaloneFolder && <Folder className="h-4 w-4" style={{ color: projectColor }} />}
+            <span className="text-base font-semibold" style={{ color: projectColor }}>{project.name}</span>
             {project.is_draft && (
               <Badge
                 variant="outline"
