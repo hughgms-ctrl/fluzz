@@ -1107,7 +1107,7 @@ export default function TaskDetail() {
                       value={editedTask.description}
                       onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
                       placeholder="Adicione uma descrição..."
-                      className="mt-2"
+                      className="mt-2 min-h-[100px] resize-y"
                     />
                   ) : isEditingDescription ? (
                     <Textarea
@@ -1127,7 +1127,7 @@ export default function TaskDetail() {
                       }}
                       autoFocus
                       placeholder="Adicione uma descrição..."
-                      className="mt-2"
+                      className="mt-2 min-h-[100px] resize-y"
                     />
                   ) : (
                     <p 
@@ -1381,7 +1381,7 @@ export default function TaskDetail() {
                       value={editedTask.documentation}
                       onChange={(e) => setEditedTask({ ...editedTask, documentation: e.target.value })}
                       placeholder="Adicione documentação adicional..."
-                      className="mt-2"
+                      className="mt-2 min-h-[120px] resize-y"
                     />
                   ) : (
                     task.documentation ? (
