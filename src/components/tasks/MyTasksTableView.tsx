@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -172,6 +173,9 @@ function TaskTableRow({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const assignedUser = task.assigned_to 
     ? profiles?.find(p => p.id === task.assigned_to) 
@@ -221,14 +225,67 @@ function TaskTableRow({
     }
   };
 
+  const handleTitleSave = async () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      try {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ title: editedTitle.trim() })
+          .eq("id", task.id);
+        
+        if (error) throw error;
+        toast.success("Título atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+      } catch (err) {
+        toast.error("Erro ao atualizar título");
+        setEditedTitle(task.title);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      setIsEditing(true);
+    } else {
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        navigate(`/tasks/${task.id}`);
+      }, 250);
+    }
+  };
+
   return (
     <TableRow className="hover:bg-muted/30 bg-background/50">
       <TableCell className="w-8 px-2"></TableCell>
-      <TableCell 
-        className="font-medium cursor-pointer hover:text-primary transition-colors pl-8"
-        onClick={() => navigate(`/tasks/${task.id}`)}
-      >
-        <span className="line-clamp-1">{task.title}</span>
+      <TableCell className="font-medium pl-8">
+        {isEditing ? (
+          <Input
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleTitleSave();
+              if (e.key === "Escape") {
+                setEditedTitle(task.title);
+                setIsEditing(false);
+              }
+            }}
+            autoFocus
+            className="h-7 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span 
+            className="line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+            onClick={handleTitleClick}
+          >
+            {task.title}
+          </span>
+        )}
       </TableCell>
       <TableCell className="w-[80px]">
         <div className="flex justify-center">

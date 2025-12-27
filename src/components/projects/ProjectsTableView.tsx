@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -185,6 +186,9 @@ function TaskTableRow({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const assignedUser = task.assigned_to 
     ? profiles?.find(p => p.id === task.assigned_to) 
@@ -234,14 +238,67 @@ function TaskTableRow({
     }
   };
 
+  const handleTitleSave = async () => {
+    if (editedTitle.trim() && editedTitle !== task.title) {
+      try {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ title: editedTitle.trim() })
+          .eq("id", task.id);
+        
+        if (error) throw error;
+        toast.success("Título atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
+      } catch (err) {
+        toast.error("Erro ao atualizar título");
+        setEditedTitle(task.title);
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      setIsEditing(true);
+    } else {
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        navigate(`/tasks/${task.id}`);
+      }, 250);
+    }
+  };
+
   return (
     <TableRow className="hover:bg-muted/30 bg-background/50">
       <TableCell className="w-8 px-2"></TableCell>
-      <TableCell 
-        className="font-medium cursor-pointer hover:text-primary transition-colors pl-8"
-        onClick={() => navigate(`/tasks/${task.id}`)}
-      >
-        <span className="line-clamp-1">{task.title}</span>
+      <TableCell className="font-medium pl-8">
+        {isEditing ? (
+          <Input
+            value={editedTitle}
+            onChange={(e) => setEditedTitle(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleTitleSave();
+              if (e.key === "Escape") {
+                setEditedTitle(task.title);
+                setIsEditing(false);
+              }
+            }}
+            autoFocus
+            className="h-7 text-sm"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span 
+            className="line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+            onClick={handleTitleClick}
+          >
+            {task.title}
+          </span>
+        )}
       </TableCell>
       <TableCell className="w-[80px]">
         <div className="flex justify-center">
@@ -356,6 +413,9 @@ function ProjectRow({
 }) {
   const projectColor = getProjectColor(project.id);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(project.name);
+  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isGestor } = useWorkspace();
@@ -433,6 +493,39 @@ function ProjectRow({
 
   const totalColumns = (isAdmin || isGestor) ? 6 : 5;
 
+  const handleNameSave = async () => {
+    if (editedName.trim() && editedName !== project.name) {
+      try {
+        const { error } = await supabase
+          .from("projects")
+          .update({ name: editedName.trim() })
+          .eq("id", project.id);
+        
+        if (error) throw error;
+        toast.success("Nome atualizado!");
+        queryClient.invalidateQueries({ queryKey: ["projects"] });
+      } catch (err) {
+        toast.error("Erro ao atualizar nome");
+        setEditedName(project.name);
+      }
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+      clickTimeoutRef.current = null;
+      setIsEditingName(true);
+    } else {
+      clickTimeoutRef.current = setTimeout(() => {
+        clickTimeoutRef.current = null;
+        navigate(`/projects/${project.id}`);
+      }, 250);
+    }
+  };
+
   return (
     <>
       {/* Project Row */}
@@ -459,13 +552,35 @@ function ProjectRow({
           </Button>
         </TableCell>
 
-        <TableCell
-          className="font-semibold cursor-pointer hover:opacity-80 transition-opacity py-4"
-          onClick={() => navigate(`/projects/${project.id}`)}
-        >
+        <TableCell className="font-semibold py-4">
           <div className="flex items-center gap-2 flex-wrap">
             {isStandaloneFolder && <Folder className="h-4 w-4" style={{ color: projectColor }} />}
-            <span className="text-base font-semibold" style={{ color: projectColor }}>{project.name}</span>
+            {isEditingName ? (
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onBlur={handleNameSave}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleNameSave();
+                  if (e.key === "Escape") {
+                    setEditedName(project.name);
+                    setIsEditingName(false);
+                  }
+                }}
+                autoFocus
+                className="h-7 text-base font-semibold max-w-[300px]"
+                style={{ color: projectColor }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span 
+                className="text-base font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                style={{ color: projectColor }}
+                onClick={handleNameClick}
+              >
+                {project.name}
+              </span>
+            )}
             {project.is_draft && (
               <Badge
                 variant="outline"
