@@ -1,0 +1,628 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
+  ChevronRight, 
+  ChevronDown, 
+  User, 
+  MoreVertical, 
+  Copy, 
+  Archive, 
+  ArchiveRestore, 
+  Trash2, 
+  Bookmark,
+  FileEdit,
+  Folder,
+} from "lucide-react";
+import { formatDateBR, formatDateShort, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
+import { toast } from "sonner";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+interface ProjectsTableViewProps {
+  projects: any[];
+  onDelete: (id: string) => void;
+  onArchive: (id: string) => void;
+  isArchived?: boolean;
+  isStandaloneFolder?: boolean;
+}
+
+const statusConfig = {
+  todo: { 
+    label: "Parado", 
+    color: "hsl(0, 68%, 72%)",
+  },
+  in_progress: { 
+    label: "Em progresso", 
+    color: "hsl(30, 100%, 65%)",
+  },
+  completed: { 
+    label: "Feito", 
+    color: "hsl(152, 69%, 53%)",
+  },
+};
+
+const priorityConfig = {
+  high: { label: "Alta", color: "hsl(250, 60%, 45%)" },
+  medium: { label: "Média", color: "hsl(250, 50%, 60%)" },
+  low: { label: "Baixa", color: "hsl(260, 60%, 65%)" },
+};
+
+function StatusSummaryBar({ tasks }: { tasks: any[] }) {
+  const statusCounts = {
+    completed: tasks.filter(t => t.status === "completed").length,
+    in_progress: tasks.filter(t => t.status === "in_progress").length,
+    todo: tasks.filter(t => t.status === "todo" || !t.status).length,
+  };
+  
+  const total = tasks.length;
+  if (total === 0) return <span className="text-muted-foreground/50">-</span>;
+
+  return (
+    <TooltipProvider>
+      <div className="flex h-5 w-full max-w-[100px] rounded-sm overflow-hidden">
+        {Object.entries(statusCounts).map(([status, count]) => {
+          if (count === 0) return null;
+          const config = statusConfig[status as keyof typeof statusConfig];
+          const percentage = (count / total) * 100;
+          
+          return (
+            <Tooltip key={status}>
+              <TooltipTrigger asChild>
+                <div 
+                  className="h-full cursor-pointer transition-opacity hover:opacity-80"
+                  style={{ 
+                    width: `${percentage}%`, 
+                    backgroundColor: config.color,
+                    minWidth: count > 0 ? '8px' : 0,
+                  }}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{config.label}: {count}</p>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
+  );
+}
+
+function ProgressSummary({ tasks }: { tasks: any[] }) {
+  const total = tasks.length;
+  if (total === 0) return <span className="text-muted-foreground/50">-</span>;
+  
+  const completed = tasks.filter(t => t.status === "completed").length;
+  const percentage = Math.round((completed / total) * 100);
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-[80px]">
+        <div 
+          className={`h-full transition-all duration-300 rounded-full ${
+            percentage === 100 
+              ? "bg-status-completed" 
+              : percentage > 0 
+                ? "bg-primary" 
+                : "bg-transparent"
+          }`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+      <span className={`text-xs min-w-[35px] text-right ${
+        percentage === 100 
+          ? "text-status-completed font-medium" 
+          : "text-muted-foreground"
+      }`}>
+        {percentage}%
+      </span>
+    </div>
+  );
+}
+
+function TaskTableRow({ 
+  task, 
+  profiles 
+}: { 
+  task: any;
+  profiles: any[];
+}) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  
+  const assignedUser = task.assigned_to 
+    ? profiles?.find(p => p.id === task.assigned_to) 
+    : null;
+
+  const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
+  const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
+  
+  const isOverdue = isTaskOverdue(task.due_date, task.status);
+  const isDueSoon = isTaskDueSoon(task.due_date, task.status);
+
+  const handleStatusChange = async (newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: newStatus })
+        .eq("id", task.id);
+      
+      if (error) {
+        toast.error("Erro ao atualizar status");
+        return;
+      }
+      
+      toast.success("Status atualizado!");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    } catch (err) {
+      toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handlePriorityChange = async (newPriority: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ priority: newPriority })
+        .eq("id", task.id);
+      
+      if (error) {
+        toast.error("Erro ao atualizar prioridade");
+        return;
+      }
+      
+      toast.success("Prioridade atualizada!");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    } catch (err) {
+      toast.error("Erro ao atualizar prioridade");
+    }
+  };
+
+  return (
+    <TableRow className="hover:bg-muted/30">
+      <TableCell className="w-10 px-3">
+        <input 
+          type="checkbox" 
+          className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </TableCell>
+      <TableCell 
+        className="font-medium cursor-pointer hover:text-primary transition-colors pl-8"
+        onClick={() => navigate(`/tasks/${task.id}`)}
+      >
+        <span className="line-clamp-1">{task.title}</span>
+      </TableCell>
+      <TableCell className="w-[80px]">
+        <div className="flex justify-center">
+          {assignedUser ? (
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={assignedUser.avatar_url} />
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs bg-muted">
+                <User className="h-3 w-3 text-muted-foreground" />
+              </AvatarFallback>
+            </Avatar>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="w-[120px]">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="w-full px-2 py-1 text-xs font-medium rounded-sm text-center transition-all text-white"
+              style={{ backgroundColor: status.color }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {status.label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[100px]">
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <DropdownMenuItem 
+                key={key} 
+                onSelect={() => handleStatusChange(key)}
+                className="justify-center"
+              >
+                <span 
+                  className="px-2 py-0.5 rounded-sm text-xs font-medium text-white"
+                  style={{ backgroundColor: config.color }}
+                >
+                  {config.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+      <TableCell className="w-[80px] text-center">
+        {task.due_date ? (
+          <span className={`text-xs ${
+            isOverdue 
+              ? "text-destructive font-medium" 
+              : isDueSoon 
+                ? "text-amber-500 dark:text-amber-400" 
+                : "text-muted-foreground"
+          }`}>
+            {formatDateBR(task.due_date).slice(0, 5)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50">-</span>
+        )}
+      </TableCell>
+      <TableCell className="w-[100px]">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="w-full px-2 py-1 text-xs font-medium rounded-sm text-center transition-all text-white"
+              style={{ backgroundColor: priority.color }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {priority.label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[80px]">
+            {Object.entries(priorityConfig).map(([key, config]) => (
+              <DropdownMenuItem 
+                key={key} 
+                onSelect={() => handlePriorityChange(key)}
+                className="justify-center"
+              >
+                <span 
+                  className="px-2 py-0.5 rounded-sm text-xs font-medium text-white"
+                  style={{ backgroundColor: config.color }}
+                >
+                  {config.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function ProjectRow({ 
+  project, 
+  onDelete, 
+  onArchive, 
+  isArchived,
+  isStandaloneFolder,
+  profiles,
+}: { 
+  project: any;
+  onDelete: (id: string) => void;
+  onArchive: (id: string) => void;
+  isArchived?: boolean;
+  isStandaloneFolder?: boolean;
+  profiles: any[];
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { isAdmin, isGestor } = useWorkspace();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const tasks = project.tasks || [];
+  const taskCount = tasks.length;
+  
+  // Date range
+  const formatEventDates = () => {
+    if (!project.start_date && !project.end_date) return null;
+    const start = project.start_date;
+    const end = project.end_date;
+    
+    if (start && end && start !== end) {
+      return `${formatDateShort(start)} - ${formatDateShort(end)}`;
+    }
+    return formatDateBR(end || start);
+  };
+
+  const eventDates = formatEventDates();
+
+  const duplicateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data: newProject, error } = await supabase
+        .from("projects")
+        .insert([{
+          name: `Cópia de ${project.name}`,
+          description: null,
+          status: 'active',
+          user_id: user.id,
+          workspace_id: project.workspace_id,
+          is_draft: true,
+          pending_notifications: true,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return newProject;
+    },
+    onSuccess: (newProject) => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success("Rascunho criado!");
+      if (newProject) navigate(`/projects/${newProject.id}`);
+    },
+    onError: () => toast.error("Erro ao duplicar projeto"),
+  });
+
+  const saveAsTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("project_templates")
+        .insert([{
+          name: project.name,
+          description: project.description,
+          workspace_id: project.workspace_id,
+          created_by: user.id,
+        }]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
+      toast.success("Projeto salvo como modelo!");
+    },
+    onError: () => toast.error("Erro ao salvar como modelo"),
+  });
+
+  return (
+    <>
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        {/* Project Header Row */}
+        <TableRow className="bg-card hover:bg-muted/50 border-b-2 border-border">
+          <TableCell className="w-10 px-3">
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
+          </TableCell>
+          <TableCell 
+            className="font-semibold cursor-pointer hover:text-primary transition-colors"
+            onClick={() => navigate(`/projects/${project.id}`)}
+          >
+            <div className="flex items-center gap-2">
+              {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
+              <span className="text-primary">{project.name}</span>
+              {project.is_draft && (
+                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
+                  <FileEdit className="h-3 w-3 mr-1" />
+                  Rascunho
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground font-normal mt-0.5">
+              {taskCount} {taskCount === 1 ? 'Elemento' : 'Elementos'}
+            </p>
+          </TableCell>
+          <TableCell className="w-[80px]"></TableCell>
+          <TableCell className="w-[120px]">
+            <StatusSummaryBar tasks={tasks} />
+          </TableCell>
+          <TableCell className="w-[80px] text-center">
+            {eventDates ? (
+              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+                {eventDates}
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground/50">-</span>
+            )}
+          </TableCell>
+          <TableCell className="w-[100px]">
+            <ProgressSummary tasks={tasks} />
+          </TableCell>
+          {(isAdmin || isGestor) && (
+            <TableCell className="w-10">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="z-50 bg-popover">
+                  <DropdownMenuItem onClick={() => duplicateMutation.mutate()}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicar
+                  </DropdownMenuItem>
+                  {!isStandaloneFolder && (
+                    <DropdownMenuItem onClick={() => saveAsTemplateMutation.mutate()}>
+                      <Bookmark className="mr-2 h-4 w-4" />
+                      Salvar como Modelo
+                    </DropdownMenuItem>
+                  )}
+                  {!isStandaloneFolder && (
+                    <DropdownMenuItem onClick={() => onArchive(project.id)}>
+                      {isArchived ? (
+                        <>
+                          <ArchiveRestore className="mr-2 h-4 w-4" />
+                          Restaurar
+                        </>
+                      ) : (
+                        <>
+                          <Archive className="mr-2 h-4 w-4" />
+                          Arquivar
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem 
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TableCell>
+          )}
+        </TableRow>
+
+        {/* Expanded Tasks */}
+        <CollapsibleContent asChild>
+          <>
+            {tasks.length > 0 ? (
+              tasks.map((task: any) => (
+                <TaskTableRow 
+                  key={task.id} 
+                  task={task} 
+                  profiles={profiles}
+                />
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground text-sm">
+                  Nenhuma tarefa neste projeto
+                </TableCell>
+              </TableRow>
+            )}
+          </>
+        </CollapsibleContent>
+      </Collapsible>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Projeto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir permanentemente este projeto? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onDelete(project.id);
+                setShowDeleteDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+export function ProjectsTableView({ 
+  projects, 
+  onDelete, 
+  onArchive, 
+  isArchived,
+  isStandaloneFolder,
+}: ProjectsTableViewProps) {
+  const { isAdmin, isGestor } = useWorkspace();
+
+  // Fetch all profiles
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  if (projects.length === 0) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-muted-foreground">
+          {isArchived 
+            ? "Você não tem projetos arquivados." 
+            : isStandaloneFolder 
+              ? "Você não tem pastas de tarefas avulsas."
+              : "Nenhum projeto encontrado."
+          }
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border overflow-hidden bg-card">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead className="w-10 px-3"></TableHead>
+            <TableHead className="min-w-[200px]">Elemento</TableHead>
+            <TableHead className="w-[80px] text-center">Pessoa</TableHead>
+            <TableHead className="w-[120px] text-center">Status</TableHead>
+            <TableHead className="w-[80px] text-center">Data</TableHead>
+            <TableHead className="w-[100px]">Acompanhamento</TableHead>
+            {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {projects.map((project) => (
+            <ProjectRow
+              key={project.id}
+              project={project}
+              onDelete={onDelete}
+              onArchive={onArchive}
+              isArchived={isArchived}
+              isStandaloneFolder={isStandaloneFolder}
+              profiles={profiles || []}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
