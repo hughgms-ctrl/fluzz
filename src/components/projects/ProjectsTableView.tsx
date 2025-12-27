@@ -157,10 +157,12 @@ function ProgressSummary({ tasks }: { tasks: any[] }) {
 
 function TaskTableRow({ 
   task, 
-  profiles 
+  profiles,
+  showActions,
 }: { 
   task: any;
   profiles: any[];
+  showActions?: boolean;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -214,8 +216,8 @@ function TaskTableRow({
   };
 
   return (
-    <TableRow className="hover:bg-muted/30">
-      <TableCell className="w-10 px-3">
+    <TableRow className="hover:bg-muted/30 bg-background/50">
+      <TableCell className="w-8 px-2">
         <input 
           type="checkbox" 
           className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
@@ -275,7 +277,7 @@ function TaskTableRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
-      <TableCell className="w-[80px] text-center">
+      <TableCell className="w-[90px] text-center">
         {task.due_date ? (
           <span className={`text-xs ${
             isOverdue 
@@ -319,6 +321,7 @@ function TaskTableRow({
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>
+      {showActions && <TableCell className="w-10"></TableCell>}
     </TableRow>
   );
 }
@@ -418,8 +421,8 @@ function ProjectRow({
     <>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Project Header Row */}
-        <TableRow className="bg-card hover:bg-muted/50 border-b-2 border-border">
-          <TableCell className="w-10 px-3">
+        <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
+          <TableCell className="w-8 px-2">
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 {isExpanded ? (
@@ -431,12 +434,12 @@ function ProjectRow({
             </CollapsibleTrigger>
           </TableCell>
           <TableCell 
-            className="font-semibold cursor-pointer hover:text-primary transition-colors"
+            className="font-semibold cursor-pointer hover:text-primary transition-colors py-4"
             onClick={() => navigate(`/projects/${project.id}`)}
           >
             <div className="flex items-center gap-2">
               {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-              <span className="text-primary">{project.name}</span>
+              <span className="text-primary text-base">{project.name}</span>
               {project.is_draft && (
                 <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                   <FileEdit className="h-3 w-3 mr-1" />
@@ -444,15 +447,14 @@ function ProjectRow({
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground font-normal mt-0.5">
+            <p className="text-xs text-muted-foreground font-normal mt-1">
               {taskCount} {taskCount === 1 ? 'Elemento' : 'Elementos'}
             </p>
           </TableCell>
-          <TableCell className="w-[80px]"></TableCell>
-          <TableCell className="w-[120px]">
+          <TableCell className="w-[140px]">
             <StatusSummaryBar tasks={tasks} />
           </TableCell>
-          <TableCell className="w-[80px] text-center">
+          <TableCell className="w-[120px] text-center">
             {eventDates ? (
               <Badge variant="secondary" className="text-xs whitespace-nowrap">
                 {eventDates}
@@ -461,7 +463,7 @@ function ProjectRow({
               <span className="text-muted-foreground/50">-</span>
             )}
           </TableCell>
-          <TableCell className="w-[100px]">
+          <TableCell className="w-[120px]">
             <ProgressSummary tasks={tasks} />
           </TableCell>
           {(isAdmin || isGestor) && (
@@ -514,12 +516,23 @@ function ProjectRow({
         {/* Expanded Tasks */}
         <CollapsibleContent asChild>
           <>
+            {/* Task headers - only show when expanded */}
+            <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
+              <TableCell className="w-8 px-2"></TableCell>
+              <TableCell className="font-medium text-muted-foreground pl-8">Tarefa</TableCell>
+              <TableCell className="w-[80px] text-center font-medium text-muted-foreground">Pessoa</TableCell>
+              <TableCell className="w-[120px] text-center font-medium text-muted-foreground">Status</TableCell>
+              <TableCell className="w-[90px] text-center font-medium text-muted-foreground">Data</TableCell>
+              <TableCell className="w-[100px] text-center font-medium text-muted-foreground">Prioridade</TableCell>
+              {(isAdmin || isGestor) && <TableCell className="w-10"></TableCell>}
+            </TableRow>
             {tasks.length > 0 ? (
               tasks.map((task: any) => (
                 <TaskTableRow 
                   key={task.id} 
                   task={task} 
                   profiles={profiles}
+                  showActions={isAdmin || isGestor}
                 />
               ))
             ) : (
@@ -600,12 +613,11 @@ export function ProjectsTableView({
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-10 px-3"></TableHead>
-            <TableHead className="min-w-[200px]">Elemento</TableHead>
-            <TableHead className="w-[80px] text-center">Pessoa</TableHead>
-            <TableHead className="w-[120px] text-center">Status</TableHead>
-            <TableHead className="w-[80px] text-center">Data</TableHead>
-            <TableHead className="w-[100px]">Acompanhamento</TableHead>
+            <TableHead className="w-8 px-2"></TableHead>
+            <TableHead className="min-w-[280px]">Projeto</TableHead>
+            <TableHead className="w-[140px] text-center">Status</TableHead>
+            <TableHead className="w-[120px] text-center">Data</TableHead>
+            <TableHead className="w-[120px]">Progresso</TableHead>
             {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
           </TableRow>
         </TableHeader>
