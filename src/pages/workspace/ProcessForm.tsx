@@ -161,7 +161,7 @@ export default function ProcessForm() {
         },
       }),
       Placeholder.configure({
-        placeholder: "Escreva o conteúdo do processo... (Cole imagens com Ctrl+V)",
+        placeholder: "Escreva o conteúdo do POP... (Cole imagens com Ctrl+V)",
       }),
     ],
     content: "",
@@ -295,11 +295,11 @@ export default function ProcessForm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["process-documentation"] });
-      toast.success(isEditing ? "Processo atualizado!" : "Processo criado!");
+      toast.success(isEditing ? "POP atualizado!" : "POP criado!");
       navigate("/workspace/processes");
     },
     onError: () => {
-      toast.error(isEditing ? "Erro ao atualizar processo" : "Erro ao criar processo");
+      toast.error(isEditing ? "Erro ao atualizar POP" : "Erro ao criar POP");
     },
   });
 
@@ -310,7 +310,7 @@ export default function ProcessForm() {
       return;
     }
     if (!editor?.getHTML().trim() || editor.getHTML() === "<p></p>") {
-      toast.error("Preencha o conteúdo do processo");
+      toast.error("Preencha o conteúdo do POP");
       return;
     }
     createMutation.mutate();
@@ -388,10 +388,10 @@ export default function ProcessForm() {
           </Button>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {isEditing ? "Editar Processo" : "Novo Processo"}
+              {isEditing ? "Editar POP" : "Novo POP"}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isEditing ? "Atualize as informações do processo" : "Documente um novo processo"}
+              {isEditing ? "Atualize as informações do POP" : "Documente um novo Procedimento Operacional Padrão"}
             </p>
           </div>
         </div>
@@ -420,7 +420,7 @@ export default function ProcessForm() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="title">Título do Processo *</Label>
+              <Label htmlFor="title">Título do POP *</Label>
               <Input
                 id="title"
                 value={title}

@@ -66,7 +66,7 @@ export default function Processes() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["process-documentation"] });
-      toast.success("Processo excluído!");
+      toast.success("POP excluído!");
       setSelectedProcess(null);
     },
   });
@@ -106,14 +106,14 @@ export default function Processes() {
       <div className="space-y-4 md:space-y-6 px-2 md:px-0">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Processos</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">POP's</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Documentação de processos organizados por setor
+              Procedimentos Operacionais Padrão organizados por setor
             </p>
           </div>
           <Button onClick={() => navigate("/workspace/processes/new")} className="gap-2 w-full sm:w-auto">
             <Plus size={20} />
-            Novo Processo
+            Novo POP
           </Button>
         </div>
 
@@ -162,11 +162,11 @@ export default function Processes() {
               <div className="text-center">
                 <FileText className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                 <p className="text-sm md:text-base text-muted-foreground mb-4">
-                  {selectedArea ? `Nenhum processo neste setor ainda` : `Nenhum processo cadastrado ainda`}
+                  {selectedArea ? `Nenhum POP neste setor ainda` : `Nenhum POP cadastrado ainda`}
                 </p>
                 <Button onClick={() => navigate("/workspace/processes/new")} className="gap-2 w-full sm:w-auto">
                   <Plus size={20} />
-                  Criar Primeiro Processo
+                  Criar Primeiro POP
                 </Button>
               </div>
             </CardContent>

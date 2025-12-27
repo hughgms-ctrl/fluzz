@@ -81,7 +81,7 @@ const permissionConfigs: PermissionConfig[] = [
   { key: "briefings", label: "Briefings", viewKey: "can_view_briefings", editKey: "can_edit_briefings" },
   { key: "culture", label: "Cultura", viewKey: "can_view_culture", editKey: "can_edit_culture" },
   { key: "vision", label: "Visão", viewKey: "can_view_vision", editKey: "can_edit_vision" },
-  { key: "processes", label: "Processos", viewKey: "can_view_processes", editKey: "can_edit_processes" },
+  { key: "processes", label: "POP's", viewKey: "can_view_processes", editKey: "can_edit_processes" },
   { key: "inventory", label: "Inventário", viewKey: "can_view_inventory", editKey: "can_edit_inventory" },
   { key: "ai", label: "Fluzz AI", viewKey: "can_view_ai", viewOnly: true },
   { key: "workload", label: "Workload View", viewKey: "can_view_workload", viewOnly: true },

@@ -729,7 +729,7 @@ export default function TaskDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-processes", id] });
       setIsAddingProcess(false);
-      toast.success("Processo vinculado!");
+      toast.success("POP vinculado!");
     },
   });
 
@@ -743,7 +743,7 @@ export default function TaskDetail() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["task-processes", id] });
-      toast.success("Processo desvinculado!");
+      toast.success("POP desvinculado!");
     },
   });
 
@@ -1483,7 +1483,7 @@ export default function TaskDetail() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Processos Vinculados</CardTitle>
+                  <CardTitle>POP's Vinculados</CardTitle>
                   <Badge variant="secondary">
                     {taskProcesses?.length || 0}
                   </Badge>
@@ -1519,16 +1519,16 @@ export default function TaskDetail() {
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full gap-2">
                       <LinkIcon size={16} />
-                      Vincular Processo
+                      Vincular POP
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Vincular Processo</DialogTitle>
+                      <DialogTitle>Vincular POP</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Selecione um processo</Label>
+                        <Label>Selecione um POP</Label>
                         <Select onValueChange={(value) => linkProcessMutation.mutate(value)}>
                           <SelectTrigger>
                             <SelectValue placeholder="Escolher processo..." />
@@ -1552,7 +1552,7 @@ export default function TaskDetail() {
                           navigate("/workspace/processes");
                         }}
                       >
-                        Criar Novo Processo
+                        Criar Novo POP
                       </Button>
                     </div>
                   </DialogContent>
@@ -1564,7 +1564,7 @@ export default function TaskDetail() {
                     className="w-full"
                     onClick={() => navigate(`/workspace/processes`)}
                   >
-                    Ver Processos
+                    Ver POP's
                   </Button>
                 )}
               </CardContent>
