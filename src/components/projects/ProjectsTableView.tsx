@@ -236,13 +236,7 @@ function TaskTableRow({
 
   return (
     <TableRow className="hover:bg-muted/30 bg-background/50">
-      <TableCell className="w-8 px-2">
-        <input 
-          type="checkbox" 
-          className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-        />
-      </TableCell>
+      <TableCell className="w-8 px-2"></TableCell>
       <TableCell 
         className="font-medium cursor-pointer hover:text-primary transition-colors pl-8"
         onClick={() => navigate(`/tasks/${task.id}`)}
