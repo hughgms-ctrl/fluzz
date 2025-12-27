@@ -174,14 +174,12 @@ function ProgressSummary({ tasks }: { tasks: any[] }) {
   );
 }
 
-function TaskTableRow({ 
+function TaskCard({ 
   task, 
   profiles,
-  showActions,
 }: { 
   task: any;
   profiles: any[];
-  showActions?: boolean;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -196,146 +194,85 @@ function TaskTableRow({
   const isOverdue = isTaskOverdue(task.due_date, task.status);
   const isDueSoon = isTaskDueSoon(task.due_date, task.status);
 
-  const handleStatusChange = async (newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status: newStatus })
-        .eq("id", task.id);
-      
-      if (error) {
-        toast.error("Erro ao atualizar status");
-        return;
-      }
-      
-      toast.success("Status atualizado!");
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-    } catch (err) {
-      toast.error("Erro ao atualizar status");
-    }
-  };
-
-  const handlePriorityChange = async (newPriority: string) => {
-    try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ priority: newPriority })
-        .eq("id", task.id);
-      
-      if (error) {
-        toast.error("Erro ao atualizar prioridade");
-        return;
-      }
-      
-      toast.success("Prioridade atualizada!");
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-    } catch (err) {
-      toast.error("Erro ao atualizar prioridade");
-    }
-  };
+  // Calculate subtasks progress
+  const subtasks = task.subtasks || [];
+  const completedSubtasks = subtasks.filter((s: any) => s.completed).length;
+  const totalSubtasks = subtasks.length;
+  const progressPercent = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
   return (
-    <TableRow className="hover:bg-muted/30 bg-background/50">
-      <TableCell className="w-8 px-2"></TableCell>
-      <TableCell 
-        className="font-medium cursor-pointer hover:text-primary transition-colors pl-8"
-        onClick={() => navigate(`/tasks/${task.id}`)}
-      >
-        <span className="line-clamp-1">{task.title}</span>
-      </TableCell>
-      <TableCell className="w-[80px]">
-        <div className="flex justify-center">
-          {assignedUser ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={assignedUser.avatar_url} />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs bg-muted">
-                <User className="h-3 w-3 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
+    <div 
+      className="bg-card border border-border rounded-lg p-4 cursor-pointer hover:shadow-md transition-all hover:border-primary/30"
+      onClick={() => navigate(`/tasks/${task.id}`)}
+    >
+      <div className="flex flex-col gap-2">
+        {/* Task title */}
+        <h4 className="font-medium text-foreground line-clamp-1">{task.title}</h4>
+        
+        {/* Badges row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span 
+            className="px-2 py-0.5 text-xs font-medium rounded-sm text-white"
+            style={{ backgroundColor: priority.color }}
+          >
+            {priority.label}
+          </span>
+          <span 
+            className="px-2 py-0.5 text-xs font-medium rounded-sm text-white"
+            style={{ backgroundColor: status.color }}
+          >
+            {status.label}
+          </span>
+          {task.due_date && (
+            <span className={`text-xs flex items-center gap-1 ${
+              isOverdue 
+                ? "text-destructive font-medium" 
+                : isDueSoon 
+                  ? "text-amber-500 dark:text-amber-400" 
+                  : "text-muted-foreground"
+            }`}>
+              📅 {formatDateBR(task.due_date).slice(0, 5)}
+            </span>
+          )}
+          {task.setor && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              🏢 {task.setor}
+            </span>
+          )}
+          {assignedUser && (
+            <div className="flex items-center gap-1">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={assignedUser.avatar_url} />
+                <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
+                  {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                </AvatarFallback>
+              </Avatar>
+            </div>
           )}
         </div>
-      </TableCell>
-      <TableCell className="w-[120px]">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button 
-              className="w-full px-2 py-1 text-xs font-medium rounded-sm text-center transition-all text-white"
-              style={{ backgroundColor: status.color }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {status.label}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="min-w-[100px]">
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <DropdownMenuItem 
-                key={key} 
-                onSelect={() => handleStatusChange(key)}
-                className="justify-center"
-              >
-                <span 
-                  className="px-2 py-0.5 rounded-sm text-xs font-medium text-white"
-                  style={{ backgroundColor: config.color }}
-                >
-                  {config.label}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-      <TableCell className="w-[90px] text-center">
-        {task.due_date ? (
-          <span className={`text-xs ${
-            isOverdue 
-              ? "text-destructive font-medium" 
-              : isDueSoon 
-                ? "text-amber-500 dark:text-amber-400" 
-                : "text-muted-foreground"
-          }`}>
-            {formatDateBR(task.due_date).slice(0, 5)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground/50">-</span>
+
+        {/* Progress bar (if has subtasks) */}
+        {totalSubtasks > 0 && (
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-300 rounded-full ${
+                  progressPercent === 100 
+                    ? "bg-status-completed" 
+                    : progressPercent > 0 
+                      ? "bg-primary" 
+                      : "bg-transparent"
+                }`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground min-w-[30px] text-right">
+              {completedSubtasks}/{totalSubtasks}
+            </span>
+          </div>
         )}
-      </TableCell>
-      <TableCell className="w-[100px]">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button 
-              className="w-full px-2 py-1 text-xs font-medium rounded-sm text-center transition-all text-white"
-              style={{ backgroundColor: priority.color }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {priority.label}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="min-w-[80px]">
-            {Object.entries(priorityConfig).map(([key, config]) => (
-              <DropdownMenuItem 
-                key={key} 
-                onSelect={() => handlePriorityChange(key)}
-                className="justify-center"
-              >
-                <span 
-                  className="px-2 py-0.5 rounded-sm text-xs font-medium text-white"
-                  style={{ backgroundColor: config.color }}
-                >
-                  {config.label}
-                </span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </TableCell>
-      {showActions && <TableCell className="w-10"></TableCell>}
-    </TableRow>
+      </div>
+    </div>
   );
 }
 
@@ -546,45 +483,26 @@ function ProjectRow({
         )}
       </TableRow>
 
-      {/* Expanded content (nested table to keep alignment) */}
+      {/* Expanded content - Task cards */}
       {isExpanded && (
-        <TableRow className="bg-background">
+        <TableRow className="bg-background hover:bg-background">
           <TableCell colSpan={totalColumns} className="p-0">
-            <div className="border-t border-border bg-muted/10">
-              <Table className="w-full">
-                <TableHeader>
-                  <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
-                    <TableHead className="w-10 px-2"></TableHead>
-                    <TableHead className="font-medium text-muted-foreground pl-8">Tarefa</TableHead>
-                    <TableHead className="w-[80px] text-center font-medium text-muted-foreground">Pessoa</TableHead>
-                    <TableHead className="w-[120px] text-center font-medium text-muted-foreground">Status</TableHead>
-                    <TableHead className="w-[90px] text-center font-medium text-muted-foreground">Data</TableHead>
-                    <TableHead className="w-[100px] text-center font-medium text-muted-foreground">Prioridade</TableHead>
-                    {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.length > 0 ? (
-                    tasks.map((task: any) => (
-                      <TaskTableRow
-                        key={task.id}
-                        task={task}
-                        profiles={profiles}
-                        showActions={isAdmin || isGestor}
-                      />
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={(isAdmin || isGestor) ? 7 : 6}
-                        className="text-center py-4 text-muted-foreground text-sm"
-                      >
-                        Nenhuma tarefa neste projeto
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="border-t border-border bg-muted/5 p-4">
+              {tasks.length > 0 ? (
+                <div className="grid gap-3">
+                  {tasks.map((task: any) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      profiles={profiles}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-4 text-muted-foreground text-sm">
+                  Nenhuma tarefa neste projeto
+                </p>
+              )}
             </div>
           </TableCell>
         </TableRow>
