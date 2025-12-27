@@ -177,19 +177,14 @@ export function ProjectMobileCard({
     setIsEditingName(false);
   };
 
-  const handleNameClick = (e: React.MouseEvent) => {
+  const handleCardClick = () => {
+    navigate(`/projects/${project.id}`);
+  };
+
+  const handleNameDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (clickTimeoutRef.current) {
-      clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-      if (isAdmin || isGestor) {
-        setIsEditingName(true);
-      }
-    } else {
-      clickTimeoutRef.current = setTimeout(() => {
-        clickTimeoutRef.current = null;
-        navigate(`/projects/${project.id}`);
-      }, 250);
+    if (isAdmin || isGestor) {
+      setIsEditingName(true);
     }
   };
 
@@ -222,7 +217,8 @@ export function ProjectMobileCard({
               ) : (
                 <div 
                   className="flex items-center gap-2"
-                  onClick={handleNameClick}
+                  onClick={handleCardClick}
+                  onDoubleClick={handleNameDoubleClick}
                 >
                   {isStandaloneFolder && <Folder className="h-4 w-4 shrink-0" style={{ color: projectColor }} />}
                   <h3 className="font-semibold text-base line-clamp-2" style={{ color: projectColor }}>
@@ -312,7 +308,7 @@ export function ProjectMobileCard({
           </div>
 
           {/* Progress bar */}
-          <div className="flex items-center gap-3" onClick={handleNameClick}>
+          <div className="flex items-center gap-3" onClick={handleCardClick}>
             <Progress value={progress} className="flex-1 h-2" />
             <span 
               className="text-sm font-medium min-w-[40px] text-right"

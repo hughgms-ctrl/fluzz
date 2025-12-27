@@ -8,6 +8,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
 import { MyTasksTableView } from "@/components/tasks/MyTasksTableView";
+import { MyTasksMobileView } from "@/components/tasks/MyTasksMobileView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -18,10 +19,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 import { parseDateOnly, isTaskOverdue } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function MyTasks() {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
+  const isMobile = useIsMobile();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
@@ -394,20 +397,36 @@ export default function MyTasks() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="mt-6">
-            <MyTasksTableView tasks={filteredTasks} />
+          <TabsContent value="all" className="mt-4 md:mt-6">
+            {isMobile ? (
+              <MyTasksMobileView tasks={filteredTasks} />
+            ) : (
+              <MyTasksTableView tasks={filteredTasks} />
+            )}
           </TabsContent>
 
-          <TabsContent value="todo" className="mt-6">
-            <MyTasksTableView tasks={todoTasks} />
+          <TabsContent value="todo" className="mt-4 md:mt-6">
+            {isMobile ? (
+              <MyTasksMobileView tasks={todoTasks} />
+            ) : (
+              <MyTasksTableView tasks={todoTasks} />
+            )}
           </TabsContent>
 
-          <TabsContent value="in_progress" className="mt-6">
-            <MyTasksTableView tasks={inProgressTasks} />
+          <TabsContent value="in_progress" className="mt-4 md:mt-6">
+            {isMobile ? (
+              <MyTasksMobileView tasks={inProgressTasks} />
+            ) : (
+              <MyTasksTableView tasks={inProgressTasks} />
+            )}
           </TabsContent>
 
-          <TabsContent value="completed" className="mt-6">
-            <MyTasksTableView tasks={completedTasks} />
+          <TabsContent value="completed" className="mt-4 md:mt-6">
+            {isMobile ? (
+              <MyTasksMobileView tasks={completedTasks} />
+            ) : (
+              <MyTasksTableView tasks={completedTasks} />
+            )}
           </TabsContent>
         </Tabs>
       </div>
