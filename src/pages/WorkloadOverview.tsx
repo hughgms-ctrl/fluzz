@@ -504,34 +504,44 @@ export default function WorkloadOverview() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {tasksByDate.map(({ date, tasks }) => {
-                    const parsedDate = parseDateOnly(date);
-                    const isOverdue = parsedDate && parsedDate < new Date() && tasks.some(t => t.status !== "completed");
-                    
-                    return (
-                      <div key={date}>
-                        <div className={`flex items-center gap-2 mb-3 ${isOverdue ? 'text-destructive' : ''}`}>
-                          <Calendar className="h-4 w-4" />
-                          <span className="font-medium">
-                            {parsedDate ? format(parsedDate, "EEEE, dd 'de' MMMM", { locale: ptBR }) : date}
-                          </span>
-                          <Badge variant={isOverdue ? "destructive" : "secondary"}>
-                            {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
-                          </Badge>
-                        </div>
+                {tasksByDate.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhuma tarefa com prazo definido
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[60px]">Status</TableHead>
+                        <TableHead>Tarefa</TableHead>
+                        <TableHead className="w-[180px]">Responsável</TableHead>
+                        <TableHead className="w-[150px]">Projeto</TableHead>
+                        <TableHead className="w-[100px]">Prioridade</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tasksByDate.map(({ date, tasks }) => {
+                        const parsedDate = parseDateOnly(date);
+                        const isOverdue = parsedDate && parsedDate < new Date() && tasks.some(t => t.status !== "completed");
                         
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="w-[40px]">Status</TableHead>
-                              <TableHead>Tarefa</TableHead>
-                              <TableHead>Responsável</TableHead>
-                              <TableHead>Projeto</TableHead>
-                              <TableHead className="w-[80px]">Prioridade</TableHead>
+                        return (
+                          <>
+                            {/* Date separator row */}
+                            <TableRow key={`date-${date}`} className="bg-muted/30 hover:bg-muted/30">
+                              <TableCell colSpan={5} className="py-2">
+                                <div className={`flex items-center gap-2 ${isOverdue ? 'text-destructive' : ''}`}>
+                                  <Calendar className="h-4 w-4" />
+                                  <span className="font-medium">
+                                    {parsedDate ? format(parsedDate, "EEEE, dd 'de' MMMM", { locale: ptBR }) : date}
+                                  </span>
+                                  <Badge variant={isOverdue ? "destructive" : "secondary"}>
+                                    {tasks.length} tarefa{tasks.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                </div>
+                              </TableCell>
                             </TableRow>
-                          </TableHeader>
-                          <TableBody>
+                            
+                            {/* Task rows */}
                             {tasks.map(task => (
                               <TableRow 
                                 key={task.id} 
@@ -555,7 +565,7 @@ export default function WorkloadOverview() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-2">
-                                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                                       <User className="h-3 w-3 text-primary" />
                                     </div>
                                     {getMemberName(task.assigned_to)}
@@ -575,18 +585,12 @@ export default function WorkloadOverview() {
                                 </TableCell>
                               </TableRow>
                             ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    );
-                  })}
-                  
-                  {tasksByDate.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhuma tarefa com prazo definido
-                    </div>
-                  )}
-                </div>
+                          </>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
