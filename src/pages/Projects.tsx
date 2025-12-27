@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Plus, LayoutGrid, List, Folder, CalendarDays } from "lucide-react";
+import { Plus, LayoutGrid, List, Folder, CalendarDays, Archive } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
 import { ProjectsTableView } from "@/components/projects/ProjectsTableView";
@@ -12,6 +12,18 @@ import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -20,9 +32,10 @@ import { format } from "date-fns";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"active" | "archived" | "standalone">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "drafts" | "standalone">("active");
   const [viewMode, setViewMode] = useState<"grid" | "list" | "calendar">("list");
   const [defaultProjectDate, setDefaultProjectDate] = useState<Date | null>(null);
+  const [showArchivedDialog, setShowArchivedDialog] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();
@@ -60,24 +73,41 @@ export default function Projects() {
     });
   };
 
-  const { activeProjects, archivedProjects, standaloneFolders, calendarProjects } = useMemo(() => {
-    // Members (non-admin/gestor) should not see draft projects in list/grid views
+  const { activeProjects, draftProjects, archivedProjects, standaloneFolders, calendarProjects } = useMemo(() => {
+    // Members (non-admin/gestor) should not see draft projects
     const canSeeDrafts = isAdmin || isGestor;
     
-    const filterDrafts = (projectList: any[]) => {
-      if (canSeeDrafts) return projectList;
-      // Filter out drafts (is_draft = true or pending_notifications = true)
-      return projectList.filter(p => !p.is_draft && !p.pending_notifications);
+    // All projects for different categories
+    const allProjects = projects || [];
+    
+    // Active projects: not archived, not draft, not standalone folder
+    const active = sortByEventDate(allProjects.filter(p => 
+      !p.archived && !p.is_standalone_folder && !p.is_draft
+    ));
+    
+    // Draft projects: is_draft = true, not archived (only visible to admin/gestor)
+    const drafts = canSeeDrafts 
+      ? sortByEventDate(allProjects.filter(p => p.is_draft && !p.archived && !p.is_standalone_folder))
+      : [];
+    
+    // Archived projects
+    const archived = sortByEventDate(allProjects.filter(p => p.archived && !p.is_standalone_folder));
+    
+    // Standalone folders
+    const standalone = allProjects.filter(p => p.is_standalone_folder && !p.archived);
+    
+    // Calendar view: all active including drafts for admin/gestor
+    const calendarProjectsList = canSeeDrafts
+      ? sortByEventDate(allProjects.filter(p => !p.archived && !p.is_standalone_folder))
+      : active;
+    
+    return { 
+      activeProjects: active, 
+      draftProjects: drafts, 
+      archivedProjects: archived, 
+      standaloneFolders: standalone, 
+      calendarProjects: calendarProjectsList 
     };
-    
-    // All active projects (including drafts) for calendar view - members can see but not click
-    const allActiveProjects = projects?.filter(p => !p.archived && !p.is_standalone_folder) || [];
-    const calendarProjectsList = sortByEventDate(allActiveProjects);
-    
-    const active = sortByEventDate(filterDrafts(allActiveProjects));
-    const archived = sortByEventDate(filterDrafts(projects?.filter(p => p.archived && !p.is_standalone_folder) || []));
-    const standalone = filterDrafts(projects?.filter(p => p.is_standalone_folder) || []);
-    return { activeProjects: active, archivedProjects: archived, standaloneFolders: standalone, calendarProjects: calendarProjectsList };
   }, [projects, isAdmin, isGestor]);
 
   const deleteMutation = useMutation({
@@ -145,9 +175,30 @@ export default function Projects() {
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
-            <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
+            </div>
+            {archivedProjects.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setShowArchivedDialog(true)}
+                      className="h-8 w-8"
+                    >
+                      <Archive className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Projetos arquivados ({archivedProjects.length})</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="flex border rounded-md">
@@ -188,18 +239,20 @@ export default function Projects() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "archived" | "standalone")}>
-          <TabsList className="grid w-full grid-cols-3 h-auto">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "drafts" | "standalone")}>
+          <TabsList className={`grid w-full h-auto ${(isAdmin || isGestor) ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="active" className="text-xs sm:text-sm">
               <span className="hidden sm:inline">Ativos</span>
               <span className="sm:hidden">Ativo</span>
               ({activeProjects.length})
             </TabsTrigger>
-            <TabsTrigger value="archived" className="text-xs sm:text-sm">
-              <span className="hidden sm:inline">Arquivados</span>
-              <span className="sm:hidden">Arq.</span>
-              ({archivedProjects.length})
-            </TabsTrigger>
+            {(isAdmin || isGestor) && (
+              <TabsTrigger value="drafts" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Rascunhos</span>
+                <span className="sm:hidden">Rasc.</span>
+                ({draftProjects.length})
+              </TabsTrigger>
+            )}
             <TabsTrigger value="standalone" className="text-xs sm:text-sm">
               <span className="hidden sm:inline">Avulsos</span>
               <span className="sm:hidden">Avulso</span>
@@ -249,32 +302,30 @@ export default function Projects() {
             )}
           </TabsContent>
 
-          <TabsContent value="archived" className="mt-6">
-            {archivedProjects.length === 0 ? (
+          <TabsContent value="drafts" className="mt-6">
+            {draftProjects.length === 0 ? (
               <div className="text-center py-16">
                 <p className="text-muted-foreground">
-                  Você não tem projetos arquivados.
+                  Você não tem projetos em rascunho.
                 </p>
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {archivedProjects.map((project: any) => (
+                {draftProjects.map((project: any) => (
                   <ProjectCard
                     key={project.id}
                     project={project}
                     onDelete={() => deleteMutation.mutate(project.id)}
-                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: false })}
-                    isArchived={true}
+                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
                     canEdit={isAdmin || isGestor}
                   />
                 ))}
               </div>
             ) : (
               <ProjectsTableView
-                projects={archivedProjects}
+                projects={draftProjects}
                 onDelete={(id) => deleteMutation.mutate(id)}
-                onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
-                isArchived
+                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
               />
             )}
           </TabsContent>
@@ -343,6 +394,32 @@ export default function Projects() {
         }}
         defaultDate={defaultProjectDate}
       />
+
+      {/* Archived Projects Dialog */}
+      <Dialog open={showArchivedDialog} onOpenChange={setShowArchivedDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5" />
+              Projetos Arquivados ({archivedProjects.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {archivedProjects.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum projeto arquivado.
+              </p>
+            ) : (
+              <ProjectsTableView
+                projects={archivedProjects}
+                onDelete={(id) => deleteMutation.mutate(id)}
+                onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
+                isArchived
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
