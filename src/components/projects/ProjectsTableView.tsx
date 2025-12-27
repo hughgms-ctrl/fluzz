@@ -422,7 +422,7 @@ function ProjectRow({
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Project Header Row */}
         <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
-          <TableCell className="w-10 px-2">
+          <TableCell className="px-2 align-top pt-4">
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 {isExpanded ? (
@@ -451,10 +451,10 @@ function ProjectRow({
               {taskCount} {taskCount === 1 ? 'Elemento' : 'Elementos'}
             </p>
           </TableCell>
-          <TableCell className="w-[160px]">
+          <TableCell className="align-middle">
             <StatusSummaryBar tasks={tasks} />
           </TableCell>
-          <TableCell className="w-[140px] text-center">
+          <TableCell className="text-center align-middle">
             {eventDates ? (
               <Badge className="text-xs whitespace-nowrap bg-primary/80 text-primary-foreground hover:bg-primary/70">
                 {eventDates}
@@ -463,11 +463,11 @@ function ProjectRow({
               <span className="text-muted-foreground/50">-</span>
             )}
           </TableCell>
-          <TableCell className="w-[180px]">
+          <TableCell className="align-middle">
             <ProgressSummary tasks={tasks} />
           </TableCell>
           {(isAdmin || isGestor) && (
-            <TableCell className="w-10">
+            <TableCell className="align-middle">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -610,15 +610,23 @@ export function ProjectsTableView({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table className="w-full">
+      <Table className="w-full table-fixed">
+        <colgroup>
+          <col className="w-[50px]" />
+          <col />
+          <col className="w-[160px]" />
+          <col className="w-[140px]" />
+          <col className="w-[180px]" />
+          {(isAdmin || isGestor) && <col className="w-[50px]" />}
+        </colgroup>
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-10 px-2"></TableHead>
-            <TableHead className="w-auto">Projeto</TableHead>
-            <TableHead className="w-[160px] text-center">Status</TableHead>
-            <TableHead className="w-[140px] text-center">Data</TableHead>
-            <TableHead className="w-[180px] text-center">Acompanhamento</TableHead>
-            {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
+            <TableHead className="px-2"></TableHead>
+            <TableHead>Projeto</TableHead>
+            <TableHead className="text-center">Status</TableHead>
+            <TableHead className="text-center">Data</TableHead>
+            <TableHead className="text-center">Acompanhamento</TableHead>
+            {(isAdmin || isGestor) && <TableHead></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
