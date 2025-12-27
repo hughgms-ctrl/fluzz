@@ -14,7 +14,7 @@ import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { TaskList } from "@/components/tasks/TaskList";
+import { TaskTableView } from "@/components/tasks/TaskTableView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
 import { ProjectMembers } from "@/components/projects/ProjectMembers";
@@ -820,7 +820,7 @@ export default function ProjectDetail() {
                     onSortModeChange={handleSortModeChange}
                   />
                 ) : (
-                  <TaskList
+                  <TaskTableView
                     tasks={filteredTasks || []}
                     onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
                     onUpdateOrder={(taskId, newOrder) =>
