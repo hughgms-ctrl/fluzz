@@ -477,7 +477,7 @@ function ProjectRow({
             )}
           </div>
           <p className="text-xs text-muted-foreground font-normal mt-1">
-            {taskCount} {taskCount === 1 ? "Elemento" : "Elementos"}
+            {taskCount} {taskCount === 1 ? "Tarefa" : "Tarefas"}
           </p>
         </TableCell>
 
@@ -555,7 +555,7 @@ function ProjectRow({
                 <TableHeader>
                   <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
                     <TableHead className="w-10 px-2"></TableHead>
-                    <TableHead className="font-medium text-muted-foreground pl-8">Elemento</TableHead>
+                    <TableHead className="font-medium text-muted-foreground pl-8">Tarefa</TableHead>
                     <TableHead className="w-[80px] text-center font-medium text-muted-foreground">Pessoa</TableHead>
                     <TableHead className="w-[120px] text-center font-medium text-muted-foreground">Status</TableHead>
                     <TableHead className="w-[90px] text-center font-medium text-muted-foreground">Data</TableHead>
