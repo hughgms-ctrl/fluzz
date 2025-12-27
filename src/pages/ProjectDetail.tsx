@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit, ChevronDown, ChevronRight } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -25,6 +25,7 @@ import BriefingDebriefingTab from "@/components/briefing/BriefingDebriefingTab";
 import { toast } from "sonner";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn, parseDateOnly, isTaskOverdue } from "@/lib/utils";
@@ -49,6 +50,7 @@ export default function ProjectDetail() {
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
   // Load sort mode from localStorage for this project - default to A-Z
   const [sortMode, setSortMode] = useState<"manual" | "az">(() => {
@@ -727,23 +729,36 @@ export default function ProjectDetail() {
               />
             </MobileFilterDrawer>
 
-            {/* Desktop Filters */}
-            <div className="hidden md:block">
-              <TaskFilters
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                priorityFilter={priorityFilter}
-                onPriorityChange={setPriorityFilter}
-                statusFilter={statusFilter}
-                onStatusChange={setStatusFilter}
-                dueDateFilter={dueDateFilter}
-                onDueDateChange={setDueDateFilter}
-                setorFilter={setorFilter}
-                onSetorChange={setSetorFilter}
-                setores={setoresWithNames}
-                onClearAll={handleClearAllFilters}
-              />
-            </div>
+            {/* Desktop Filters - Collapsible */}
+            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="hidden md:block">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium text-sm hover:bg-transparent">
+                  {isFiltersOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  Filtros
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3">
+                <TaskFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  priorityFilter={priorityFilter}
+                  onPriorityChange={setPriorityFilter}
+                  statusFilter={statusFilter}
+                  onStatusChange={setStatusFilter}
+                  dueDateFilter={dueDateFilter}
+                  onDueDateChange={setDueDateFilter}
+                  setorFilter={setorFilter}
+                  onSetorChange={setSetorFilter}
+                  setores={setoresWithNames}
+                  onClearAll={handleClearAllFilters}
+                />
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* View Toggle */}
             {/* View toggle - only show on desktop */}

@@ -11,8 +11,9 @@ import { MyTasksTableView } from "@/components/tasks/MyTasksTableView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
@@ -32,6 +33,7 @@ export default function MyTasks() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
   // Apply URL filter on mount
   useEffect(() => {
@@ -322,25 +324,38 @@ export default function MyTasks() {
           />
         </MobileFilterDrawer>
 
-        {/* Desktop Filters */}
-        <div className="hidden md:block">
-          <TaskFilters
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          priorityFilter={priorityFilter}
-          onPriorityChange={setPriorityFilter}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-          dueDateFilter={dueDateFilter}
-          onDueDateChange={setDueDateFilter}
-          projectFilter={projectFilter}
-          onProjectChange={setProjectFilter}
-          projects={projects}
-          typeFilter={typeFilter}
-          onTypeChange={setTypeFilter}
-          onClearAll={clearAllFilters}
-        />
-        </div>
+        {/* Desktop Filters - Collapsible */}
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="hidden md:block">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium text-sm hover:bg-transparent">
+              {isFiltersOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              Filtros
+              {activeFiltersCount > 0 && (
+                <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3">
+            <TaskFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              priorityFilter={priorityFilter}
+              onPriorityChange={setPriorityFilter}
+              statusFilter={statusFilter}
+              onStatusChange={setStatusFilter}
+              dueDateFilter={dueDateFilter}
+              onDueDateChange={setDueDateFilter}
+              projectFilter={projectFilter}
+              onProjectChange={setProjectFilter}
+              projects={projects}
+              typeFilter={typeFilter}
+              onTypeChange={setTypeFilter}
+              onClearAll={clearAllFilters}
+            />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Toggle show completed */}
         <div className="flex items-center justify-end gap-2">
