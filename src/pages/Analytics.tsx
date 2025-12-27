@@ -8,22 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
 import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { formatDateShort, parseDateOnly, formatUserName, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AnalyticsMobileTaskList } from "@/components/analytics/AnalyticsMobileTaskList";
 
 const COLORS = {
   completed: "hsl(142, 76%, 36%)",
@@ -43,6 +32,7 @@ export default function Analytics() {
   const { workspace } = useWorkspace();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const urlFilter = searchParams.get("filter");
   
   // Set initial tab based on URL filter
@@ -651,35 +641,41 @@ export default function Analytics() {
 
         {/* Task List Section */}
         <Card>
-          <CardHeader>
-            <CardTitle>Lista de Tarefas</CardTitle>
-            <CardDescription>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Lista de Tarefas</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Visualize todas as tarefas separadas por categoria
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
-                <TabsTrigger value="all" className="text-xs sm:text-sm">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 h-auto">
+                <TabsTrigger value="all" className="text-[10px] sm:text-sm py-2">
                   Todas ({totalTasks})
                 </TabsTrigger>
-                <TabsTrigger value="completed" className="text-xs sm:text-sm">
+                <TabsTrigger value="completed" className="text-[10px] sm:text-sm py-2">
                   Concluídas ({completedTasks})
                 </TabsTrigger>
-                <TabsTrigger value="pending" className="text-xs sm:text-sm">
+                <TabsTrigger value="pending" className="text-[10px] sm:text-sm py-2">
                   Pendentes ({pendingCount})
                 </TabsTrigger>
-                <TabsTrigger value="overdue" className="text-xs sm:text-sm">
+                <TabsTrigger value="overdue" className="text-[10px] sm:text-sm py-2">
                   Atrasadas ({overdueTasks})
                 </TabsTrigger>
               </TabsList>
 
               {["all", "completed", "pending", "overdue"].map(tab => (
-                <TabsContent key={tab} value={tab} className="space-y-4">
+                <TabsContent key={tab} value={tab} className="space-y-4 mt-0">
                   {filteredTasks.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">
                       Nenhuma tarefa encontrada
                     </p>
+                  ) : isMobile ? (
+                    <AnalyticsMobileTaskList
+                      groupedTasks={groupedTasks}
+                      profiles={profiles || []}
+                      onTaskClick={(taskId) => navigate(`/tasks/${taskId}`)}
+                    />
                   ) : (
                     <div className="space-y-4">
                       {/* Projects */}
