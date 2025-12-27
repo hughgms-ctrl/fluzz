@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid, List, Folder, CalendarDays } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
+import { ProjectsTableView } from "@/components/projects/ProjectsTableView";
 import { ProjectsCalendarView } from "@/components/projects/ProjectsCalendarView";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
@@ -33,7 +34,7 @@ export default function Projects() {
       
       const { data, error } = await supabase
         .from("projects")
-        .select("*, tasks(id, status), start_date, end_date")
+        .select("*, tasks(id, title, status, priority, assigned_to, due_date, start_date), start_date, end_date")
         .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -240,11 +241,10 @@ export default function Projects() {
                 ))}
               </div>
             ) : (
-              <ProjectListView
+              <ProjectsTableView
                 projects={activeProjects}
                 onDelete={(id) => deleteMutation.mutate(id)}
                 onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-                navigate={navigate}
               />
             )}
           </TabsContent>
@@ -270,11 +270,10 @@ export default function Projects() {
                 ))}
               </div>
             ) : (
-              <ProjectListView
+              <ProjectsTableView
                 projects={archivedProjects}
                 onDelete={(id) => deleteMutation.mutate(id)}
                 onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
-                navigate={navigate}
                 isArchived
               />
             )}
@@ -325,11 +324,10 @@ export default function Projects() {
                 ))}
               </div>
             ) : (
-              <ProjectListView
+              <ProjectsTableView
                 projects={standaloneFolders}
                 onDelete={(id) => deleteMutation.mutate(id)}
                 onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-                navigate={navigate}
                 isStandaloneFolder
               />
             )}
