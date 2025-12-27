@@ -71,9 +71,9 @@ const statusConfig = {
 };
 
 const priorityConfig = {
-  high: { label: "Alta", className: "bg-destructive text-destructive-foreground" },
-  medium: { label: "Média", className: "bg-warning text-warning-foreground" },
-  low: { label: "Baixa", className: "bg-muted text-muted-foreground" },
+  high: { label: "Alta", className: "bg-[hsl(250,60%,45%)] text-white hover:bg-[hsl(250,60%,40%)]" },
+  medium: { label: "Média", className: "bg-[hsl(250,50%,60%)] text-white hover:bg-[hsl(250,50%,55%)]" },
+  low: { label: "Baixa", className: "bg-[hsl(260,60%,65%)] text-white hover:bg-[hsl(260,60%,60%)]" },
 };
 
 // Natural sort function
@@ -84,6 +84,7 @@ const naturalSort = (a: string, b: string) => {
 function SortableTableRow({ 
   task, 
   onStatusChange, 
+  onPriorityChange,
   sortMode,
   assignedUser,
   subtaskProgress,
@@ -91,6 +92,7 @@ function SortableTableRow({
 }: { 
   task: any; 
   onStatusChange: (taskId: string, status: string) => void;
+  onPriorityChange: (taskId: string, priority: string) => void;
   sortMode: "manual" | "az";
   assignedUser: any;
   subtaskProgress: { completed: number; total: number };
@@ -116,6 +118,7 @@ function SortableTableRow({
   };
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
+  const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
   const progress = subtaskProgress.total > 0 
     ? Math.round((subtaskProgress.completed / subtaskProgress.total) * 100) 
     : 0;
@@ -214,6 +217,33 @@ function SortableTableRow({
         ) : (
           <span className="text-muted-foreground/50">-</span>
         )}
+      </TableCell>
+
+      {/* Priority column */}
+      <TableCell className="w-[120px]">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className={`w-full px-3 py-1.5 text-sm font-medium rounded-sm text-center transition-all ${priority.className}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {priority.label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[100px]">
+            {Object.entries(priorityConfig).map(([key, config]) => (
+              <DropdownMenuItem 
+                key={key} 
+                onSelect={() => onPriorityChange(task.id, key)}
+                className="justify-center"
+              >
+                <span className={`px-3 py-1 rounded-sm text-sm font-medium ${config.className}`}>
+                  {config.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </TableCell>
 
       {/* Progress column */}
@@ -350,6 +380,26 @@ export function TaskTableView({
     }
   };
 
+  const handlePriorityChange = async (taskId: string, priority: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ priority })
+        .eq("id", taskId);
+      
+      if (error) {
+        toast.error("Erro ao atualizar prioridade");
+        return;
+      }
+      
+      toast.success("Prioridade atualizada!");
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+    } catch (err) {
+      toast.error("Erro ao atualizar prioridade");
+    }
+  };
+
   const getAssignedUser = (assignedTo: string | null) => {
     if (!assignedTo || !profiles) return null;
     return profiles.find(p => p.id === assignedTo);
@@ -405,6 +455,7 @@ export function TaskTableView({
                 <TableHead className="w-[100px] text-center">Pessoa</TableHead>
                 <TableHead className="w-[140px] text-center">Status</TableHead>
                 <TableHead className="w-[100px] text-center">Data</TableHead>
+                <TableHead className="w-[120px] text-center">Prioridade</TableHead>
                 <TableHead className="w-[140px]">Acompanhamento</TableHead>
               </TableRow>
             </TableHeader>
@@ -419,6 +470,7 @@ export function TaskTableView({
                       key={task.id}
                       task={task}
                       onStatusChange={handleStatusChange}
+                      onPriorityChange={handlePriorityChange}
                       sortMode={sortMode}
                       assignedUser={getAssignedUser(task.assigned_to)}
                       subtaskProgress={getSubtaskProgress(task.id)}
@@ -427,7 +479,7 @@ export function TaskTableView({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
                       Nenhuma tarefa encontrada
                     </TableCell>
                   </TableRow>
