@@ -51,8 +51,6 @@ import {
 } from "lucide-react";
 import { formatDateBR, formatDateShort, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
 interface ProjectsTableViewProps {
   projects: any[];
   onDelete: (id: string) => void;
@@ -417,134 +415,161 @@ function ProjectRow({
     onError: () => toast.error("Erro ao salvar como modelo"),
   });
 
+  const totalColumns = (isAdmin || isGestor) ? 6 : 5;
+
   return (
     <>
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        {/* Project Header Row */}
-        <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
-          <TableCell className="px-2 align-top pt-4">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-          </TableCell>
-          <TableCell 
-            className="font-semibold cursor-pointer hover:text-primary transition-colors py-4"
-            onClick={() => navigate(`/projects/${project.id}`)}
+      {/* Project Row */}
+      <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
+        <TableCell className="px-2 align-top pt-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsExpanded((v) => !v);
+            }}
+            aria-label={isExpanded ? "Recolher projeto" : "Expandir projeto"}
           >
-            <div className="flex items-center gap-2 flex-wrap">
-              {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-              <span className="text-primary text-base">{project.name}</span>
-              {project.is_draft && (
-                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
-                  <FileEdit className="h-3 w-3 mr-1" />
-                  Rascunho
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground font-normal mt-1">
-              {taskCount} {taskCount === 1 ? 'Elemento' : 'Elementos'}
-            </p>
-          </TableCell>
-          <TableCell className="align-middle">
-            <StatusSummaryBar tasks={tasks} />
-          </TableCell>
-          <TableCell className="text-center align-middle">
-            {eventDates ? (
-              <Badge className="text-xs whitespace-nowrap bg-primary/80 text-primary-foreground hover:bg-primary/70">
-                {eventDates}
-              </Badge>
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
             ) : (
-              <span className="text-muted-foreground/50">-</span>
+              <ChevronRight className="h-4 w-4" />
             )}
-          </TableCell>
-          <TableCell className="align-middle">
-            <ProgressSummary tasks={tasks} />
-          </TableCell>
-          {(isAdmin || isGestor) && (
-            <TableCell className="align-middle">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="z-50 bg-popover">
-                  <DropdownMenuItem onClick={() => duplicateMutation.mutate()}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Duplicar
-                  </DropdownMenuItem>
-                  {!isStandaloneFolder && (
-                    <DropdownMenuItem onClick={() => saveAsTemplateMutation.mutate()}>
-                      <Bookmark className="mr-2 h-4 w-4" />
-                      Salvar como Modelo
-                    </DropdownMenuItem>
-                  )}
-                  {!isStandaloneFolder && (
-                    <DropdownMenuItem onClick={() => onArchive(project.id)}>
-                      {isArchived ? (
-                        <>
-                          <ArchiveRestore className="mr-2 h-4 w-4" />
-                          Restaurar
-                        </>
-                      ) : (
-                        <>
-                          <Archive className="mr-2 h-4 w-4" />
-                          Arquivar
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem 
-                    onClick={() => setShowDeleteDialog(true)}
-                    className="text-destructive focus:text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TableCell>
-          )}
-        </TableRow>
+          </Button>
+        </TableCell>
 
-        {/* Expanded Tasks */}
-        <CollapsibleContent asChild>
-          <>
-            {/* Task headers - only show when expanded */}
-            <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
-              <TableCell className="w-8 px-2"></TableCell>
-              <TableCell className="font-medium text-muted-foreground pl-8">Tarefa</TableCell>
-              <TableCell className="w-[80px] text-center font-medium text-muted-foreground">Pessoa</TableCell>
-              <TableCell className="w-[120px] text-center font-medium text-muted-foreground">Status</TableCell>
-              <TableCell className="w-[90px] text-center font-medium text-muted-foreground">Data</TableCell>
-              <TableCell className="w-[100px] text-center font-medium text-muted-foreground">Prioridade</TableCell>
-              {(isAdmin || isGestor) && <TableCell className="w-10"></TableCell>}
-            </TableRow>
-            {tasks.length > 0 ? (
-              tasks.map((task: any) => (
-                <TaskTableRow 
-                  key={task.id} 
-                  task={task} 
-                  profiles={profiles}
-                  showActions={isAdmin || isGestor}
-                />
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground text-sm">
-                  Nenhuma tarefa neste projeto
-                </TableCell>
-              </TableRow>
+        <TableCell
+          className="font-semibold cursor-pointer hover:text-primary transition-colors py-4"
+          onClick={() => navigate(`/projects/${project.id}`)}
+        >
+          <div className="flex items-center gap-2 flex-wrap">
+            {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
+            <span className="text-primary text-base">{project.name}</span>
+            {project.is_draft && (
+              <Badge
+                variant="outline"
+                className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30"
+              >
+                <FileEdit className="h-3 w-3 mr-1" />
+                Rascunho
+              </Badge>
             )}
-          </>
-        </CollapsibleContent>
-      </Collapsible>
+          </div>
+          <p className="text-xs text-muted-foreground font-normal mt-1">
+            {taskCount} {taskCount === 1 ? "Elemento" : "Elementos"}
+          </p>
+        </TableCell>
+
+        <TableCell className="align-middle">
+          <StatusSummaryBar tasks={tasks} />
+        </TableCell>
+
+        <TableCell className="text-center align-middle">
+          {eventDates ? (
+            <Badge className="text-xs whitespace-nowrap bg-primary/80 text-primary-foreground hover:bg-primary/70">
+              {eventDates}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground/50">-</span>
+          )}
+        </TableCell>
+
+        <TableCell className="align-middle">
+          <ProgressSummary tasks={tasks} />
+        </TableCell>
+
+        {(isAdmin || isGestor) && (
+          <TableCell className="align-middle">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-7 w-7">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="z-50 bg-popover">
+                <DropdownMenuItem onClick={() => duplicateMutation.mutate()}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicar
+                </DropdownMenuItem>
+                {!isStandaloneFolder && (
+                  <DropdownMenuItem onClick={() => saveAsTemplateMutation.mutate()}>
+                    <Bookmark className="mr-2 h-4 w-4" />
+                    Salvar como Modelo
+                  </DropdownMenuItem>
+                )}
+                {!isStandaloneFolder && (
+                  <DropdownMenuItem onClick={() => onArchive(project.id)}>
+                    {isArchived ? (
+                      <>
+                        <ArchiveRestore className="mr-2 h-4 w-4" />
+                        Restaurar
+                      </>
+                    ) : (
+                      <>
+                        <Archive className="mr-2 h-4 w-4" />
+                        Arquivar
+                      </>
+                    )}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TableCell>
+        )}
+      </TableRow>
+
+      {/* Expanded content (nested table to keep alignment) */}
+      {isExpanded && (
+        <TableRow className="bg-background">
+          <TableCell colSpan={totalColumns} className="p-0">
+            <div className="border-t border-border bg-muted/10">
+              <Table className="w-full">
+                <TableHeader>
+                  <TableRow className="bg-muted/30 hover:bg-muted/30 text-xs">
+                    <TableHead className="w-10 px-2"></TableHead>
+                    <TableHead className="font-medium text-muted-foreground pl-8">Elemento</TableHead>
+                    <TableHead className="w-[80px] text-center font-medium text-muted-foreground">Pessoa</TableHead>
+                    <TableHead className="w-[120px] text-center font-medium text-muted-foreground">Status</TableHead>
+                    <TableHead className="w-[90px] text-center font-medium text-muted-foreground">Data</TableHead>
+                    <TableHead className="w-[100px] text-center font-medium text-muted-foreground">Prioridade</TableHead>
+                    {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tasks.length > 0 ? (
+                    tasks.map((task: any) => (
+                      <TaskTableRow
+                        key={task.id}
+                        task={task}
+                        profiles={profiles}
+                        showActions={isAdmin || isGestor}
+                      />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={(isAdmin || isGestor) ? 7 : 6}
+                        className="text-center py-4 text-muted-foreground text-sm"
+                      >
+                        Nenhuma tarefa neste projeto
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
