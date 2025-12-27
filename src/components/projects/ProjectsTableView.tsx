@@ -80,6 +80,27 @@ const priorityConfig = {
   low: { label: "Baixa", color: "hsl(260, 60%, 65%)" },
 };
 
+// Colors for project accent bars (Monday.com style)
+const projectColors = [
+  "hsl(217, 91%, 60%)",  // Blue
+  "hsl(142, 71%, 45%)",  // Green
+  "hsl(280, 65%, 60%)",  // Purple
+  "hsl(25, 95%, 53%)",   // Orange
+  "hsl(340, 82%, 52%)",  // Pink/Red
+  "hsl(47, 95%, 50%)",   // Yellow
+  "hsl(173, 80%, 40%)",  // Teal
+  "hsl(315, 70%, 50%)",  // Magenta
+];
+
+function getProjectColor(projectId: string): string {
+  // Use project ID to generate consistent color
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i++) {
+    hash = projectId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return projectColors[Math.abs(hash) % projectColors.length];
+}
+
 function StatusSummaryBar({ tasks }: { tasks: any[] }) {
   const statusCounts = {
     completed: tasks.filter(t => t.status === "completed").length,
@@ -339,6 +360,7 @@ function ProjectRow({
   isStandaloneFolder?: boolean;
   profiles: any[];
 }) {
+  const projectColor = getProjectColor(project.id);
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -420,8 +442,13 @@ function ProjectRow({
   return (
     <>
       {/* Project Row */}
-      <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
-        <TableCell className="px-2 align-top pt-4">
+      <TableRow className="bg-card hover:bg-muted/50 border-b border-border relative">
+        {/* Color accent bar */}
+        <td 
+          className="absolute left-0 top-0 bottom-0 w-1 rounded-l-sm"
+          style={{ backgroundColor: projectColor }}
+        />
+        <TableCell className="px-2 align-top pt-4 pl-3">
           <Button
             variant="ghost"
             size="icon"
