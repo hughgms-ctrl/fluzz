@@ -133,18 +133,11 @@ function SortableTableRow({
       className={`group hover:bg-muted/50 ${sortMode === "manual" ? "cursor-grab active:cursor-grabbing" : ""}`}
       {...(sortMode === "manual" ? { ...attributes, ...listeners } : {})}
     >
-      {/* Checkbox column */}
+      {/* Drag handle column */}
       <TableCell className="w-10 px-3">
-        <div className="flex items-center gap-2">
-          {sortMode === "manual" && (
-            <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-          )}
-          <input 
-            type="checkbox" 
-            className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        {sortMode === "manual" && (
+          <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        )}
       </TableCell>
 
       {/* Title column */}
