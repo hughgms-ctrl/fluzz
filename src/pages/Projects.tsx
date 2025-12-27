@@ -8,6 +8,7 @@ import { ProjectCard } from "@/components/projects/ProjectCard";
 import { ProjectListView } from "@/components/projects/ProjectListView";
 import { ProjectsTableView } from "@/components/projects/ProjectsTableView";
 import { ProjectsCalendarView } from "@/components/projects/ProjectsCalendarView";
+import { ProjectMobileCard } from "@/components/projects/ProjectMobileCard";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,11 +25,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { formatDateBR } from "@/lib/utils";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -39,6 +47,7 @@ export default function Projects() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();
+  const isMobile = useIsMobile();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", workspace?.id],
@@ -171,97 +180,191 @@ export default function Projects() {
     }
   };
 
+  const renderProjectsList = (projectsList: any[], isStandalone = false) => {
+    if (projectsList.length === 0) return null;
+
+    // Mobile: sempre mostrar cards
+    if (isMobile) {
+      return (
+        <div className="space-y-3">
+          {projectsList.map((project: any) => (
+            <ProjectMobileCard
+              key={project.id}
+              project={project}
+              onDelete={(id) => deleteMutation.mutate(id)}
+              onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
+              isStandaloneFolder={isStandalone}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    // Desktop: respeitar viewMode
+    if (viewMode === "grid") {
+      return (
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {projectsList.map((project: any) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onDelete={() => deleteMutation.mutate(project.id)}
+              onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
+              canEdit={isAdmin || isGestor}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <ProjectsTableView
+        projects={projectsList}
+        onDelete={(id) => deleteMutation.mutate(id)}
+        onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
+        isStandaloneFolder={isStandalone}
+      />
+    );
+  };
+
+  const ArchivedContent = () => (
+    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+      {archivedProjects.length === 0 ? (
+        <p className="text-center text-muted-foreground py-8">
+          Nenhum projeto arquivado.
+        </p>
+      ) : isMobile ? (
+        archivedProjects.map((project: any) => (
+          <ProjectMobileCard
+            key={project.id}
+            project={project}
+            onDelete={(id) => deleteMutation.mutate(id)}
+            onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
+            isArchived
+          />
+        ))
+      ) : (
+        <ProjectsTableView
+          projects={archivedProjects}
+          onDelete={(id) => deleteMutation.mutate(id)}
+          onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
+          isArchived
+        />
+      )}
+    </div>
+  );
+
   return (
     <AppLayout>
-      <div className="space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
-              <p className="text-sm md:text-base text-muted-foreground">Gerencie todos os seus projetos</p>
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div>
+                <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Projetos</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground">Gerencie seus projetos</p>
+              </div>
+              {archivedProjects.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setShowArchivedDialog(true)}
+                        className="h-8 w-8 relative"
+                      >
+                        <Archive className="h-4 w-4 text-muted-foreground" />
+                        <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center">
+                          {archivedProjects.length}
+                        </span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Projetos arquivados</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
-            {archivedProjects.length > 0 && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowArchivedDialog(true)}
-                      className="h-8 w-8"
-                    >
-                      <Archive className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Projetos arquivados ({archivedProjects.length})</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="flex border rounded-md">
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-                className="rounded-r-none"
-                title="Visualização em grade"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-                title="Visualização em lista"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "calendar" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("calendar")}
-                className="rounded-l-none"
-                title="Visualização de calendário"
-              >
-                <CalendarDays className="h-4 w-4" />
-              </Button>
+            
+            <div className="flex items-center gap-2">
+              {/* View mode toggle - esconder no mobile */}
+              {!isMobile && (
+                <div className="flex border rounded-md">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("grid")}
+                    className="rounded-r-none h-8 w-8"
+                    title="Grade"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("list")}
+                    className="h-8 w-8"
+                    title="Lista"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "calendar" ? "default" : "ghost"}
+                    size="icon"
+                    onClick={() => setViewMode("calendar")}
+                    className="rounded-l-none h-8 w-8"
+                    title="Calendário"
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              
+              {(isAdmin || isGestor) && (
+                <Button 
+                  onClick={() => setIsCreateOpen(true)} 
+                  className="gap-1.5 h-9 px-3"
+                  size={isMobile ? "sm" : "default"}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Novo Projeto</span>
+                  <span className="sm:hidden">Novo</span>
+                </Button>
+              )}
             </div>
-            {(isAdmin || isGestor) && (
-              <Button onClick={() => setIsCreateOpen(true)} className="gap-2 flex-1 sm:flex-initial">
-                <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">Novo Projeto</span>
-                <span className="sm:hidden">Novo</span>
-              </Button>
-            )}
           </div>
         </div>
 
+        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "drafts" | "standalone")}>
-          <TabsList className={`grid w-full h-auto ${(isAdmin || isGestor) ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <TabsTrigger value="active" className="text-xs sm:text-sm">
-              <span className="hidden sm:inline">Ativos</span>
-              <span className="sm:hidden">Ativo</span>
-              ({activeProjects.length})
+          <TabsList className={`w-full h-auto p-1 ${(isAdmin || isGestor) ? 'grid grid-cols-3' : 'grid grid-cols-2'}`}>
+            <TabsTrigger value="active" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+              Ativos
+              <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                {activeProjects.length}
+              </Badge>
             </TabsTrigger>
             {(isAdmin || isGestor) && (
-              <TabsTrigger value="drafts" className="text-xs sm:text-sm">
-                <span className="hidden sm:inline">Rascunhos</span>
-                <span className="sm:hidden">Rasc.</span>
-                ({draftProjects.length})
+              <TabsTrigger value="drafts" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                Rascunhos
+                <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                  {draftProjects.length}
+                </Badge>
               </TabsTrigger>
             )}
-            <TabsTrigger value="standalone" className="text-xs sm:text-sm">
-              <span className="hidden sm:inline">Avulsos</span>
-              <span className="sm:hidden">Avulso</span>
-              ({standaloneFolders.length})
+            <TabsTrigger value="standalone" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+              Avulsos
+              <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                {standaloneFolders.length}
+              </Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="active" className="mt-6">
-          {viewMode === "calendar" ? (
+          <TabsContent value="active" className="mt-4">
+            {viewMode === "calendar" && !isMobile ? (
               <ProjectsCalendarView
                 projects={calendarProjects}
                 onCreateProject={(date) => {
@@ -272,115 +375,50 @@ export default function Projects() {
                 canSeeDrafts={isAdmin || isGestor}
               />
             ) : activeProjects.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground mb-4">
-                  Você ainda não tem projetos ativos. Comece criando um!
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4 text-sm">
+                  Você ainda não tem projetos ativos.
                 </p>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                  <Plus size={20} />
-                  Criar Primeiro Projeto
-                </Button>
-              </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {activeProjects.map((project: any) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    onDelete={() => deleteMutation.mutate(project.id)}
-                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
-                    canEdit={isAdmin || isGestor}
-                  />
-                ))}
+                {(isAdmin || isGestor) && (
+                  <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
+                    <Plus size={18} />
+                    Criar Primeiro Projeto
+                  </Button>
+                )}
               </div>
             ) : (
-              <ProjectsTableView
-                projects={activeProjects}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-              />
+              renderProjectsList(activeProjects)
             )}
           </TabsContent>
 
-          <TabsContent value="drafts" className="mt-6">
+          <TabsContent value="drafts" className="mt-4">
             {draftProjects.length === 0 ? (
-              <div className="text-center py-16">
-                <p className="text-muted-foreground">
+              <div className="text-center py-12">
+                <p className="text-muted-foreground text-sm">
                   Você não tem projetos em rascunho.
                 </p>
               </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {draftProjects.map((project: any) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    onDelete={() => deleteMutation.mutate(project.id)}
-                    onArchive={() => archiveMutation.mutate({ id: project.id, archived: true })}
-                    canEdit={isAdmin || isGestor}
-                  />
-                ))}
-              </div>
             ) : (
-              <ProjectsTableView
-                projects={draftProjects}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-              />
+              renderProjectsList(draftProjects)
             )}
           </TabsContent>
 
-          <TabsContent value="standalone" className="mt-6">
+          <TabsContent value="standalone" className="mt-4">
             {standaloneFolders.length === 0 ? (
-              <div className="text-center py-16">
-                <Folder className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">
+              <div className="text-center py-12">
+                <Folder className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                <p className="text-muted-foreground mb-4 text-sm">
                   Você não tem pastas de tarefas avulsas.
                 </p>
                 {(isAdmin || isGestor) && (
                   <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                    <Plus size={20} />
+                    <Plus size={18} />
                     Criar Pasta Avulsa
                   </Button>
                 )}
               </div>
-            ) : viewMode === "grid" ? (
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {standaloneFolders.map((folder: any) => (
-                  <Card
-                    key={folder.id}
-                    className="hover:shadow-lg transition-all cursor-pointer"
-                    onClick={() => navigate(`/projects/${folder.id}`)}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Folder className="h-5 w-5 text-primary" />
-                          <CardTitle className="text-lg line-clamp-2">{folder.name}</CardTitle>
-                        </div>
-                        <Badge variant="outline">Avulso</Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {folder.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {folder.description}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {folder.tasks?.length || 0} tarefas
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
             ) : (
-              <ProjectsTableView
-                projects={standaloneFolders}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-                isStandaloneFolder
-              />
+              renderProjectsList(standaloneFolders, true)
             )}
           </TabsContent>
         </Tabs>
@@ -395,31 +433,36 @@ export default function Projects() {
         defaultDate={defaultProjectDate}
       />
 
-      {/* Archived Projects Dialog */}
-      <Dialog open={showArchivedDialog} onOpenChange={setShowArchivedDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Archive className="h-5 w-5" />
-              Projetos Arquivados ({archivedProjects.length})
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            {archivedProjects.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Nenhum projeto arquivado.
-              </p>
-            ) : (
-              <ProjectsTableView
-                projects={archivedProjects}
-                onDelete={(id) => deleteMutation.mutate(id)}
-                onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
-                isArchived
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Archived Projects - Drawer for mobile, Dialog for desktop */}
+      {isMobile ? (
+        <Drawer open={showArchivedDialog} onOpenChange={setShowArchivedDialog}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="flex items-center gap-2">
+                <Archive className="h-5 w-5" />
+                Arquivados ({archivedProjects.length})
+              </DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-6">
+              <ArchivedContent />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog open={showArchivedDialog} onOpenChange={setShowArchivedDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Archive className="h-5 w-5" />
+                Projetos Arquivados ({archivedProjects.length})
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-4">
+              <ArchivedContent />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </AppLayout>
   );
 }
