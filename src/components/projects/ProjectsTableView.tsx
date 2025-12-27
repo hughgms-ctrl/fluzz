@@ -90,11 +90,11 @@ function StatusSummaryBar({ tasks }: { tasks: any[] }) {
   };
   
   const total = tasks.length;
-  if (total === 0) return <span className="text-muted-foreground/50">-</span>;
+  if (total === 0) return <span className="text-muted-foreground/50 text-center block">-</span>;
 
   return (
     <TooltipProvider>
-      <div className="flex h-5 w-full max-w-[100px] rounded-sm overflow-hidden">
+      <div className="flex h-6 w-full rounded-sm overflow-hidden">
         {Object.entries(statusCounts).map(([status, count]) => {
           if (count === 0) return null;
           const config = statusConfig[status as keyof typeof statusConfig];
@@ -108,7 +108,7 @@ function StatusSummaryBar({ tasks }: { tasks: any[] }) {
                   style={{ 
                     width: `${percentage}%`, 
                     backgroundColor: config.color,
-                    minWidth: count > 0 ? '8px' : 0,
+                    minWidth: count > 0 ? '10px' : 0,
                   }}
                 />
               </TooltipTrigger>
@@ -125,14 +125,14 @@ function StatusSummaryBar({ tasks }: { tasks: any[] }) {
 
 function ProgressSummary({ tasks }: { tasks: any[] }) {
   const total = tasks.length;
-  if (total === 0) return <span className="text-muted-foreground/50">-</span>;
+  if (total === 0) return <span className="text-muted-foreground/50 text-center block">-</span>;
   
   const completed = tasks.filter(t => t.status === "completed").length;
   const percentage = Math.round((completed / total) * 100);
 
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden max-w-[80px]">
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div 
           className={`h-full transition-all duration-300 rounded-full ${
             percentage === 100 
@@ -144,9 +144,9 @@ function ProgressSummary({ tasks }: { tasks: any[] }) {
           style={{ width: `${percentage}%` }}
         />
       </div>
-      <span className={`text-xs min-w-[35px] text-right ${
+      <span className={`text-sm font-medium min-w-[40px] text-right ${
         percentage === 100 
-          ? "text-status-completed font-medium" 
+          ? "text-status-completed" 
           : "text-muted-foreground"
       }`}>
         {percentage}%
@@ -422,7 +422,7 @@ function ProjectRow({
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Project Header Row */}
         <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
-          <TableCell className="w-[40px] px-2">
+          <TableCell className="w-10 px-2">
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 {isExpanded ? (
@@ -439,7 +439,7 @@ function ProjectRow({
           >
             <div className="flex items-center gap-2 flex-wrap">
               {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-              <span className="text-primary text-base truncate">{project.name}</span>
+              <span className="text-primary text-base">{project.name}</span>
               {project.is_draft && (
                 <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                   <FileEdit className="h-3 w-3 mr-1" />
@@ -451,23 +451,23 @@ function ProjectRow({
               {taskCount} {taskCount === 1 ? 'Elemento' : 'Elementos'}
             </p>
           </TableCell>
-          <TableCell className="w-[140px]">
+          <TableCell className="w-[160px]">
             <StatusSummaryBar tasks={tasks} />
           </TableCell>
-          <TableCell className="w-[130px] text-center">
+          <TableCell className="w-[140px] text-center">
             {eventDates ? (
-              <Badge variant="secondary" className="text-xs whitespace-nowrap">
+              <Badge className="text-xs whitespace-nowrap bg-primary/80 text-primary-foreground hover:bg-primary/70">
                 {eventDates}
               </Badge>
             ) : (
               <span className="text-muted-foreground/50">-</span>
             )}
           </TableCell>
-          <TableCell className="w-[140px]">
+          <TableCell className="w-[180px]">
             <ProgressSummary tasks={tasks} />
           </TableCell>
           {(isAdmin || isGestor) && (
-            <TableCell className="w-[50px]">
+            <TableCell className="w-10">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -610,15 +610,15 @@ export function ProjectsTableView({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table className="w-full table-fixed">
+      <Table className="w-full">
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-[40px] px-2"></TableHead>
-            <TableHead className="">Projeto</TableHead>
-            <TableHead className="w-[140px] text-center">Status</TableHead>
-            <TableHead className="w-[130px] text-center">Data</TableHead>
-            <TableHead className="w-[140px]">Progresso</TableHead>
-            {(isAdmin || isGestor) && <TableHead className="w-[50px]"></TableHead>}
+            <TableHead className="w-10 px-2"></TableHead>
+            <TableHead className="w-auto">Projeto</TableHead>
+            <TableHead className="w-[160px] text-center">Status</TableHead>
+            <TableHead className="w-[140px] text-center">Data</TableHead>
+            <TableHead className="w-[180px] text-center">Acompanhamento</TableHead>
+            {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
