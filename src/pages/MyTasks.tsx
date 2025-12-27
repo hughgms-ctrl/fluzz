@@ -5,14 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { TaskCard } from "@/components/tasks/TaskCard";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
-import { ProjectTaskGroup } from "@/components/tasks/ProjectTaskGroup";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MyTasksTableView } from "@/components/tasks/MyTasksTableView";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, PlayCircle, Plus, FolderOpen, User, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -249,113 +247,6 @@ export default function MyTasks() {
     );
   }
 
-  const TaskTypeIcon = ({ type }: { type: "project" | "standalone" | "routine" }) => {
-    const icons = {
-      project: <FolderOpen size={12} />,
-      standalone: <User size={12} />,
-      routine: <RefreshCw size={12} />,
-    };
-    return icons[type];
-  };
-
-  const TaskTypeBadge = ({ task }: { task: any }) => {
-    const type = getTaskType(task);
-    const labels = {
-      project: task.projects?.name || "Projeto",
-      standalone: "Avulsa",
-      routine: "Rotina",
-    };
-    const colors = {
-      project: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-      standalone: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
-      routine: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    };
-
-    return (
-      <Badge variant="outline" className={`text-xs px-1.5 py-0 h-5 gap-1 ${colors[type]}`}>
-        <TaskTypeIcon type={type} />
-        {labels[type]}
-      </Badge>
-    );
-  };
-
-  const renderTaskList = (taskList: any[], emptyMessage: string) => (
-    taskList.length > 0 ? (
-      <div className="space-y-3">
-        {taskList.map((task) => (
-          <div key={task.id} className="space-y-1">
-            <TaskTypeBadge task={task} />
-            <TaskCard
-              task={task}
-              onDelete={() => deleteTaskMutation.mutate(task.id)}
-            />
-          </div>
-        ))}
-      </div>
-    ) : (
-      <p className="text-center text-muted-foreground py-8">
-        {emptyMessage}
-      </p>
-    )
-  );
-
-  const renderGroupedTasks = (taskList: any[], emptyMessage: string) => {
-    if (taskList.length === 0) {
-      return (
-        <p className="text-center text-muted-foreground py-8">
-          {emptyMessage}
-        </p>
-      );
-    }
-
-    // Group the specific task list
-    const groups: { [key: string]: { name: string; tasks: any[]; type: "project" | "standalone" | "routine" } } = {};
-    
-    taskList.forEach((task) => {
-      const taskType = getTaskType(task);
-      
-      if (taskType === "standalone") {
-        if (!groups["standalone"]) {
-          groups["standalone"] = { name: "Tarefas Avulsas", tasks: [], type: "standalone" };
-        }
-        groups["standalone"].tasks.push(task);
-      } else if (taskType === "routine") {
-        if (!groups["routine"]) {
-          groups["routine"] = { name: "Tarefas de Rotina", tasks: [], type: "routine" };
-        }
-        groups["routine"].tasks.push(task);
-      } else if (task.project_id) {
-        const projectKey = task.project_id;
-        if (!groups[projectKey]) {
-          groups[projectKey] = { 
-            name: task.projects?.name || "Projeto", 
-            tasks: [], 
-            type: "project" 
-          };
-        }
-        groups[projectKey].tasks.push(task);
-      }
-    });
-    
-    const sortedGroups = Object.entries(groups)
-      .sort(([, a], [, b]) => naturalSort(a.name, b.name))
-      .map(([id, group]) => ({ id, ...group }));
-
-    return (
-      <div className="space-y-4">
-        {sortedGroups.map((group) => (
-          <ProjectTaskGroup
-            key={group.id}
-            projectId={group.id === "standalone" || group.id === "routine" ? null : group.id}
-            projectName={group.name}
-            tasks={group.tasks}
-            type={group.type}
-            onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-          />
-        ))}
-      </div>
-    );
-  };
 
   return (
     <AppLayout>
@@ -489,19 +380,19 @@ export default function MyTasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            {renderGroupedTasks(filteredTasks, "Nenhuma tarefa atribuída a você ainda")}
+            <MyTasksTableView tasks={filteredTasks} />
           </TabsContent>
 
           <TabsContent value="todo" className="mt-6">
-            {renderGroupedTasks(todoTasks, "Nenhuma tarefa para fazer")}
+            <MyTasksTableView tasks={todoTasks} />
           </TabsContent>
 
           <TabsContent value="in_progress" className="mt-6">
-            {renderGroupedTasks(inProgressTasks, "Nenhuma tarefa em progresso")}
+            <MyTasksTableView tasks={inProgressTasks} />
           </TabsContent>
 
           <TabsContent value="completed" className="mt-6">
-            {renderGroupedTasks(completedTasks, "Nenhuma tarefa concluída")}
+            <MyTasksTableView tasks={completedTasks} />
           </TabsContent>
         </Tabs>
       </div>
