@@ -35,7 +35,7 @@ const menuItems: MenuItem[] = [
 ];
 
 const workspaceItems: MenuItem[] = [
-  { title: "Processos", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
+  { title: "POP's", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
   { title: "Equipe", url: "/team", icon: Users, adminOnly: true },
   { title: "Setores", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
   { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },

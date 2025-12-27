@@ -284,7 +284,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             />
           </div>
           <div className="space-y-2">
-            <Label>Processos Vinculados</Label>
+            <Label>POP's Vinculados</Label>
             <div className="space-y-2">
               {processes?.map((process) => (
                 <div key={process.id} className="flex items-center gap-2">

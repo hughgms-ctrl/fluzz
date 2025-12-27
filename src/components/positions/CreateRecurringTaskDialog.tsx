@@ -187,16 +187,16 @@ export function CreateRecurringTaskDialog({ positionId, open, onOpenChange }: Cr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="process">Vincular a Processo (Opcional)</Label>
+            <Label htmlFor="process">Vincular a POP (Opcional)</Label>
             <Select 
               value={processId || "none"} 
               onValueChange={(value) => setProcessId(value === "none" ? null : value)}
             >
               <SelectTrigger id="process">
-                <SelectValue placeholder="Selecione um processo" />
+                <SelectValue placeholder="Selecione um POP" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Nenhum processo</SelectItem>
+                <SelectItem value="none">Nenhum POP</SelectItem>
                 {processes?.map((process) => (
                   <SelectItem key={process.id} value={process.id}>
                     {process.title} ({process.area})
@@ -205,7 +205,7 @@ export function CreateRecurringTaskDialog({ positionId, open, onOpenChange }: Cr
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Vincula a tarefa a um processo documentado para referência
+              Vincula a tarefa a um POP para referência
             </p>
           </div>
 

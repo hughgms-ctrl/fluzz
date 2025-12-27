@@ -273,7 +273,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
             </MemberDrawer>
           </div>
           <div className="space-y-2">
-            <Label>Processos Vinculados</Label>
+            <Label>POP's Vinculados</Label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {processes?.map((process) => (
                 <div key={process.id} className="flex items-center gap-2">
