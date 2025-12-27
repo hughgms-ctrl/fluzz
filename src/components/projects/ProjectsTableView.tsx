@@ -422,7 +422,7 @@ function ProjectRow({
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         {/* Project Header Row */}
         <TableRow className="bg-card hover:bg-muted/50 border-b border-border">
-          <TableCell className="w-8 px-2">
+          <TableCell className="w-[40px] px-2">
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 {isExpanded ? (
@@ -437,9 +437,9 @@ function ProjectRow({
             className="font-semibold cursor-pointer hover:text-primary transition-colors py-4"
             onClick={() => navigate(`/projects/${project.id}`)}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
-              <span className="text-primary text-base">{project.name}</span>
+              <span className="text-primary text-base truncate">{project.name}</span>
               {project.is_draft && (
                 <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                   <FileEdit className="h-3 w-3 mr-1" />
@@ -454,7 +454,7 @@ function ProjectRow({
           <TableCell className="w-[140px]">
             <StatusSummaryBar tasks={tasks} />
           </TableCell>
-          <TableCell className="w-[120px] text-center">
+          <TableCell className="w-[130px] text-center">
             {eventDates ? (
               <Badge variant="secondary" className="text-xs whitespace-nowrap">
                 {eventDates}
@@ -463,11 +463,11 @@ function ProjectRow({
               <span className="text-muted-foreground/50">-</span>
             )}
           </TableCell>
-          <TableCell className="w-[120px]">
+          <TableCell className="w-[140px]">
             <ProgressSummary tasks={tasks} />
           </TableCell>
           {(isAdmin || isGestor) && (
-            <TableCell className="w-10">
+            <TableCell className="w-[50px]">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -610,15 +610,15 @@ export function ProjectsTableView({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table>
+      <Table className="w-full table-fixed">
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-8 px-2"></TableHead>
-            <TableHead className="min-w-[280px]">Projeto</TableHead>
+            <TableHead className="w-[40px] px-2"></TableHead>
+            <TableHead className="">Projeto</TableHead>
             <TableHead className="w-[140px] text-center">Status</TableHead>
-            <TableHead className="w-[120px] text-center">Data</TableHead>
-            <TableHead className="w-[120px]">Progresso</TableHead>
-            {(isAdmin || isGestor) && <TableHead className="w-10"></TableHead>}
+            <TableHead className="w-[130px] text-center">Data</TableHead>
+            <TableHead className="w-[140px]">Progresso</TableHead>
+            {(isAdmin || isGestor) && <TableHead className="w-[50px]"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
