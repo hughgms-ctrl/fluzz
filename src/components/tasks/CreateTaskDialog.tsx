@@ -242,7 +242,9 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <Briefcase size={16} />
-                  {sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor"}
+                  {sectorId === "multiple" 
+                    ? "Múltiplos Setores" 
+                    : (sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor")}
                 </span>
                 <ChevronRight size={16} />
               </Button>
