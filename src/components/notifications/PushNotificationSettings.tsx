@@ -135,10 +135,20 @@ export function PushNotificationSettings() {
         )}
 
         {permission === 'denied' && (
-          <div className="p-3 bg-destructive/10 rounded-md text-sm">
-            <p className="text-destructive">
-              As notificações foram bloqueadas. Para ativá-las, clique no ícone de cadeado 
-              na barra de endereços do navegador e permita notificações.
+          <div className="p-3 bg-destructive/10 rounded-md text-sm space-y-2">
+            <p className="text-destructive font-medium">
+              Notificações bloqueadas
+            </p>
+            <p className="text-muted-foreground">
+              Para liberar as notificações:
+            </p>
+            <ol className="text-muted-foreground list-decimal list-inside space-y-1 text-xs">
+              <li><strong>Chrome/Edge:</strong> Clique no ícone à esquerda da URL → "Permissões do site" → Notificações → Permitir</li>
+              <li><strong>Firefox:</strong> Clique no ícone de cadeado → Conexão segura → Mais informações → Permissões</li>
+              <li><strong>Safari:</strong> Safari → Preferências → Sites → Notificações</li>
+            </ol>
+            <p className="text-xs text-muted-foreground mt-2">
+              Após liberar, recarregue a página e clique em "Ativar Notificações Push" novamente.
             </p>
           </div>
         )}
