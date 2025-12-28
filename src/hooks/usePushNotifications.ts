@@ -3,9 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// VAPID public key - user needs to set this
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
-
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
   const base64 = (base64String + padding)
@@ -27,6 +24,7 @@ export function usePushNotifications() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  const [vapidKey, setVapidKey] = useState<string | null>(null);
 
   useEffect(() => {
     // Check if push notifications are supported
@@ -35,9 +33,22 @@ export function usePushNotifications() {
 
     if (supported) {
       setPermission(Notification.permission);
+      fetchVapidKey();
       checkSubscription();
     }
   }, [user]);
+
+  const fetchVapidKey = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('get-vapid-key');
+      if (error) throw error;
+      if (data?.publicKey) {
+        setVapidKey(data.publicKey);
+      }
+    } catch (error) {
+      console.error('Error fetching VAPID key:', error);
+    }
+  };
 
   const checkSubscription = useCallback(async () => {
     if (!user) return;
@@ -82,8 +93,9 @@ export function usePushNotifications() {
       return false;
     }
 
-    if (!VAPID_PUBLIC_KEY) {
-      toast.error('Chave VAPID não configurada');
+    if (!vapidKey) {
+      toast.error('Chave VAPID não configurada. Tente novamente em alguns segundos.');
+      await fetchVapidKey();
       return false;
     }
 
@@ -105,7 +117,7 @@ export function usePushNotifications() {
       // Subscribe to push
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        applicationServerKey: urlBase64ToUint8Array(vapidKey)
       });
 
       const subscriptionJson = subscription.toJSON();

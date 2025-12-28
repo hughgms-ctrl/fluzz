@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -345,6 +346,8 @@ export default function Profile() {
             </p>
           </CardContent>
         </Card>
+
+        <PushNotificationSettings />
       </div>
     </AppLayout>
   );
