@@ -75,32 +75,36 @@ export function MultiAssigneeDialog({
     queryFn: async () => {
       if (!workspace) return [];
       
+      // First fetch workspace members
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
-        .select(`
-          id,
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select("id, user_id, role")
         .eq("workspace_id", workspace.id);
       
       if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      // Fetch profiles separately
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
 
       // Fetch user positions
       const { data: userPositions, error: positionsError } = await supabase
         .from("user_positions")
-        .select("user_id, position_id");
+        .select("user_id, position_id")
+        .in("user_id", userIds);
       
       if (positionsError) throw positionsError;
 
-      // Combine members with their positions
+      // Combine members with their profiles and positions
       return members.map(member => ({
         ...member,
+        profiles: profiles?.find(p => p.id === member.user_id) || null,
         positionIds: userPositions
           ?.filter(up => up.user_id === member.user_id)
           .map(up => up.position_id) || [],

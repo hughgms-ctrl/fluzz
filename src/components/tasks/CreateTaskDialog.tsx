@@ -109,6 +109,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
 
   const createMutation = useMutation({
     mutationFn: async () => {
+      const assigneeId = assignedTo || user!.id;
+      
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
@@ -119,14 +121,23 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             priority,
             status,
             due_date: dueDate || null,
-            assigned_to: assignedTo || user!.id,
+            assigned_to: assigneeId,
             documentation: documentation || null,
-            setor: sectorId || null,
+            setor: sectorId === "multiplos" ? null : (sectorId || null),
           },
         ])
         .select()
         .single();
       if (taskError) throw taskError;
+
+      // Insert into task_assignees table
+      const { error: assigneeError } = await supabase
+        .from("task_assignees")
+        .insert({
+          task_id: newTask.id,
+          user_id: assigneeId,
+        });
+      if (assigneeError) throw assigneeError;
 
       // Link selected processes
       if (selectedProcesses.length > 0) {
@@ -144,6 +155,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] });
       queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["task-assignees"] });
+      queryClient.invalidateQueries({ queryKey: ["task-assignees-multiple"] });
       toast.success("Tarefa criada com sucesso!");
       resetForm();
       onOpenChange(false);
@@ -242,7 +255,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <Briefcase size={16} />
-                  {sectorId === "multiple" 
+                  {sectorId === "multiplos" 
                     ? "Múltiplos Setores" 
                     : (sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor")}
                 </span>
