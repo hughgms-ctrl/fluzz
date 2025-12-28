@@ -142,12 +142,33 @@ export function PushNotificationSettings() {
             <p className="text-muted-foreground">
               Para liberar as notificações:
             </p>
-            <ol className="text-muted-foreground list-decimal list-inside space-y-1 text-xs">
-              <li><strong>Chrome/Edge:</strong> Clique no ícone à esquerda da URL → "Permissões do site" → Notificações → Permitir</li>
-              <li><strong>Firefox:</strong> Clique no ícone de cadeado → Conexão segura → Mais informações → Permissões</li>
-              <li><strong>Safari:</strong> Safari → Preferências → Sites → Notificações</li>
-            </ol>
-            <p className="text-xs text-muted-foreground mt-2">
+            <div className="text-muted-foreground space-y-3 text-xs">
+              <div>
+                <p className="font-medium text-foreground mb-1">💻 No computador:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><strong>Chrome/Edge:</strong> Clique no ícone à esquerda da URL → Permissões → Notificações → Permitir</li>
+                  <li><strong>Firefox:</strong> Clique no cadeado → Conexão segura → Permissões</li>
+                  <li><strong>Safari:</strong> Safari → Preferências → Sites → Notificações</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">📱 No celular Android:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Toque no ícone de cadeado/info na barra de endereço</li>
+                  <li>Toque em "Permissões" ou "Configurações do site"</li>
+                  <li>Ative "Notificações"</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-foreground mb-1">🍎 No iPhone (iOS 16.4+):</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Primeiro, adicione o app à tela inicial (Compartilhar → Adicionar à Tela de Início)</li>
+                  <li>Abra o app pela tela inicial</li>
+                  <li>Vá em Ajustes → Notificações → [Nome do App] → Permitir</li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
               Após liberar, recarregue a página e clique em "Ativar Notificações Push" novamente.
             </p>
           </div>
