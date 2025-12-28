@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 import { SectorDrawer } from "./SectorDrawer";
 import { MemberDrawer } from "./MemberDrawer";
-import { Briefcase, UserCircle, ChevronRight, Shield } from "lucide-react";
+import { Briefcase, UserCircle, ChevronRight, Shield, FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface CreateMyTaskDialogProps {
@@ -48,6 +48,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
   const [approvalReviewerId, setApprovalReviewerId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [documentation, setDocumentation] = useState("");
   const [showReviewerSheet, setShowReviewerSheet] = useState(false);
 
   const { data: sectors } = useQuery({
@@ -113,6 +114,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
         approval_status: requiresApproval ? 'pending' : null,
         start_date: startDate || null,
         due_date: dueDate || null,
+        documentation: documentation || null,
         project_id: null,
       };
       
@@ -156,6 +158,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
     setApprovalReviewerId(null);
     setStartDate("");
     setDueDate("");
+    setDocumentation("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -278,7 +281,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
           </div>
 
           {/* Aprovação */}
-          <div className="border-t pt-4 space-y-4">
+          <div className="space-y-4">
             <Label className="flex items-center gap-2">
               <Shield size={16} />
               Aprovação
@@ -293,9 +296,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
                 checked={requiresApproval}
                 onCheckedChange={(checked) => {
                   setRequiresApproval(checked);
-                  if (checked) {
-                    setShowReviewerSheet(true);
-                  } else {
+                  if (!checked) {
                     setApprovalReviewerId(null);
                   }
                 }}
@@ -359,6 +360,20 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+          </div>
+
+          {/* Documentação */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <FileText size={16} />
+              Documentação
+            </Label>
+            <Textarea
+              value={documentation}
+              onChange={(e) => setDocumentation(e.target.value)}
+              placeholder="Coloque o link do grupo aqui:"
+              className="min-h-[80px] resize-y"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
