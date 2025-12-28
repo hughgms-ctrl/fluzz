@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, ArrowLeft, LayoutGrid, List, Users, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit, ChevronDown, ChevronRight } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -17,7 +17,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { TaskTableView } from "@/components/tasks/TaskTableView";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { MobileFilterDrawer } from "@/components/filters/MobileFilterDrawer";
-import { ProjectMembers } from "@/components/projects/ProjectMembers";
 import { ProjectDashboard } from "@/components/projects/ProjectDashboard";
 import { ProjectNotes } from "@/components/projects/ProjectNotes";
 import { TimelineView } from "@/components/tasks/TimelineView";
@@ -39,7 +38,6 @@ export default function ProjectDetail() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "tasks" | "notes" | "briefing">("tasks");
   const [view, setView] = useState<"board" | "list" | "timeline">("list");
-  const [showMembers, setShowMembers] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -51,6 +49,7 @@ export default function ProjectDetail() {
   const [projectDescription, setProjectDescription] = useState("");
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  
   
   // Load sort mode from localStorage for this project - default to A-Z
   const [sortMode, setSortMode] = useState<"manual" | "az">(() => {
@@ -652,16 +651,6 @@ export default function ProjectDetail() {
                 </span>
               </Button>
             )}
-            <Button
-              variant="outline"
-              onClick={() => setShowMembers(!showMembers)}
-              className="gap-2 flex-1 sm:flex-initial text-xs sm:text-sm"
-              size="sm"
-            >
-              <Users size={14} className="sm:w-4 sm:h-4" />
-              <span className="hidden sm:inline">Membros</span>
-              <span className="sm:hidden">Membros</span>
-            </Button>
             <Button onClick={() => setIsCreateOpen(true)} className="gap-2 flex-1 sm:flex-initial text-xs sm:text-sm" size="sm">
               <Plus size={14} className="sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Nova Tarefa</span>
@@ -669,10 +658,6 @@ export default function ProjectDetail() {
             </Button>
           </div>
         </div>
-
-        {showMembers && (
-          <ProjectMembers projectId={id!} />
-        )}
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "dashboard" | "tasks" | "notes" | "briefing")}>
