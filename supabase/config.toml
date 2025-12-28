@@ -23,6 +23,3 @@ verify_jwt = false
 
 [functions.check-incomplete-profiles]
 verify_jwt = false
-
-[functions.generate-valid-vapid]
-verify_jwt = false
