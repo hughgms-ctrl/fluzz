@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,11 +16,9 @@ import {
 import { 
   ChevronDown, 
   ChevronRight, 
-  User, 
   FolderOpen,
   RefreshCw,
   FileText,
-  Plus,
   ArrowDownAZ,
   GripVertical,
 } from "lucide-react";
@@ -46,6 +45,12 @@ const statusConfig = {
     label: "Feito", 
     color: "hsl(152, 69%, 53%)",
   },
+};
+
+const priorityConfig = {
+  high: { label: "Alta", color: "hsl(250, 60%, 45%)" },
+  medium: { label: "Média", color: "hsl(250, 50%, 60%)" },
+  low: { label: "Baixa", color: "hsl(260, 60%, 65%)" },
 };
 
 const groupColors = [
@@ -82,10 +87,12 @@ function TaskRow({
   task, 
   assignees,
   groupColor,
+  subtasks,
 }: { 
   task: any;
   assignees: { user_id: string }[];
   groupColor: string;
+  subtasks: { completed: boolean }[];
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -95,8 +102,14 @@ function TaskRow({
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
+  const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
   const isOverdue = isTaskOverdue(task.due_date, task.status);
   const isDueSoon = isTaskDueSoon(task.due_date, task.status);
+
+  // Subtask progress
+  const totalSubtasks = subtasks.length;
+  const completedSubtasks = subtasks.filter(s => s.completed).length;
+  const subtaskProgress = totalSubtasks > 0 ? (completedSubtasks / totalSubtasks) * 100 : 0;
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -114,6 +127,25 @@ function TaskRow({
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
     } catch (err) {
       toast.error("Erro ao atualizar status");
+    }
+  };
+
+  const handlePriorityChange = async (newPriority: string) => {
+    try {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ priority: newPriority })
+        .eq("id", task.id);
+      
+      if (error) {
+        toast.error("Erro ao atualizar prioridade");
+        return;
+      }
+      
+      toast.success("Prioridade atualizada!");
+      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
+    } catch (err) {
+      toast.error("Erro ao atualizar prioridade");
     }
   };
 
@@ -152,11 +184,11 @@ function TaskRow({
 
   return (
     <div 
-      className="flex items-center gap-2 py-3 border-b border-border last:border-b-0"
-      style={{ borderLeftWidth: 3, borderLeftColor: groupColor, paddingLeft: 8 }}
+      className="flex items-center border-b border-border last:border-b-0"
+      style={{ borderLeftWidth: 3, borderLeftColor: groupColor }}
     >
-      {/* Task title and date */}
-      <div className="flex-1 min-w-0">
+      {/* Task title - fixed column */}
+      <div className="w-[180px] min-w-[180px] py-3 px-2 shrink-0">
         {isEditing ? (
           <Input
             value={editedTitle}
@@ -175,27 +207,16 @@ function TaskRow({
           />
         ) : (
           <p 
-            className="font-medium text-sm line-clamp-1 cursor-pointer hover:text-primary transition-colors"
+            className="font-medium text-sm line-clamp-2 cursor-pointer hover:text-primary transition-colors"
             onClick={handleTitleClick}
           >
             {task.title}
           </p>
         )}
-        {task.due_date && (
-          <p className={`text-xs mt-0.5 ${
-            isOverdue 
-              ? "text-destructive" 
-              : isDueSoon 
-                ? "text-amber-500" 
-                : "text-muted-foreground"
-          }`}>
-            {formatDateBR(task.due_date).slice(0, 5)}
-          </p>
-        )}
       </div>
 
       {/* Assignees */}
-      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[80px] min-w-[80px] py-3 flex justify-center shrink-0" onClick={(e) => e.stopPropagation()}>
         <MultiAssigneeAvatars
           taskId={task.id}
           assignees={assignees}
@@ -213,33 +234,97 @@ function TaskRow({
       </div>
 
       {/* Status dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button 
-            className="px-3 py-1.5 text-xs font-semibold rounded text-white min-w-[90px] text-center shrink-0"
-            style={{ backgroundColor: status.color }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {status.label}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[120px]">
-          {Object.entries(statusConfig).map(([key, config]) => (
-            <DropdownMenuItem 
-              key={key} 
-              onSelect={() => handleStatusChange(key)}
-              className="justify-center"
+      <div className="w-[100px] min-w-[100px] py-3 flex justify-center shrink-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="px-3 py-1.5 text-xs font-semibold rounded text-white w-full text-center"
+              style={{ backgroundColor: status.color }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <span 
-                className="px-3 py-1 rounded text-xs font-semibold text-white w-full text-center"
-                style={{ backgroundColor: config.color }}
+              {status.label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[120px]">
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <DropdownMenuItem 
+                key={key} 
+                onSelect={() => handleStatusChange(key)}
+                className="justify-center"
               >
-                {config.label}
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+                <span 
+                  className="px-3 py-1 rounded text-xs font-semibold text-white w-full text-center"
+                  style={{ backgroundColor: config.color }}
+                >
+                  {config.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Due date */}
+      <div className="w-[70px] min-w-[70px] py-3 text-center shrink-0">
+        {task.due_date ? (
+          <span className={`text-xs font-medium ${
+            isOverdue 
+              ? "text-destructive" 
+              : isDueSoon 
+                ? "text-amber-500" 
+                : "text-muted-foreground"
+          }`}>
+            {formatDateBR(task.due_date).slice(0, 5)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground/50 text-xs">-</span>
+        )}
+      </div>
+
+      {/* Priority dropdown */}
+      <div className="w-[90px] min-w-[90px] py-3 flex justify-center shrink-0">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button 
+              className="px-3 py-1.5 text-xs font-semibold rounded text-white w-full text-center"
+              style={{ backgroundColor: priority.color }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {priority.label}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="min-w-[100px]">
+            {Object.entries(priorityConfig).map(([key, config]) => (
+              <DropdownMenuItem 
+                key={key} 
+                onSelect={() => handlePriorityChange(key)}
+                className="justify-center"
+              >
+                <span 
+                  className="px-3 py-1 rounded text-xs font-semibold text-white w-full text-center"
+                  style={{ backgroundColor: config.color }}
+                >
+                  {config.label}
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Progress (subtasks) */}
+      <div className="w-[100px] min-w-[100px] py-3 px-2 shrink-0">
+        {totalSubtasks > 0 ? (
+          <div className="flex items-center gap-1">
+            <Progress value={subtaskProgress} className="h-2 flex-1" />
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {completedSubtasks}/{totalSubtasks}
+            </span>
+          </div>
+        ) : (
+          <div className="h-2 bg-muted/50 rounded-full" />
+        )}
+      </div>
     </div>
   );
 }
@@ -247,6 +332,7 @@ function TaskRow({
 function TaskGroupCard({ 
   group,
   taskAssignees,
+  taskSubtasks,
   sortMode,
 }: { 
   group: {
@@ -257,6 +343,7 @@ function TaskGroupCard({
     color: string;
   };
   taskAssignees: Record<string, { user_id: string }[]>;
+  taskSubtasks: Record<string, { completed: boolean }[]>;
   sortMode: "manual" | "az";
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -306,28 +393,33 @@ function TaskGroupCard({
         </span>
       </div>
 
-      {/* Tasks List - Table-like layout */}
+      {/* Tasks List - Horizontally scrollable table */}
       {isExpanded && sortedTasks.length > 0 && (
         <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {/* Table header */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border text-xs text-muted-foreground font-medium">
-              <div className="flex-1 pl-2">Elemento</div>
-              <div className="w-[70px] text-center shrink-0">Pessoa</div>
-              <div className="w-[90px] text-center shrink-0">Status</div>
-            </div>
-            {/* Task rows */}
-            <div className="px-2">
+          <ScrollArea className="w-full" type="scroll">
+            <div className="min-w-[620px]">
+              {/* Table header */}
+              <div className="flex items-center bg-muted/30 border-b border-border text-xs text-muted-foreground font-medium">
+                <div className="w-[180px] min-w-[180px] py-2 px-2 shrink-0">Elemento</div>
+                <div className="w-[80px] min-w-[80px] py-2 text-center shrink-0">Pessoa</div>
+                <div className="w-[100px] min-w-[100px] py-2 text-center shrink-0">Status</div>
+                <div className="w-[70px] min-w-[70px] py-2 text-center shrink-0">Data</div>
+                <div className="w-[90px] min-w-[90px] py-2 text-center shrink-0">Prioridade</div>
+                <div className="w-[100px] min-w-[100px] py-2 px-2 shrink-0">Acompanha</div>
+              </div>
+              {/* Task rows */}
               {sortedTasks.map((task) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   assignees={taskAssignees[task.id] || []}
+                  subtasks={taskSubtasks[task.id] || []}
                   groupColor={group.color}
                 />
               ))}
             </div>
-          </CardContent>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </Card>
       )}
     </div>
@@ -340,6 +432,30 @@ export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
   // Fetch all task assignees
   const taskIds = tasks.map(t => t.id);
   const { data: taskAssignees = {} } = useMultipleTasksAssignees(taskIds, tasks);
+
+  // Fetch subtasks for all tasks
+  const { data: allSubtasks = {} } = useQuery({
+    queryKey: ["subtasks-multiple", taskIds],
+    queryFn: async () => {
+      if (taskIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from("subtasks")
+        .select("task_id, completed")
+        .in("task_id", taskIds);
+      if (error) throw error;
+      
+      // Group by task_id
+      const grouped: Record<string, { completed: boolean }[]> = {};
+      data?.forEach(item => {
+        if (!grouped[item.task_id]) {
+          grouped[item.task_id] = [];
+        }
+        grouped[item.task_id].push({ completed: item.completed || false });
+      });
+      return grouped;
+    },
+    enabled: taskIds.length > 0,
+  });
 
   // Group tasks by project/routine/standalone
   const groupedTasks = tasks.reduce((acc, task) => {
@@ -421,6 +537,7 @@ export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
           key={group.id}
           group={group}
           taskAssignees={taskAssignees}
+          taskSubtasks={allSubtasks}
           sortMode={sortMode}
         />
       ))}
