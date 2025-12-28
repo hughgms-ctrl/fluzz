@@ -32,10 +32,12 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
     return uuidRegex.test(id);
   };
 
+  // "multiple" means show all members from all sectors
+  const isMultipleSectors = positionId === "multiple";
   const validPositionId = isValidUUID(positionId) ? positionId : undefined;
 
   const { data: workspaceMembers, isLoading } = useQuery({
-    queryKey: ["workspace-members-drawer", workspace?.id, validPositionId],
+    queryKey: ["workspace-members-drawer", workspace?.id, validPositionId, isMultipleSectors],
     queryFn: async () => {
       if (!workspace?.id) return [];
       
@@ -50,8 +52,8 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
 
       let userIds = members.map(m => m.user_id);
 
-      // If positionId is provided and valid, filter by users assigned to that position
-      if (validPositionId) {
+      // If positionId is provided and valid (and not "multiple"), filter by users assigned to that position
+      if (validPositionId && !isMultipleSectors) {
         const { data: userPositions, error: positionsError } = await supabase
           .from("user_positions")
           .select("user_id")
@@ -67,6 +69,7 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
           return [];
         }
       }
+      // If isMultipleSectors is true, we keep all userIds (no filtering)
 
       // Fetch profiles for filtered users
       const { data: profiles, error: profilesError } = await supabase

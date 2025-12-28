@@ -11,16 +11,17 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, ChevronRight } from "lucide-react";
+import { Briefcase, Users } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SectorDrawerProps {
   value: string;
   onValueChange: (value: string) => void;
   children: React.ReactNode;
+  showMultipleSectors?: boolean;
 }
 
-export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerProps) => {
+export const SectorDrawer = ({ value, onValueChange, children, showMultipleSectors = true }: SectorDrawerProps) => {
   const { workspace } = useWorkspace();
 
   const { data: sectors, isLoading } = useQuery({
@@ -57,6 +58,32 @@ export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerPro
         
         <ScrollArea className="h-[calc(80vh-120px)] mt-4">
           <div className="space-y-2">
+            {showMultipleSectors && (
+              <Button
+                variant={value === "multiple" ? "default" : "outline"}
+                className="w-full justify-between h-auto py-4 border-dashed"
+                onClick={() => {
+                  onValueChange("multiple");
+                  document.querySelector('[data-radix-dialog-close]')?.dispatchEvent(
+                    new Event('click', { bubbles: true })
+                  );
+                }}
+              >
+                <div className="flex items-center gap-3 flex-1 text-left">
+                  <Users size={20} className="flex-shrink-0" />
+                  <div>
+                    <div className="font-semibold">Múltiplos Setores</div>
+                    <div className="text-xs text-muted-foreground font-normal mt-1">
+                      Permite selecionar responsáveis de qualquer setor
+                    </div>
+                  </div>
+                </div>
+                {value === "multiple" && (
+                  <Badge variant="secondary" className="ml-2">Selecionado</Badge>
+                )}
+              </Button>
+            )}
+
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -69,7 +96,6 @@ export const SectorDrawer = ({ value, onValueChange, children }: SectorDrawerPro
                   className="w-full justify-between h-auto py-4"
                   onClick={() => {
                     onValueChange(sector.id);
-                    // Close drawer after selection
                     document.querySelector('[data-radix-dialog-close]')?.dispatchEvent(
                       new Event('click', { bubbles: true })
                     );
