@@ -82,7 +82,7 @@ export default function MyTasks() {
       // Get tasks assigned to me
       const { data: myTasks, error: myTasksError } = await supabase
         .from("tasks")
-        .select("*, projects(id, name, archived, pending_notifications)")
+        .select("*, projects(id, name, archived, pending_notifications), task_assignees(user_id)")
         .eq("assigned_to", user!.id)
         .order("created_at", { ascending: false });
       if (myTasksError) throw myTasksError;
@@ -90,7 +90,7 @@ export default function MyTasks() {
       // Get tasks I need to review (where I'm the approval_reviewer_id)
       const { data: reviewTasks, error: reviewError } = await supabase
         .from("tasks")
-        .select("*, projects(id, name, archived, pending_notifications)")
+        .select("*, projects(id, name, archived, pending_notifications), task_assignees(user_id)")
         .eq("approval_reviewer_id", user!.id)
         .eq("requires_approval", true)
         .eq("approval_status", "pending")
