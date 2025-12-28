@@ -7,8 +7,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
-import { MyTasksTableView } from "@/components/tasks/MyTasksTableView";
-import { MyTasksMobileView } from "@/components/tasks/MyTasksMobileView";
+import { UnifiedTaskView } from "@/components/tasks/UnifiedTaskView";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -398,35 +397,35 @@ export default function MyTasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-4 md:mt-6">
-            {isMobile ? (
-              <MyTasksMobileView tasks={filteredTasks} />
-            ) : (
-              <MyTasksTableView tasks={filteredTasks} />
-            )}
+            <UnifiedTaskView 
+              tasks={filteredTasks} 
+              showGrouping={true}
+              queryKeyToInvalidate={["my-tasks", "tasks"]}
+            />
           </TabsContent>
 
           <TabsContent value="todo" className="mt-4 md:mt-6">
-            {isMobile ? (
-              <MyTasksMobileView tasks={todoTasks} />
-            ) : (
-              <MyTasksTableView tasks={todoTasks} />
-            )}
+            <UnifiedTaskView 
+              tasks={todoTasks} 
+              showGrouping={true}
+              queryKeyToInvalidate={["my-tasks", "tasks"]}
+            />
           </TabsContent>
 
           <TabsContent value="in_progress" className="mt-4 md:mt-6">
-            {isMobile ? (
-              <MyTasksMobileView tasks={inProgressTasks} />
-            ) : (
-              <MyTasksTableView tasks={inProgressTasks} />
-            )}
+            <UnifiedTaskView 
+              tasks={inProgressTasks} 
+              showGrouping={true}
+              queryKeyToInvalidate={["my-tasks", "tasks"]}
+            />
           </TabsContent>
 
           <TabsContent value="completed" className="mt-4 md:mt-6">
-            {isMobile ? (
-              <MyTasksMobileView tasks={completedTasks} />
-            ) : (
-              <MyTasksTableView tasks={completedTasks} />
-            )}
+            <UnifiedTaskView 
+              tasks={completedTasks} 
+              showGrouping={true}
+              queryKeyToInvalidate={["my-tasks", "tasks"]}
+            />
           </TabsContent>
         </Tabs>
       </div>
