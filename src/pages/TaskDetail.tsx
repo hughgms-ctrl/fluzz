@@ -79,6 +79,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Briefcase, UserCircle, ChevronRight, Shield, CheckCircle, XCircle } from "lucide-react";
 import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { MultiAssigneeAvatars } from "@/components/tasks/MultiAssigneeAvatars";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { X } from "lucide-react";
 
 // Approval Status Badge Component
 const ApprovalStatusBadge = ({ status }: { status: string | null }) => {
@@ -547,6 +550,20 @@ export default function TaskDetail() {
     },
   });
 
+  // Query para buscar os responsáveis da tarefa
+  const { data: taskAssignees } = useQuery({
+    queryKey: ["task-assignees", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_assignees")
+        .select("user_id")
+        .eq("task_id", id!);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
   useEffect(() => {
     if (task) {
       setEditedTask({
@@ -745,6 +762,42 @@ export default function TaskDetail() {
       queryClient.invalidateQueries({ queryKey: ["task-processes", id] });
       toast.success("POP desvinculado!");
     },
+  });
+
+  // Mutation para adicionar responsável
+  const addAssigneeMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("task_assignees")
+        .insert([{ task_id: id!, user_id: userId }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-assignees", id] });
+      toast.success("Responsável adicionado!");
+    },
+    onError: () => {
+      toast.error("Erro ao adicionar responsável");
+    }
+  });
+
+  // Mutation para remover responsável
+  const removeAssigneeMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase
+        .from("task_assignees")
+        .delete()
+        .eq("task_id", id!)
+        .eq("user_id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["task-assignees", id] });
+      toast.success("Responsável removido!");
+    },
+    onError: () => {
+      toast.error("Erro ao remover responsável");
+    }
   });
 
   const updateTaskMutation = useMutation({
@@ -1165,7 +1218,24 @@ export default function TaskDetail() {
                 </div>
 
                 <div>
-                  <Label>Responsável</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Responsável</Label>
+                    {!isEditing && (
+                      <MemberDrawer 
+                        value="" 
+                        onValueChange={(value) => {
+                          if (value && !taskAssignees?.some(a => a.user_id === value)) {
+                            addAssigneeMutation.mutate(value);
+                          }
+                        }}
+                        positionId={task.setor === "Multiplos" ? "Multiplos" : (task.setor || undefined)}
+                      >
+                        <Button variant="ghost" size="icon" className="h-6 w-6" type="button">
+                          <Plus size={14} />
+                        </Button>
+                      </MemberDrawer>
+                    )}
+                  </div>
                   {isEditing ? (
                     <MemberDrawer 
                       value={editedTask.assigned_to} 
@@ -1181,9 +1251,36 @@ export default function TaskDetail() {
                       </Button>
                     </MemberDrawer>
                   ) : (
-                    <p className="text-muted-foreground mt-2">
-                      {task.assigned_to && workspaceMembers?.find(m => m.user_id === task.assigned_to)?.profiles?.full_name || "Sem responsável"}
-                    </p>
+                    <div className="mt-2 space-y-2">
+                      {taskAssignees && taskAssignees.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {taskAssignees.map(assignee => {
+                            const profile = workspaceMembers?.find(m => m.user_id === assignee.user_id)?.profiles;
+                            return (
+                              <div 
+                                key={assignee.user_id}
+                                className="flex items-center gap-2 bg-muted/50 rounded-full pl-1 pr-2 py-1 group"
+                              >
+                                <Avatar className="h-6 w-6">
+                                  <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                                    {profile?.full_name?.charAt(0).toUpperCase() || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{profile?.full_name || "Usuário"}</span>
+                                <button
+                                  onClick={() => removeAssigneeMutation.mutate(assignee.user_id)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                                >
+                                  <X size={14} className="text-muted-foreground hover:text-destructive" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Sem responsável</p>
+                      )}
+                    </div>
                   )}
                 </div>
 
