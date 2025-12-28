@@ -35,6 +35,9 @@ import {
 } from "lucide-react";
 import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
+import { MultiAssigneeAvatars } from "./MultiAssigneeAvatars";
+import { MultiAssigneeDialog } from "./MultiAssigneeDialog";
+import { useMultipleTasksAssignees } from "@/hooks/useTaskAssignees";
 
 interface MyTasksTableViewProps {
   tasks: any[];
@@ -166,20 +169,17 @@ function ProgressSummary({ tasks }: { tasks: any[] }) {
 
 function TaskTableRow({ 
   task, 
-  profiles,
+  assignees,
 }: { 
   task: any;
-  profiles: any[];
+  assignees: { user_id: string }[];
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const assignedUser = task.assigned_to 
-    ? profiles?.find(p => p.id === task.assigned_to) 
-    : null;
+  const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
@@ -288,22 +288,22 @@ function TaskTableRow({
         )}
       </TableCell>
       <TableCell className="w-[80px]">
-        <div className="flex justify-center">
-          {assignedUser ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={assignedUser.avatar_url} />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Avatar className="h-6 w-6">
-              <AvatarFallback className="text-xs bg-muted">
-                <User className="h-3 w-3 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
-          )}
+        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+          <MultiAssigneeAvatars
+            taskId={task.id}
+            assignees={assignees}
+            size="sm"
+            maxDisplay={2}
+            showAddButton
+            onAddClick={() => setAssigneeDialogOpen(true)}
+          />
         </div>
+        <MultiAssigneeDialog
+          open={assigneeDialogOpen}
+          onOpenChange={setAssigneeDialogOpen}
+          taskId={task.id}
+          currentAssignees={assignees}
+        />
       </TableCell>
       <TableCell className="w-[120px]">
         <DropdownMenu>
@@ -384,7 +384,7 @@ function TaskTableRow({
 
 function TaskGroupRow({ 
   group,
-  profiles,
+  taskAssignees,
 }: { 
   group: {
     id: string;
@@ -393,7 +393,7 @@ function TaskGroupRow({
     type: "project" | "standalone" | "routine";
     color: string;
   };
-  profiles: any[];
+  taskAssignees: Record<string, { user_id: string }[]>;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
@@ -481,7 +481,7 @@ function TaskGroupRow({
                       <TaskTableRow
                         key={task.id}
                         task={task}
-                        profiles={profiles}
+                        assignees={taskAssignees[task.id] || []}
                       />
                     ))
                   ) : (
@@ -505,17 +505,9 @@ function TaskGroupRow({
 }
 
 export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
-  // Fetch all profiles
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url");
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  // Fetch all task assignees
+  const taskIds = tasks.map(t => t.id);
+  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds);
 
   // Group tasks by project/type
   const groups = (() => {
@@ -597,7 +589,7 @@ export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
             <TaskGroupRow
               key={group.id}
               group={group}
-              profiles={profiles || []}
+              taskAssignees={allTaskAssignees || {}}
             />
           ))}
         </TableBody>

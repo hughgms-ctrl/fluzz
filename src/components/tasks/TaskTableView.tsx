@@ -46,6 +46,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { MultiAssigneeAvatars } from "./MultiAssigneeAvatars";
+import { MultiAssigneeDialog } from "./MultiAssigneeDialog";
+import { useMultipleTasksAssignees } from "@/hooks/useTaskAssignees";
 
 interface TaskTableViewProps {
   tasks: any[];
@@ -86,7 +89,7 @@ function SortableTableRow({
   onStatusChange, 
   onPriorityChange,
   sortMode,
-  assignedUser,
+  assignees,
   subtaskProgress,
   onNavigate,
 }: { 
@@ -94,10 +97,11 @@ function SortableTableRow({
   onStatusChange: (taskId: string, status: string) => void;
   onPriorityChange: (taskId: string, priority: string) => void;
   sortMode: "manual" | "az";
-  assignedUser: any;
+  assignees: { user_id: string }[];
   subtaskProgress: { completed: number; total: number };
   onNavigate: (taskId: string) => void;
 }) {
+  const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
@@ -208,22 +212,22 @@ function SortableTableRow({
 
       {/* Person column */}
       <TableCell className="w-[100px]">
-        <div className="flex justify-center">
-          {assignedUser ? (
-            <Avatar className="h-7 w-7">
-              <AvatarImage src={assignedUser.avatar_url} />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <Avatar className="h-7 w-7">
-              <AvatarFallback className="text-xs bg-muted">
-                <User className="h-3 w-3 text-muted-foreground" />
-              </AvatarFallback>
-            </Avatar>
-          )}
+        <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+          <MultiAssigneeAvatars
+            taskId={task.id}
+            assignees={assignees}
+            size="md"
+            maxDisplay={2}
+            showAddButton
+            onAddClick={() => setAssigneeDialogOpen(true)}
+          />
         </div>
+        <MultiAssigneeDialog
+          open={assigneeDialogOpen}
+          onOpenChange={setAssigneeDialogOpen}
+          taskId={task.id}
+          currentAssignees={assignees}
+        />
       </TableCell>
 
       {/* Status column */}
@@ -351,20 +355,12 @@ export function TaskTableView({
     })
   );
 
-  // Fetch all profiles for assigned users
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url");
-      if (error) throw error;
-      return data;
-    },
-  });
-
   // Fetch subtasks for all tasks
   const taskIds = tasks.map(t => t.id);
+  
+  // Fetch assignees for all tasks
+  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds);
+  
   const { data: allSubtasks } = useQuery({
     queryKey: ["all-subtasks", taskIds],
     queryFn: async () => {
@@ -451,9 +447,8 @@ export function TaskTableView({
     }
   };
 
-  const getAssignedUser = (assignedTo: string | null) => {
-    if (!assignedTo || !profiles) return null;
-    return profiles.find(p => p.id === assignedTo);
+  const getTaskAssignees = (taskId: string): { user_id: string }[] => {
+    return allTaskAssignees?.[taskId] || [];
   };
 
   const getSubtaskProgress = (taskId: string) => {
@@ -523,7 +518,7 @@ export function TaskTableView({
                       onStatusChange={handleStatusChange}
                       onPriorityChange={handlePriorityChange}
                       sortMode={sortMode}
-                      assignedUser={getAssignedUser(task.assigned_to)}
+                      assignees={getTaskAssignees(task.id)}
                       subtaskProgress={getSubtaskProgress(task.id)}
                       onNavigate={(taskId) => navigate(`/tasks/${taskId}`)}
                     />
