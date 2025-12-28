@@ -1,7 +1,8 @@
-import { Bell, BellOff, Loader2, TestTube } from 'lucide-react';
+import { Bell, BellOff, BellRing, Loader2, TestTube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { toast } from 'sonner';
 
 export function PushNotificationSettings() {
   const {
@@ -13,6 +14,27 @@ export function PushNotificationSettings() {
     unsubscribe,
     sendTestNotification
   } = usePushNotifications();
+
+  const handleRequestPermission = async () => {
+    if (!isSupported) {
+      toast.error('Seu navegador não suporta notificações push');
+      return;
+    }
+
+    try {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        toast.success('Permissão concedida! Agora clique em "Ativar" para receber notificações.');
+      } else if (result === 'denied') {
+        toast.error('Permissão negada. Você pode alterar isso nas configurações do navegador.');
+      } else {
+        toast.info('Você fechou o prompt. Clique novamente para permitir notificações.');
+      }
+    } catch (error) {
+      console.error('Error requesting permission:', error);
+      toast.error('Erro ao solicitar permissão');
+    }
+  };
 
   if (!isSupported) {
     return (
@@ -42,6 +64,31 @@ export function PushNotificationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Permission Status */}
+        {permission === 'default' && !isSubscribed && (
+          <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
+            <div className="flex items-start gap-3">
+              <BellRing className="h-5 w-5 text-primary mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-foreground">Permita notificações</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Clique no botão abaixo para permitir que o navegador envie notificações. 
+                  Isso é necessário para receber alertas de tarefas e atualizações.
+                </p>
+              </div>
+            </div>
+            <Button 
+              onClick={handleRequestPermission}
+              className="w-full"
+              variant="default"
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              Permitir Notificações
+            </Button>
+          </div>
+        )}
+
+        {/* Subscription Status */}
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Status</p>
@@ -49,8 +96,10 @@ export function PushNotificationSettings() {
               {permission === 'denied' 
                 ? 'Notificações bloqueadas pelo navegador'
                 : isSubscribed 
-                  ? 'Notificações ativadas'
-                  : 'Notificações desativadas'}
+                  ? 'Notificações ativadas ✓'
+                  : permission === 'granted'
+                    ? 'Permissão concedida - clique em Ativar'
+                    : 'Notificações desativadas'}
             </p>
           </div>
           
