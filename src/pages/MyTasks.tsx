@@ -270,31 +270,31 @@ export default function MyTasks() {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+        <div className="grid gap-3 grid-cols-3">
           <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <FolderOpen className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <FolderOpen className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{projectTasks.length}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Projeto</p>
+                <p className="text-lg sm:text-2xl font-bold">{projectTasks.length}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Projeto</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <User className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <User className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{standaloneTasks.length}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Avulsas</p>
+                <p className="text-lg sm:text-2xl font-bold">{standaloneTasks.length}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Avulsas</p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-3">
-              <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+              <RefreshCw className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               <div>
-                <p className="text-xl sm:text-2xl font-bold">{routineTasks.length}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">Rotina</p>
+                <p className="text-lg sm:text-2xl font-bold">{routineTasks.length}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Rotina</p>
               </div>
             </CardContent>
           </Card>
