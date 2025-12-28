@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -31,13 +32,10 @@ import {
   FolderOpen,
   RefreshCw,
   User,
-  MoreVertical,
 } from "lucide-react";
 import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
-import { MultiAssigneeAvatars } from "./MultiAssigneeAvatars";
 import { MultiAssigneeDialog } from "./MultiAssigneeDialog";
-import { useMultipleTasksAssignees } from "@/hooks/useTaskAssignees";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // ============= Configuration =============
@@ -658,36 +656,41 @@ export function UnifiedTaskView({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table className="w-full table-fixed">
-        <colgroup>
-          <col className="w-[50px]" />
-          <col />
-          <col className="w-[160px]" />
-          <col className="w-[140px]" />
-          <col className="w-[180px]" />
-          <col className="w-[50px]" />
-        </colgroup>
-        <TableHeader>
-          <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="px-2"></TableHead>
-            <TableHead>Grupo</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Data</TableHead>
-            <TableHead className="text-center">Acompanhamento</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {groups.map((group) => (
-            <GroupRow
-              key={group.id}
-              group={group}
-              profiles={profiles || []}
-              queryKeyToInvalidate={queryKeyToInvalidate}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <ScrollArea className="w-full" type="scroll">
+        <div className="min-w-[700px]">
+          <Table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-[50px]" />
+              <col />
+              <col className="w-[160px]" />
+              <col className="w-[140px]" />
+              <col className="w-[180px]" />
+              <col className="w-[50px]" />
+            </colgroup>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="px-2"></TableHead>
+                <TableHead>Grupo</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Data</TableHead>
+                <TableHead className="text-center">Acompanhamento</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {groups.map((group) => (
+                <GroupRow
+                  key={group.id}
+                  group={group}
+                  profiles={profiles || []}
+                  queryKeyToInvalidate={queryKeyToInvalidate}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 }
