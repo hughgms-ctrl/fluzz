@@ -12,7 +12,7 @@ import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, Refresh
 import { useMemo, useState, useEffect } from "react";
 import { formatDateShort, parseDateOnly, formatUserName, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AnalyticsMobileTaskList } from "@/components/analytics/AnalyticsMobileTaskList";
+import { UnifiedTaskView } from "@/components/tasks/UnifiedTaskView";
 
 const COLORS = {
   completed: "hsl(142, 76%, 36%)",
@@ -670,44 +670,19 @@ export default function Analytics() {
                     <p className="text-center text-muted-foreground py-8">
                       Nenhuma tarefa encontrada
                     </p>
-                  ) : isMobile ? (
-                    <AnalyticsMobileTaskList
-                      groupedTasks={groupedTasks}
-                      profiles={profiles || []}
-                      onTaskClick={(taskId) => navigate(`/tasks/${taskId}`)}
-                    />
                   ) : (
-                    <div className="space-y-4">
-                      {/* Projects */}
-                      {Object.entries(groupedTasks.projects)
-                        .sort(([, a], [, b]) => naturalSort(a.name, b.name))
-                        .map(([projectId, group]) => (
-                          <CollapsibleTaskGroup
-                            key={projectId}
-                            title={group.name}
-                            icon={FolderOpen}
-                            iconColor="text-blue-500"
-                            tasks={group.tasks}
-                          />
-                        ))
-                      }
-
-                      {/* Standalone Tasks */}
-                      <CollapsibleTaskGroup
-                        title="Tarefas Avulsas"
-                        icon={User}
-                        iconColor="text-purple-500"
-                        tasks={groupedTasks.standalone}
-                      />
-
-                      {/* Routine Tasks */}
-                      <CollapsibleTaskGroup
-                        title="Tarefas de Rotina"
-                        icon={RefreshCw}
-                        iconColor="text-green-500"
-                        tasks={groupedTasks.routine}
-                      />
-                    </div>
+                    <UnifiedTaskView
+                      tasks={filteredTasks.map(t => {
+                        const projectInfo = projectTasks?.find(pt => pt.project_id === t.project_id);
+                        return {
+                          ...t,
+                          projects: (t as any).projects || projectInfo?.projects
+                        };
+                      })}
+                      showGrouping={true}
+                      showSortToggle={true}
+                      queryKeyToInvalidate={["analytics-project-tasks", "analytics-standalone-tasks", "analytics-routine-tasks", "tasks", "my-tasks"]}
+                    />
                   )}
                 </TabsContent>
               ))}
