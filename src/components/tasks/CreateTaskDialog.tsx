@@ -124,7 +124,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             due_date: dueDate || null,
             assigned_to: primaryAssignee,
             documentation: documentation || null,
-            setor: sectorId === "multiplos" ? null : (sectorId || null),
+            setor: sectorId === "Multiplos" ? null : (sectorId || null),
           },
         ])
         .select()
@@ -288,7 +288,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <Briefcase size={16} />
-                  {sectorId === "multiplos" 
+                  {sectorId === "Multiplos" 
                     ? "Múltiplos Setores" 
                     : (sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor")}
                 </span>
@@ -343,10 +343,10 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               onValueChange={handleAddAssignee}
               positionId={sectorId || undefined}
             >
-              <Button variant="outline" className="w-full justify-between" type="button">
+              <Button variant="outline" className={`w-full justify-between ${assignees.length > 0 ? 'border-dashed' : ''}`} type="button">
                 <span className="flex items-center gap-2">
                   <Plus size={16} />
-                  {assignees.length === 0 ? "Adicionar responsável" : "Adicionar outro responsável"}
+                  {assignees.length === 0 ? "Adicionar responsável" : "Adicionar mais"}
                 </span>
                 <ChevronRight size={16} />
               </Button>
