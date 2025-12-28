@@ -773,7 +773,7 @@ export const TimelineView = ({
                             <span 
                               className="text-xs font-medium text-white whitespace-nowrap select-none"
                               style={{ 
-                                WebkitTextStroke: '1px black',
+                                WebkitTextStroke: '1.5px black',
                                 paintOrder: 'stroke fill'
                               }}
                             >
