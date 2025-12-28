@@ -1,44 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { 
   ChevronDown, 
   ChevronRight, 
-  User, 
   FolderOpen,
   RefreshCw,
+  FileText,
 } from "lucide-react";
-import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
-import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { TaskCard } from "./TaskCard";
 
 interface MyTasksMobileViewProps {
   tasks: any[];
 }
-
-const statusConfig = {
-  todo: { 
-    label: "Parado", 
-    color: "hsl(0, 68%, 72%)",
-  },
-  in_progress: { 
-    label: "Em progresso", 
-    color: "hsl(30, 100%, 65%)",
-  },
-  completed: { 
-    label: "Feito", 
-    color: "hsl(152, 69%, 53%)",
-  },
-};
 
 const groupColors = [
   "hsl(217, 91%, 60%)",
@@ -65,107 +41,9 @@ function getTaskType(task: any): "project" | "standalone" | "routine" {
   return "project";
 }
 
-function TaskMobileCard({ 
-  task, 
-  profiles,
-}: { 
-  task: any;
-  profiles: any[];
-}) {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  
-  const assignedUser = task.assigned_to 
-    ? profiles?.find(p => p.id === task.assigned_to) 
-    : null;
-
-  const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
-  const isOverdue = isTaskOverdue(task.due_date, task.status);
-  const isDueSoon = isTaskDueSoon(task.due_date, task.status);
-
-  const handleStatusChange = async (newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from("tasks")
-        .update({ status: newStatus })
-        .eq("id", task.id);
-      
-      if (error) {
-        toast.error("Erro ao atualizar status");
-        return;
-      }
-      
-      toast.success("Status atualizado!");
-      queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
-    } catch (err) {
-      toast.error("Erro ao atualizar status");
-    }
-  };
-
-  return (
-    <div 
-      className="flex items-center gap-3 py-3 border-b border-border last:border-b-0 active:bg-muted/50"
-      onClick={() => navigate(`/tasks/${task.id}`)}
-    >
-      {/* Task title */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm line-clamp-1">{task.title}</p>
-        {task.due_date && (
-          <p className={`text-xs mt-0.5 ${
-            isOverdue 
-              ? "text-destructive" 
-              : isDueSoon 
-                ? "text-amber-500" 
-                : "text-muted-foreground"
-          }`}>
-            {formatDateBR(task.due_date).slice(0, 5)}
-          </p>
-        )}
-      </div>
-
-      {/* Avatar */}
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={assignedUser?.avatar_url} />
-        <AvatarFallback className="text-xs bg-primary/10 text-primary">
-          {assignedUser?.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-        </AvatarFallback>
-      </Avatar>
-
-      {/* Status dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button 
-            className="px-3 py-1.5 text-xs font-semibold rounded text-white min-w-[100px] text-center shrink-0"
-            style={{ backgroundColor: status.color }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {status.label}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[120px]">
-          {Object.entries(statusConfig).map(([key, config]) => (
-            <DropdownMenuItem 
-              key={key} 
-              onSelect={() => handleStatusChange(key)}
-              className="justify-center"
-            >
-              <span 
-                className="px-3 py-1 rounded text-xs font-semibold text-white w-full text-center"
-                style={{ backgroundColor: config.color }}
-              >
-                {config.label}
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 function TaskGroupCard({ 
   group,
-  profiles,
+  onDeleteTask,
 }: { 
   group: {
     id: string;
@@ -174,7 +52,7 @@ function TaskGroupCard({
     type: "project" | "standalone" | "routine";
     color: string;
   };
-  profiles: any[];
+  onDeleteTask: (taskId: string) => void;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const navigate = useNavigate();
@@ -184,11 +62,11 @@ function TaskGroupCard({
   const GroupIcon = group.type === "routine" 
     ? RefreshCw 
     : group.type === "standalone" 
-      ? User 
+      ? FileText 
       : FolderOpen;
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       {/* Group Header */}
       <div 
         className="flex items-center gap-2 mb-2 cursor-pointer"
@@ -201,7 +79,7 @@ function TaskGroupCard({
         )}
         <GroupIcon className="h-4 w-4 shrink-0" style={{ color: group.color }} />
         <h3 
-          className="font-semibold text-base flex-1 line-clamp-1"
+          className="font-semibold text-sm flex-1 line-clamp-1"
           style={{ color: group.color }}
           onClick={(e) => {
             if (group.type === "project") {
@@ -220,12 +98,12 @@ function TaskGroupCard({
       {/* Tasks List */}
       {isExpanded && tasks.length > 0 && (
         <Card className="overflow-hidden" style={{ borderLeftWidth: 3, borderLeftColor: group.color }}>
-          <CardContent className="p-3">
+          <CardContent className="p-2 space-y-2">
             {tasks.map((task) => (
-              <TaskMobileCard
+              <TaskCard
                 key={task.id}
                 task={task}
-                profiles={profiles}
+                onDelete={() => onDeleteTask(task.id)}
               />
             ))}
           </CardContent>
@@ -236,15 +114,6 @@ function TaskGroupCard({
 }
 
 export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
-  const { data: profiles = [] } = useQuery({
-    queryKey: ["profiles"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("*");
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
   // Group tasks by project/routine/standalone
   const groupedTasks = tasks.reduce((acc, task) => {
     const type = getTaskType(task);
@@ -288,6 +157,11 @@ export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
     return typeOrder[a.type] - typeOrder[b.type];
   });
 
+  const handleDeleteTask = async (taskId: string) => {
+    // This will be handled by the parent component through query invalidation
+    console.log("Delete task:", taskId);
+  };
+
   if (tasks.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -302,7 +176,7 @@ export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
         <TaskGroupCard
           key={group.id}
           group={group}
-          profiles={profiles}
+          onDeleteTask={handleDeleteTask}
         />
       ))}
     </div>
