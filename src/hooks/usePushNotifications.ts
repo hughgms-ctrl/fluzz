@@ -213,17 +213,44 @@ export function usePushNotifications() {
     if (!user) return;
 
     try {
+      // Get user's workspace
+      const { data: memberData } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .single();
+
+      // Create in-app notification
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          workspace_id: memberData?.workspace_id,
+          type: 'task_reminder',
+          title: '⏰ Tarefa Atrasada (Teste)',
+          message: 'Esta é uma notificação de teste. Você tem uma tarefa atrasada que precisa de atenção!',
+          link: '/my-tasks',
+          data: { test: true }
+        });
+
+      if (notifError) {
+        console.error('Error creating in-app notification:', notifError);
+      }
+
+      // Send push notification
       const { error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           userId: user.id,
-          title: 'Teste de Notificação',
-          body: 'Esta é uma notificação de teste do Fluzz!',
-          url: '/my-tasks'
+          title: '⏰ Tarefa Atrasada (Teste)',
+          body: 'Você tem uma tarefa atrasada que precisa de atenção!',
+          url: '/my-tasks',
+          tag: 'task-reminder-test',
+          requireInteraction: true
         }
       });
 
       if (error) throw error;
-      toast.success('Notificação de teste enviada!');
+      toast.success('Notificação de teste enviada! Verifique o sino e sua tela.');
     } catch (error: any) {
       console.error('Error sending test notification:', error);
       toast.error('Erro ao enviar notificação de teste');
