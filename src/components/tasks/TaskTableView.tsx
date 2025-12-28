@@ -359,7 +359,7 @@ export function TaskTableView({
   const taskIds = tasks.map(t => t.id);
   
   // Fetch assignees for all tasks
-  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds);
+  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds, tasks);
   
   const { data: allSubtasks } = useQuery({
     queryKey: ["all-subtasks", taskIds],
