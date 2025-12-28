@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -25,7 +27,17 @@ import {
 import { toast } from "sonner";
 import { SectorDrawer } from "./SectorDrawer";
 import { MemberDrawer } from "./MemberDrawer";
-import { Briefcase, UserCircle, ChevronRight, Shield, FileText } from "lucide-react";
+import { 
+  Briefcase, 
+  UserCircle, 
+  ChevronRight, 
+  Shield, 
+  FileText, 
+  Link as LinkIcon,
+  Upload,
+  X,
+  Plus
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface CreateMyTaskDialogProps {
@@ -38,6 +50,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
   
+  // Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [setor, setSetor] = useState("");
@@ -49,8 +62,13 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
   const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [documentation, setDocumentation] = useState("");
+  const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
   const [showReviewerSheet, setShowReviewerSheet] = useState(false);
+  const [showProcessSheet, setShowProcessSheet] = useState(false);
+  const [linkInput, setLinkInput] = useState("");
+  const [links, setLinks] = useState<string[]>([]);
 
+  // Fetch sectors/positions
   const { data: sectors } = useQuery({
     queryKey: ["positions", workspace?.id],
     queryFn: async () => {
@@ -66,6 +84,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
     enabled: !!workspace,
   });
 
+  // Fetch workspace members
   const { data: workspaceMembers } = useQuery({
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
@@ -96,10 +115,46 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
     enabled: !!workspace,
   });
 
+  // Fetch processes based on sector
+  const { data: processes } = useQuery({
+    queryKey: ["processes", workspace?.id, setor],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      let query = supabase
+        .from("process_documentation")
+        .select("id, title, area")
+        .eq("workspace_id", workspace.id)
+        .order("title");
+      
+      // If a specific sector is selected (not "Multiplos"), filter by area
+      if (setor && setor !== "Multiplos") {
+        const sectorName = sectors?.find(s => s.id === setor)?.name;
+        if (sectorName) {
+          query = query.eq("area", sectorName);
+        }
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
   const createMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) {
         throw new Error("User not authenticated");
+      }
+      
+      // Build documentation with links
+      let fullDocumentation = documentation;
+      if (links.length > 0) {
+        const linksText = links.join("\n");
+        fullDocumentation = documentation 
+          ? `${documentation}\n\nLinks:\n${linksText}` 
+          : `Links:\n${linksText}`;
       }
       
       const taskData = {
@@ -114,7 +169,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
         approval_status: requiresApproval ? 'pending' : null,
         start_date: startDate || null,
         due_date: dueDate || null,
-        documentation: documentation || null,
+        documentation: fullDocumentation || null,
         project_id: null,
       };
       
@@ -127,10 +182,21 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
 
       // Add assignee to task_assignees table
       if (data && data[0]) {
+        const taskId = data[0].id;
         const assigneeId = assignedTo || user.id;
+        
         await supabase
           .from("task_assignees")
-          .insert([{ task_id: data[0].id, user_id: assigneeId }]);
+          .insert([{ task_id: taskId, user_id: assigneeId }]);
+
+        // Link selected processes
+        if (selectedProcesses.length > 0) {
+          const processLinks = selectedProcesses.map(processId => ({
+            task_id: taskId,
+            process_id: processId
+          }));
+          await supabase.from("task_processes").insert(processLinks);
+        }
       }
 
       return data;
@@ -159,6 +225,9 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
     setStartDate("");
     setDueDate("");
     setDocumentation("");
+    setSelectedProcesses([]);
+    setLinks([]);
+    setLinkInput("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -179,6 +248,25 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
     return workspaceMembers?.find(m => m.user_id === userId)?.profiles?.full_name || "Selecione um responsável";
   };
 
+  const handleAddLink = () => {
+    if (linkInput.trim()) {
+      setLinks([...links, linkInput.trim()]);
+      setLinkInput("");
+    }
+  };
+
+  const handleRemoveLink = (index: number) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const toggleProcess = (processId: string) => {
+    setSelectedProcesses(prev => 
+      prev.includes(processId) 
+        ? prev.filter(id => id !== processId)
+        : [...prev, processId]
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -189,30 +277,30 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Título */}
+          {/* 1. Título */}
           <div className="space-y-2">
             <Label htmlFor="title">Título *</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Organizar documentos"
+              placeholder="Ex: Criar página inicial"
               required
             />
           </div>
 
-          {/* Descrição */}
+          {/* 2. Descrição */}
           <div className="space-y-2">
             <Label>Descrição</Label>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Adicione uma descrição..."
-              className="min-h-[100px] resize-y"
+              placeholder="Descreva os detalhes da tarefa..."
+              className="min-h-[80px] resize-y"
             />
           </div>
 
-          {/* Setor */}
+          {/* 3. Setor */}
           <div className="space-y-2">
             <Label>Setor</Label>
             <SectorDrawer 
@@ -220,6 +308,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
               onValueChange={(value) => {
                 setSetor(value);
                 setAssignedTo("");
+                setSelectedProcesses([]);
               }}
             >
               <Button variant="outline" className="w-full justify-between" type="button">
@@ -232,7 +321,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             </SectorDrawer>
           </div>
 
-          {/* Responsável */}
+          {/* 4. Responsável */}
           <div className="space-y-2">
             <Label>Responsável</Label>
             <MemberDrawer 
@@ -250,7 +339,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             </MemberDrawer>
           </div>
 
-          {/* Prioridade */}
+          {/* 5. Prioridade */}
           <div className="space-y-2">
             <Label>Prioridade</Label>
             <Select value={priority} onValueChange={setPriority}>
@@ -265,7 +354,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             </Select>
           </div>
 
-          {/* Status */}
+          {/* 6. Status */}
           <div className="space-y-2">
             <Label>Status</Label>
             <Select value={status} onValueChange={setStatus}>
@@ -280,19 +369,16 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             </Select>
           </div>
 
-          {/* Aprovação */}
-          <div className="space-y-4">
+          {/* 7. Aprovação */}
+          <div className="space-y-3">
             <Label className="flex items-center gap-2">
               <Shield size={16} />
               Aprovação
             </Label>
             
             <div className="flex items-center justify-between">
-              <Label htmlFor="requires-approval" className="text-sm font-normal">
-                Requer aprovação de outra pessoa
-              </Label>
+              <span className="text-sm">Requer aprovação de outra pessoa</span>
               <Switch
-                id="requires-approval"
                 checked={requiresApproval}
                 onCheckedChange={(checked) => {
                   setRequiresApproval(checked);
@@ -320,29 +406,31 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
                   <SheetHeader>
                     <SheetTitle>Selecionar Revisor</SheetTitle>
                   </SheetHeader>
-                  <div className="mt-4 space-y-2">
-                    {workspaceMembers?.filter(m => m.user_id !== user?.id).map((member) => (
-                      <Button
-                        key={member.user_id}
-                        variant={approvalReviewerId === member.user_id ? "default" : "outline"}
-                        className="w-full justify-start"
-                        type="button"
-                        onClick={() => {
-                          setApprovalReviewerId(member.user_id);
-                          setShowReviewerSheet(false);
-                        }}
-                      >
-                        <UserCircle size={16} className="mr-2" />
-                        {member.profiles?.full_name || "Usuário"}
-                      </Button>
-                    ))}
-                  </div>
+                  <ScrollArea className="h-[calc(100vh-120px)] mt-4">
+                    <div className="space-y-2">
+                      {workspaceMembers?.filter(m => m.user_id !== user?.id).map((member) => (
+                        <Button
+                          key={member.user_id}
+                          variant={approvalReviewerId === member.user_id ? "default" : "outline"}
+                          className="w-full justify-start"
+                          type="button"
+                          onClick={() => {
+                            setApprovalReviewerId(member.user_id);
+                            setShowReviewerSheet(false);
+                          }}
+                        >
+                          <UserCircle size={16} className="mr-2" />
+                          {member.profiles?.full_name || "Usuário"}
+                        </Button>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </SheetContent>
               </Sheet>
             )}
           </div>
 
-          {/* Datas */}
+          {/* 8. Datas */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Data de Início</Label>
@@ -362,7 +450,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             </div>
           </div>
 
-          {/* Documentação */}
+          {/* 9. Documentação */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <FileText size={16} />
@@ -371,11 +459,121 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
             <Textarea
               value={documentation}
               onChange={(e) => setDocumentation(e.target.value)}
-              placeholder="Coloque o link do grupo aqui:"
+              placeholder="Adicione documentação, links ou anotações importantes..."
               className="min-h-[80px] resize-y"
             />
+            
+            {/* Links */}
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  value={linkInput}
+                  onChange={(e) => setLinkInput(e.target.value)}
+                  placeholder="Cole um link aqui..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddLink();
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={handleAddLink}>
+                  <LinkIcon size={16} />
+                </Button>
+              </div>
+              
+              {links.length > 0 && (
+                <div className="space-y-1">
+                  {links.map((link, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1">
+                      <LinkIcon size={12} className="text-muted-foreground flex-shrink-0" />
+                      <span className="truncate flex-1">{link}</span>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5"
+                        onClick={() => handleRemoveLink(index)}
+                      >
+                        <X size={12} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* 10. POPs Vinculados */}
+          <div className="space-y-2">
+            <Label>POP's Vinculados</Label>
+            <Sheet open={showProcessSheet} onOpenChange={setShowProcessSheet}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="w-full justify-between" type="button">
+                  <span className="flex items-center gap-2">
+                    <Plus size={16} />
+                    {selectedProcesses.length > 0 
+                      ? `${selectedProcesses.length} POP(s) selecionado(s)`
+                      : "Vincular processos"}
+                  </span>
+                  <ChevronRight size={16} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Selecionar POPs</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100vh-120px)] mt-4">
+                  <div className="space-y-2">
+                    {processes && processes.length > 0 ? (
+                      processes.map((process) => (
+                        <div
+                          key={process.id}
+                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                          onClick={() => toggleProcess(process.id)}
+                        >
+                          <Checkbox 
+                            checked={selectedProcesses.includes(process.id)}
+                            onCheckedChange={() => toggleProcess(process.id)}
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium">{process.title}</p>
+                            <p className="text-xs text-muted-foreground">{process.area}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                        <p>Nenhum POP encontrado</p>
+                        <p className="text-sm mt-2">
+                          {setor ? "Nenhum processo cadastrado para este setor" : "Selecione um setor primeiro"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+
+            {/* Show selected processes */}
+            {selectedProcesses.length > 0 && (
+              <div className="space-y-1">
+                {selectedProcesses.map(processId => {
+                  const process = processes?.find(p => p.id === processId);
+                  return process ? (
+                    <div key={processId} className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span>{process.title}</span>
+                      <span className="text-muted-foreground">({process.area})</span>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Buttons */}
           <div className="flex justify-end gap-2 pt-4">
             <Button
               type="button"
