@@ -439,7 +439,6 @@ function GroupRow({
     tasks: any[];
     type: "project" | "standalone" | "routine";
     color: string;
-    endDate?: string | null;
   };
   profiles: any[];
   queryKeyToInvalidate: string[];
@@ -449,6 +448,13 @@ function GroupRow({
 
   const tasks = group.tasks || [];
   const taskCount = tasks.length;
+
+  // Calculate the nearest due date from tasks in this group
+  const nearestDueDate = tasks.reduce((nearest: string | null, task: any) => {
+    if (!task.due_date) return nearest;
+    if (!nearest) return task.due_date;
+    return task.due_date < nearest ? task.due_date : nearest;
+  }, null);
 
   // Sort tasks by title (A-Z)
   const sortedTasks = [...tasks].sort((a, b) => naturalSort(a.title, b.title));
@@ -513,9 +519,9 @@ function GroupRow({
         </TableCell>
 
         <TableCell className="text-center align-middle">
-          {group.endDate ? (
+          {nearestDueDate ? (
             <Badge className="text-xs whitespace-nowrap bg-primary/80 text-primary-foreground hover:bg-primary/70">
-              {formatDateBR(group.endDate)}
+              {formatDateBR(nearestDueDate)}
             </Badge>
           ) : (
             <span className="text-muted-foreground/50">-</span>
@@ -607,13 +613,11 @@ export function UnifiedTaskView({
     let groupId: string;
     let groupName: string;
     let color: string;
-    let endDate: string | null = null;
 
     if (type === "project" && task.project_id) {
       groupId = task.project_id;
       groupName = task.projects?.name || "Projeto sem nome";
       color = getProjectColor(task.project_id);
-      endDate = task.projects?.end_date || null;
     } else if (type === "routine") {
       groupId = "routine";
       groupName = "Tarefas de Rotina";
@@ -625,19 +629,14 @@ export function UnifiedTaskView({
     }
 
     if (!acc[groupId]) {
-      acc[groupId] = { id: groupId, name: groupName, tasks: [], type, color, endDate };
+      acc[groupId] = { id: groupId, name: groupName, tasks: [], type, color };
     }
     acc[groupId].tasks.push(task);
     
-    // Keep the most recent end date for the group
-    if (endDate && (!acc[groupId].endDate || endDate > acc[groupId].endDate)) {
-      acc[groupId].endDate = endDate;
-    }
-    
     return acc;
-  }, {} as Record<string, { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; endDate: string | null; }>);
+  }, {} as Record<string, { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; }>);
 
-  type TaskGroup = { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; endDate: string | null; };
+  type TaskGroup = { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; };
   const groups: TaskGroup[] = Object.values(groupedTasks);
   
   // Sort groups: projects first, then routine, then standalone
