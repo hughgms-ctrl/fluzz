@@ -25,7 +25,8 @@ import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SectorDrawer } from "./SectorDrawer";
 import { MemberDrawer } from "./MemberDrawer";
-import { Briefcase, UserCircle, ChevronRight } from "lucide-react";
+import { Briefcase, UserCircle, ChevronRight, Plus, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -42,7 +43,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
   const [dueDate, setDueDate] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [documentation, setDocumentation] = useState("");
   const [sectorId, setSectorId] = useState("");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
@@ -109,7 +110,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const assigneeId = assignedTo || user!.id;
+      const primaryAssignee = assignees.length > 0 ? assignees[0] : user!.id;
       
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
@@ -121,7 +122,7 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             priority,
             status,
             due_date: dueDate || null,
-            assigned_to: assigneeId,
+            assigned_to: primaryAssignee,
             documentation: documentation || null,
             setor: sectorId === "multiplos" ? null : (sectorId || null),
           },
@@ -130,14 +131,27 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
         .single();
       if (taskError) throw taskError;
 
-      // Insert into task_assignees table
-      const { error: assigneeError } = await supabase
-        .from("task_assignees")
-        .insert({
-          task_id: newTask.id,
-          user_id: assigneeId,
-        });
-      if (assigneeError) throw assigneeError;
+      // Insert all assignees into task_assignees table
+      if (assignees.length > 0) {
+        const { error: assigneeError } = await supabase
+          .from("task_assignees")
+          .insert(
+            assignees.map(userId => ({
+              task_id: newTask.id,
+              user_id: userId,
+            }))
+          );
+        if (assigneeError) throw assigneeError;
+      } else {
+        // If no assignees selected, use current user
+        const { error: assigneeError } = await supabase
+          .from("task_assignees")
+          .insert({
+            task_id: newTask.id,
+            user_id: user!.id,
+          });
+        if (assigneeError) throw assigneeError;
+      }
 
       // Link selected processes
       if (selectedProcesses.length > 0) {
@@ -172,10 +186,29 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     setPriority("medium");
     setStatus("todo");
     setDueDate("");
-    setAssignedTo("");
+    setAssignees([]);
     setDocumentation("");
     setSectorId("");
     setSelectedProcesses([]);
+  };
+
+  const handleAddAssignee = (userId: string) => {
+    if (!assignees.includes(userId)) {
+      setAssignees([...assignees, userId]);
+    }
+  };
+
+  const handleRemoveAssignee = (userId: string) => {
+    setAssignees(assignees.filter(id => id !== userId));
+  };
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -249,8 +282,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             <Label>Setor</Label>
             <SectorDrawer value={sectorId} onValueChange={(value) => {
               setSectorId(value);
-              // Clear assignedTo when sector changes to refilter members
-              setAssignedTo("");
+              // Clear assignees when sector changes to refilter members
+              setAssignees([]);
             }}>
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
@@ -273,16 +306,47 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
             />
           </div>
           <div className="space-y-2">
-            <Label>Responsável</Label>
+            <Label>Responsáveis</Label>
+            
+            {/* Display selected assignees with avatars */}
+            {assignees.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {assignees.map(userId => {
+                  const member = workspaceMembers?.find(m => m.user_id === userId);
+                  return (
+                    <div
+                      key={userId}
+                      className="flex items-center gap-1.5 bg-muted rounded-full pl-1 pr-2 py-1"
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                          {getInitials(member?.profiles?.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm">{member?.profiles?.full_name || "Usuário"}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAssignee(userId)}
+                        className="ml-1 text-muted-foreground hover:text-foreground"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Button to add assignee */}
             <MemberDrawer 
-              value={assignedTo} 
-              onValueChange={setAssignedTo}
+              value="" 
+              onValueChange={handleAddAssignee}
               positionId={sectorId || undefined}
             >
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
-                  <UserCircle size={16} />
-                  {assignedTo && workspaceMembers?.find(m => m.user_id === assignedTo)?.profiles?.full_name || "Selecione um responsável"}
+                  <Plus size={16} />
+                  {assignees.length === 0 ? "Adicionar responsável" : "Adicionar outro responsável"}
                 </span>
                 <ChevronRight size={16} />
               </Button>
