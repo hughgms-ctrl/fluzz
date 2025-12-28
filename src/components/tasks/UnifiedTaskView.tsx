@@ -498,18 +498,18 @@ function GroupRow({
           </Button>
         </TableCell>
 
-        <TableCell className="font-semibold py-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <GroupIcon className="h-4 w-4" style={{ color: group.color }} />
+        <TableCell className="font-semibold py-4 min-w-[280px]">
+          <div className="flex items-center gap-2">
+            <GroupIcon className="h-4 w-4 flex-shrink-0" style={{ color: group.color }} />
             <span 
-              className={`text-base font-semibold ${group.type === "project" ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+              className={`text-base font-semibold whitespace-nowrap ${group.type === "project" ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
               style={{ color: group.color }}
               onClick={handleNameClick}
             >
               {group.name}
             </span>
           </div>
-          <p className="text-xs text-muted-foreground font-normal mt-1">
+          <p className="text-xs text-muted-foreground font-normal mt-1 whitespace-nowrap">
             {taskCount} {taskCount === 1 ? "Tarefa" : "Tarefas"}
           </p>
         </TableCell>
@@ -656,11 +656,11 @@ export function UnifiedTaskView({
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
       <ScrollArea className="w-full" type="scroll">
-        <div className="min-w-[700px]">
-          <Table className="w-full table-fixed">
+        <div className="min-w-[900px]">
+          <Table className="w-full">
             <colgroup>
               <col className="w-[50px]" />
-              <col />
+              <col className="w-[320px]" />
               <col className="w-[160px]" />
               <col className="w-[140px]" />
               <col className="w-[180px]" />
