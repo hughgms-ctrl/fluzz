@@ -102,16 +102,13 @@ export function usePushNotifications() {
     setIsLoading(true);
 
     try {
-      // Request notification permission
+      // Request notification permission - this will show browser prompt if permission is 'default'
+      // If permission was already denied, browser won't show prompt again (browser security restriction)
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
 
       if (permissionResult !== 'granted') {
-        if (permissionResult === 'denied') {
-          toast.error('Notificações bloqueadas no navegador. Para liberar, clique no cadeado na barra de endereços e permita notificações.');
-        } else {
-          toast.info('Você fechou o prompt. Clique novamente para permitir notificações.');
-        }
+        // Don't show toast - just return false silently
         return false;
       }
 
