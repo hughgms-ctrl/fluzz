@@ -507,7 +507,7 @@ function TaskGroupRow({
 export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
   // Fetch all task assignees
   const taskIds = tasks.map(t => t.id);
-  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds);
+  const { data: allTaskAssignees } = useMultipleTasksAssignees(taskIds, tasks);
 
   // Group tasks by project/type
   const groups = (() => {

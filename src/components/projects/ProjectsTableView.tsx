@@ -190,9 +190,21 @@ function TaskTableRow({
   const [editedTitle, setEditedTitle] = useState(task.title);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const assignedUser = task.assigned_to 
-    ? profiles?.find(p => p.id === task.assigned_to) 
-    : null;
+  // Get all assignees (assigned_to + approval_reviewer_id)
+  const getAssignees = () => {
+    const assignees: any[] = [];
+    if (task.assigned_to) {
+      const user = profiles?.find(p => p.id === task.assigned_to);
+      if (user) assignees.push(user);
+    }
+    if (task.approval_reviewer_id && task.approval_reviewer_id !== task.assigned_to) {
+      const reviewer = profiles?.find(p => p.id === task.approval_reviewer_id);
+      if (reviewer) assignees.push(reviewer);
+    }
+    return assignees;
+  };
+  
+  const taskAssignees = getAssignees();
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
@@ -301,14 +313,26 @@ function TaskTableRow({
         )}
       </TableCell>
       <TableCell className="w-[80px]">
-        <div className="flex justify-center">
-          {assignedUser ? (
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={assignedUser.avatar_url} />
-              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                {assignedUser.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-              </AvatarFallback>
-            </Avatar>
+        <div className="flex justify-center items-center">
+          {taskAssignees.length > 0 ? (
+            <div className="flex items-center">
+              {taskAssignees.slice(0, 2).map((user, index) => (
+                <Avatar 
+                  key={user.id} 
+                  className={`h-6 w-6 border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
+                >
+                  <AvatarImage src={user.avatar_url} />
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                    {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+              {taskAssignees.length > 2 && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  +{taskAssignees.length - 2}
+                </span>
+              )}
+            </div>
           ) : (
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs bg-muted">

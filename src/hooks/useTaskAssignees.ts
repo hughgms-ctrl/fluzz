@@ -18,9 +18,9 @@ export function useTaskAssignees(taskId: string | undefined) {
   });
 }
 
-export function useMultipleTasksAssignees(taskIds: string[]) {
+export function useMultipleTasksAssignees(taskIds: string[], tasks?: any[]) {
   return useQuery({
-    queryKey: ["task-assignees-multiple", taskIds],
+    queryKey: ["task-assignees-multiple", taskIds, tasks?.map(t => t.approval_reviewer_id).join(',')],
     queryFn: async () => {
       if (taskIds.length === 0) return {};
       const { data, error } = await supabase
@@ -37,6 +37,24 @@ export function useMultipleTasksAssignees(taskIds: string[]) {
         }
         grouped[item.task_id].push({ user_id: item.user_id });
       });
+      
+      // Add approval_reviewer_id from tasks if available
+      if (tasks) {
+        tasks.forEach(task => {
+          if (task.approval_reviewer_id) {
+            if (!grouped[task.id]) {
+              grouped[task.id] = [];
+            }
+            // Check if reviewer is already in the list
+            const alreadyExists = grouped[task.id].some(
+              a => a.user_id === task.approval_reviewer_id
+            );
+            if (!alreadyExists) {
+              grouped[task.id].push({ user_id: task.approval_reviewer_id });
+            }
+          }
+        });
+      }
       
       return grouped;
     },
