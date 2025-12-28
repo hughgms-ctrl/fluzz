@@ -731,7 +731,7 @@ export const TimelineView = ({
                           {/* Move handle - main area with avatars */}
                           <div 
                             className={cn(
-                              "flex-1 h-full flex items-center gap-1 px-1 cursor-grab overflow-hidden",
+                              "flex-1 h-full flex items-center gap-1.5 pl-1 pr-2 cursor-grab",
                               isDragging && dragInfo?.mode === 'move' && "cursor-grabbing"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
@@ -770,7 +770,7 @@ export const TimelineView = ({
                               );
                             })()}
                             
-                            <span className="text-xs font-medium text-white truncate select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
+                            <span className="text-xs font-medium text-white whitespace-nowrap select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
                               {task.title}
                             </span>
                           </div>
