@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Camera, Save, Mail, User as UserIcon, Building2, ArrowRight, Plus } from "lucide-react";
+import { Camera, Save, Mail, User as UserIcon, Building2, ArrowRight, Plus, Smartphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -344,6 +344,27 @@ export default function Profile() {
             <p className="text-xs text-muted-foreground">
               Veja todos os workspaces, saia ou exclua workspaces dos quais você é proprietário
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Instalar Aplicativo
+            </CardTitle>
+            <CardDescription>
+              Instale o Fluzz na sua tela inicial para acesso rápido e notificações push.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full gap-2" 
+              onClick={() => navigate('/install')}
+            >
+              <Smartphone className="h-4 w-4" />
+              Instalar na Tela Inicial
+            </Button>
           </CardContent>
         </Card>
 
