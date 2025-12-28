@@ -1,9 +1,12 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { format, addDays, differenceInDays, isToday, startOfDay, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical, GripHorizontal } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical, GripHorizontal, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
@@ -31,6 +34,7 @@ interface Task {
   status?: string | null;
   priority?: string | null;
   assigned_to?: string | null;
+  approval_reviewer_id?: string | null;
   task_order?: number | null;
   setor?: string | null;
 }
@@ -138,6 +142,31 @@ export const TimelineView = ({
   const navigate = useNavigate();
   const [verticalDraggedTask, setVerticalDraggedTask] = useState<Task | null>(null);
   const today = startOfDay(new Date());
+  
+  // Collect all user IDs from tasks (assigned_to + approval_reviewer_id)
+  const allUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    tasks.forEach(task => {
+      if (task.assigned_to) ids.add(task.assigned_to);
+      if (task.approval_reviewer_id) ids.add(task.approval_reviewer_id);
+    });
+    return Array.from(ids);
+  }, [tasks]);
+  
+  // Fetch profiles for all assignees
+  const { data: profiles } = useQuery({
+    queryKey: ["timeline-profiles", allUserIds],
+    queryFn: async () => {
+      if (allUserIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url")
+        .in("id", allUserIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: allUserIds.length > 0,
+  });
   
   // View spans 60 days - 30 before today, 30 after
   const [viewOffset, setViewOffset] = useState(0);
@@ -674,7 +703,7 @@ export const TimelineView = ({
                       {bar && (
                         <div
                           className={cn(
-                            "absolute top-2 h-8 rounded-md flex items-center group transition-all duration-75 pointer-events-auto",
+                            "absolute top-2 h-8 rounded-full flex items-center group transition-all duration-75 pointer-events-auto",
                             getTaskColor(task),
                             isDragging 
                               ? "shadow-xl ring-2 ring-primary/50 opacity-90 scale-[1.02]" 
@@ -689,7 +718,7 @@ export const TimelineView = ({
                           {/* Resize handle - start */}
                           <div
                             className={cn(
-                              "absolute left-0 top-0 bottom-0 w-4 cursor-col-resize rounded-l-md transition-all z-10",
+                              "absolute left-0 top-0 bottom-0 w-4 cursor-col-resize rounded-l-full transition-all z-10",
                               "flex items-center justify-center",
                               "hover:bg-white/30",
                               isDragging && dragInfo?.mode === 'resize-start' && "bg-white/40"
@@ -699,14 +728,48 @@ export const TimelineView = ({
                             <div className="w-[2px] h-4 bg-white/70 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                           </div>
 
-                          {/* Move handle - main area */}
+                          {/* Move handle - main area with avatars */}
                           <div 
                             className={cn(
-                              "flex-1 h-full flex items-center justify-center px-5 cursor-grab",
+                              "flex-1 h-full flex items-center gap-1 px-1 cursor-grab overflow-hidden",
                               isDragging && dragInfo?.mode === 'move' && "cursor-grabbing"
                             )}
                             onMouseDown={(e) => handleDragStart(e, task.id, 'move')}
                           >
+                            {/* Assignee avatars */}
+                            {(() => {
+                              const assignees: { id: string; full_name: string | null; avatar_url: string | null }[] = [];
+                              if (task.assigned_to) {
+                                const user = profiles?.find(p => p.id === task.assigned_to);
+                                if (user) assignees.push(user);
+                              }
+                              if (task.approval_reviewer_id && task.approval_reviewer_id !== task.assigned_to) {
+                                const reviewer = profiles?.find(p => p.id === task.approval_reviewer_id);
+                                if (reviewer) assignees.push(reviewer);
+                              }
+                              
+                              if (assignees.length === 0) return null;
+                              
+                              return (
+                                <div className="flex items-center shrink-0 -space-x-1">
+                                  {assignees.slice(0, 2).map((user, index) => (
+                                    <Avatar 
+                                      key={user.id} 
+                                      className={cn(
+                                        "h-6 w-6 border-2 border-white/50 shrink-0",
+                                        index > 0 && "-ml-1"
+                                      )}
+                                    >
+                                      <AvatarImage src={user.avatar_url || undefined} />
+                                      <AvatarFallback className="text-[10px] bg-white/30 text-white font-medium">
+                                        {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                            
                             <span className="text-xs font-medium text-white truncate select-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]">
                               {task.title}
                             </span>
@@ -715,7 +778,7 @@ export const TimelineView = ({
                           {/* Resize handle - end */}
                           <div
                             className={cn(
-                              "absolute right-0 top-0 bottom-0 w-4 cursor-col-resize rounded-r-md transition-all z-10",
+                              "absolute right-0 top-0 bottom-0 w-4 cursor-col-resize rounded-r-full transition-all z-10",
                               "flex items-center justify-center",
                               "hover:bg-white/30",
                               isDragging && dragInfo?.mode === 'resize-end' && "bg-white/40"
