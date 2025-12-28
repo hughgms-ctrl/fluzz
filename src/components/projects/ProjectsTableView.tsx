@@ -7,6 +7,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -576,9 +577,9 @@ function ProjectRow({
           </Button>
         </TableCell>
 
-        <TableCell className="font-semibold py-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            {isStandaloneFolder && <Folder className="h-4 w-4" style={{ color: projectColor }} />}
+        <TableCell className="font-semibold py-4 min-w-[280px]">
+          <div className="flex items-center gap-2">
+            {isStandaloneFolder && <Folder className="h-4 w-4 flex-shrink-0" style={{ color: projectColor }} />}
             {isEditingName ? (
               <Input
                 value={editedName}
@@ -598,7 +599,7 @@ function ProjectRow({
               />
             ) : (
               <span 
-                className="text-base font-semibold cursor-pointer hover:opacity-80 transition-opacity"
+                className="text-base font-semibold cursor-pointer hover:opacity-80 transition-opacity whitespace-nowrap"
                 style={{ color: projectColor }}
                 onClick={handleNameClick}
               >
@@ -608,14 +609,14 @@ function ProjectRow({
             {project.is_draft && (
               <Badge
                 variant="outline"
-                className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30"
+                className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30 flex-shrink-0"
               >
                 <FileEdit className="h-3 w-3 mr-1" />
                 Rascunho
               </Badge>
             )}
           </div>
-          <p className="text-xs text-muted-foreground font-normal mt-1">
+          <p className="text-xs text-muted-foreground font-normal mt-1 whitespace-nowrap">
             {taskCount} {taskCount === 1 ? "Tarefa" : "Tarefas"}
           </p>
         </TableCell>
@@ -793,39 +794,44 @@ export function ProjectsTableView({
 
   return (
     <div className="rounded-lg border border-border overflow-hidden bg-card">
-      <Table className="w-full table-fixed">
-        <colgroup>
-          <col className="w-[50px]" />
-          <col />
-          <col className="w-[160px]" />
-          <col className="w-[140px]" />
-          <col className="w-[180px]" />
-          {(isAdmin || isGestor) && <col className="w-[50px]" />}
-        </colgroup>
-        <TableHeader>
-          <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="px-2"></TableHead>
-            <TableHead>Projeto</TableHead>
-            <TableHead className="text-center">Status</TableHead>
-            <TableHead className="text-center">Data</TableHead>
-            <TableHead className="text-center">Acompanhamento</TableHead>
-            {(isAdmin || isGestor) && <TableHead></TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {projects.map((project) => (
-            <ProjectRow
-              key={project.id}
-              project={project}
-              onDelete={onDelete}
-              onArchive={onArchive}
-              isArchived={isArchived}
-              isStandaloneFolder={isStandaloneFolder}
-              profiles={profiles || []}
-            />
-          ))}
-        </TableBody>
-      </Table>
+      <ScrollArea className="w-full" type="scroll">
+        <div className="min-w-[900px]">
+          <Table className="w-full">
+            <colgroup>
+              <col className="w-[50px]" />
+              <col className="w-[320px]" />
+              <col className="w-[160px]" />
+              <col className="w-[140px]" />
+              <col className="w-[180px]" />
+              {(isAdmin || isGestor) && <col className="w-[50px]" />}
+            </colgroup>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="px-2"></TableHead>
+                <TableHead>Projeto</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Data</TableHead>
+                <TableHead className="text-center">Acompanhamento</TableHead>
+                {(isAdmin || isGestor) && <TableHead></TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((project) => (
+                <ProjectRow
+                  key={project.id}
+                  project={project}
+                  onDelete={onDelete}
+                  onArchive={onArchive}
+                  isArchived={isArchived}
+                  isStandaloneFolder={isStandaloneFolder}
+                  profiles={profiles || []}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
     </div>
   );
 }
