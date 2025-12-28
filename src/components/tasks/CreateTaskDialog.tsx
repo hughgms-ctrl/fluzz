@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -21,12 +21,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { toast } from "sonner";
 import { SectorDrawer } from "./SectorDrawer";
 import { MemberDrawer } from "./MemberDrawer";
-import { Briefcase, UserCircle, ChevronRight, Plus, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Briefcase,
+  ChevronRight,
+  FileText,
+  Link as LinkIcon,
+  Plus,
+  Shield,
+  Upload,
+  UserCircle,
+  X,
+} from "lucide-react";
 
 interface CreateTaskDialogProps {
   open: boolean;
@@ -34,63 +47,70 @@ interface CreateTaskDialogProps {
   projectId: string;
 }
 
+type LinkItem = { name: string; url: string };
+
 export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDialogProps) => {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
+
+  // Fields (order must match TaskDetail)
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [sectorId, setSectorId] = useState(""); // can be UUID or "Multiplos"
+  const [assignees, setAssignees] = useState<string[]>([]);
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
+
+  // Approval
+  const [requiresApproval, setRequiresApproval] = useState(false);
+  const [approvalReviewerId, setApprovalReviewerId] = useState<string | null>(null);
+  const [showReviewerSheet, setShowReviewerSheet] = useState(false);
+
+  // Dates
+  const [startDate, setStartDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [assignees, setAssignees] = useState<string[]>([]);
+
+  // Documentation + attachments
   const [documentation, setDocumentation] = useState("");
-  const [sectorId, setSectorId] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [links, setLinks] = useState<LinkItem[]>([]);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkName, setLinkName] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+
+  // POPs
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
+  const [processDrawerOpen, setProcessDrawerOpen] = useState(false);
 
   const { data: workspaceMembers } = useQuery({
     queryKey: ["workspace-members", workspace?.id],
     queryFn: async () => {
       if (!workspace) return [];
-      
-      // First fetch workspace members
+
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
         .select("user_id, role")
         .eq("workspace_id", workspace.id);
-      
+
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
 
-      // Then fetch profiles for those users
-      const userIds = members.map(m => m.user_id);
+      const userIds = members.map((m) => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
-      
+
       if (profilesError) throw profilesError;
 
-      // Combine the data
-      return members.map(member => ({
+      return members.map((member) => ({
         user_id: member.user_id,
         role: member.role,
-        profiles: profiles?.find(p => p.id === member.user_id)
+        profiles: profiles?.find((p) => p.id === member.user_id),
       }));
     },
     enabled: !!workspace,
-  });
-
-  const { data: processes } = useQuery({
-    queryKey: ["processes"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("process_documentation")
-        .select("id, title, area")
-        .order("title");
-      if (error) throw error;
-      return data;
-    },
   });
 
   const { data: positions } = useQuery({
@@ -108,62 +128,212 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
     enabled: !!workspace,
   });
 
+  const sectorName = useMemo(() => {
+    if (!sectorId) return "";
+    if (sectorId === "Multiplos") return "Múltiplos Setores";
+    return positions?.find((p) => p.id === sectorId)?.name || "";
+  }, [positions, sectorId]);
+
+  const canPickProcesses = !!sectorId;
+
+  const { data: processes, isLoading: processesLoading } = useQuery({
+    queryKey: ["processes", workspace?.id, sectorId],
+    queryFn: async () => {
+      if (!workspace) return [];
+      if (!sectorId) return [];
+
+      let query = supabase
+        .from("process_documentation")
+        .select("id, title, area")
+        .eq("workspace_id", workspace.id)
+        .order("title");
+
+      if (sectorId !== "Multiplos") {
+        if (!sectorName) return [];
+        query = query.eq("area", sectorName);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const primaryAssignee = useMemo(() => {
+    return assignees.length > 0 ? assignees[0] : user?.id;
+  }, [assignees, user?.id]);
+
+  const reviewerCandidates = useMemo(() => {
+    const excludeId = primaryAssignee;
+    return (workspaceMembers || []).filter((m) => m.user_id !== excludeId);
+  }, [workspaceMembers, primaryAssignee]);
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return "?";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setSectorId("");
+    setAssignees([]);
+    setPriority("medium");
+    setStatus("todo");
+    setRequiresApproval(false);
+    setApprovalReviewerId(null);
+    setStartDate("");
+    setDueDate("");
+    setDocumentation("");
+    setFiles([]);
+    setLinks([]);
+    setLinkDialogOpen(false);
+    setLinkName("");
+    setLinkUrl("");
+    setSelectedProcesses([]);
+    setProcessDrawerOpen(false);
+  };
+
+  const handleAddAssignee = (userId: string) => {
+    if (!assignees.includes(userId)) {
+      setAssignees([...assignees, userId]);
+    }
+  };
+
+  const handleRemoveAssignee = (userId: string) => {
+    setAssignees(assignees.filter((id) => id !== userId));
+  };
+
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    if (picked.length === 0) return;
+    setFiles((prev) => [...prev, ...picked]);
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
+
+  const addLink = () => {
+    if (!linkName.trim() || !linkUrl.trim()) {
+      toast.error("Preencha o nome e a URL do link");
+      return;
+    }
+    setLinks((prev) => [...prev, { name: linkName.trim(), url: linkUrl.trim() }]);
+    setLinkName("");
+    setLinkUrl("");
+    setLinkDialogOpen(false);
+  };
+
+  const removeLink = (index: number) => {
+    setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const toggleProcess = (processId: string) => {
+    setSelectedProcesses((prev) =>
+      prev.includes(processId) ? prev.filter((id) => id !== processId) : [...prev, processId]
+    );
+  };
+
   const createMutation = useMutation({
     mutationFn: async () => {
-      const primaryAssignee = assignees.length > 0 ? assignees[0] : user!.id;
-      
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const assigneeForTask = assignees.length > 0 ? assignees[0] : user.id;
+
       const { data: newTask, error: taskError } = await supabase
         .from("tasks")
         .insert([
           {
             project_id: projectId,
             title,
-            description,
+            description: description || null,
             priority,
             status,
+            start_date: startDate || null,
             due_date: dueDate || null,
-            assigned_to: primaryAssignee,
+            assigned_to: assigneeForTask,
             documentation: documentation || null,
-            setor: sectorId === "Multiplos" ? null : (sectorId || null),
+            setor: sectorId || null,
+            requires_approval: requiresApproval,
+            approval_reviewer_id: requiresApproval ? approvalReviewerId : null,
+            approval_status: requiresApproval ? "pending" : null,
           },
         ])
         .select()
         .single();
+
       if (taskError) throw taskError;
 
-      // Insert all assignees into task_assignees table
+      // Assignees
       if (assignees.length > 0) {
-        const { error: assigneeError } = await supabase
-          .from("task_assignees")
-          .insert(
-            assignees.map(userId => ({
-              task_id: newTask.id,
-              user_id: userId,
-            }))
-          );
+        const { error: assigneeError } = await supabase.from("task_assignees").insert(
+          assignees.map((userId) => ({
+            task_id: newTask.id,
+            user_id: userId,
+          }))
+        );
         if (assigneeError) throw assigneeError;
       } else {
-        // If no assignees selected, use current user
-        const { error: assigneeError } = await supabase
-          .from("task_assignees")
-          .insert({
-            task_id: newTask.id,
-            user_id: user!.id,
-          });
+        const { error: assigneeError } = await supabase.from("task_assignees").insert({
+          task_id: newTask.id,
+          user_id: user.id,
+        });
         if (assigneeError) throw assigneeError;
       }
 
-      // Link selected processes
+      // POPs
       if (selectedProcesses.length > 0) {
-        const { error: processError } = await supabase
-          .from("task_processes")
-          .insert(
-            selectedProcesses.map((processId) => ({
-              task_id: newTask.id,
-              process_id: processId,
-            }))
-          );
+        const { error: processError } = await supabase.from("task_processes").insert(
+          selectedProcesses.map((processId) => ({
+            task_id: newTask.id,
+            process_id: processId,
+          }))
+        );
         if (processError) throw processError;
+      }
+
+      // Attachments (files)
+      for (const file of files) {
+        const storagePath = `${newTask.id}/${Date.now()}-${file.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("task-files")
+          .upload(storagePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage.from("task-files").getPublicUrl(storagePath);
+
+        const { error: insertError } = await supabase.from("task_attachments").insert({
+          task_id: newTask.id,
+          name: file.name,
+          file_url: urlData.publicUrl,
+          file_type: file.type,
+          file_size: file.size,
+          uploaded_by: user.id,
+        });
+
+        if (insertError) throw insertError;
+      }
+
+      // Attachments (links)
+      for (const link of links) {
+        const { error } = await supabase.from("task_attachments").insert({
+          task_id: newTask.id,
+          name: link.name,
+          file_url: link.url,
+          file_type: "link",
+          file_size: null,
+          uploaded_by: user.id,
+        });
+        if (error) throw error;
       }
     },
     onSuccess: () => {
@@ -175,41 +345,11 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
       resetForm();
       onOpenChange(false);
     },
-    onError: () => {
-      toast.error("Erro ao criar tarefa");
+    onError: (error: any) => {
+      console.error("Erro ao criar tarefa:", error);
+      toast.error(error?.message ? `Erro ao criar tarefa: ${error.message}` : "Erro ao criar tarefa");
     },
   });
-
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setPriority("medium");
-    setStatus("todo");
-    setDueDate("");
-    setAssignees([]);
-    setDocumentation("");
-    setSectorId("");
-    setSelectedProcesses([]);
-  };
-
-  const handleAddAssignee = (userId: string) => {
-    if (!assignees.includes(userId)) {
-      setAssignees([...assignees, userId]);
-    }
-  };
-
-  const handleRemoveAssignee = (userId: string) => {
-    setAssignees(assignees.filter(id => id !== userId));
-  };
-
-  const getInitials = (name: string | null | undefined) => {
-    if (!name) return "?";
-    const parts = name.split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,19 +357,29 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
       toast.error("O título da tarefa é obrigatório");
       return;
     }
+    if (requiresApproval) {
+      if (!approvalReviewerId) {
+        toast.error("Selecione quem deve aprovar");
+        return;
+      }
+      if (primaryAssignee && approvalReviewerId === primaryAssignee) {
+        toast.error("O aprovador deve ser outra pessoa");
+        return;
+      }
+    }
     createMutation.mutate();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Nova Tarefa</DialogTitle>
-          <DialogDescription>
-            Crie uma nova tarefa para este projeto
-          </DialogDescription>
+          <DialogDescription>Crie uma nova tarefa para este projeto</DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Título */}
           <div className="space-y-2">
             <Label htmlFor="title">Título *</Label>
             <Input
@@ -240,6 +390,8 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               required
             />
           </div>
+
+          {/* Descrição */}
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
             <Textarea
@@ -250,69 +402,40 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               rows={3}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="priority">Prioridade</Label>
-              <Select value={priority} onValueChange={setPriority}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Baixa</SelectItem>
-                  <SelectItem value="medium">Média</SelectItem>
-                  <SelectItem value="high">Alta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+
+          {/* Setor */}
           <div className="space-y-2">
             <Label>Setor</Label>
-            <SectorDrawer value={sectorId} onValueChange={(value) => {
-              setSectorId(value);
-              // Clear assignees when sector changes to refilter members
-              setAssignees([]);
-            }}>
+            <SectorDrawer
+              value={sectorId}
+              onValueChange={(value) => {
+                setSectorId(value);
+                setAssignees([]);
+                setSelectedProcesses([]);
+              }}
+            >
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
                   <Briefcase size={16} />
-                  {sectorId === "Multiplos" 
-                    ? "Múltiplos Setores" 
-                    : (sectorId && positions?.find(s => s.id === sectorId)?.name || "Selecione um setor")}
+                  {sectorId === "Multiplos"
+                    ? "Múltiplos Setores"
+                    : sectorId && positions?.find((s) => s.id === sectorId)?.name
+                      ? positions?.find((s) => s.id === sectorId)?.name
+                      : "Selecione um setor"}
                 </span>
                 <ChevronRight size={16} />
               </Button>
             </SectorDrawer>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="due_date">Data de Vencimento</Label>
-            <Input
-              id="due_date"
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
+
+          {/* Responsáveis */}
           <div className="space-y-2">
             <Label>Responsáveis</Label>
-            
-            {/* Display selected assignees with avatars */}
+
             {assignees.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {assignees.map(userId => {
-                  const member = workspaceMembers?.find(m => m.user_id === userId);
+              <div className="flex flex-wrap gap-2">
+                {assignees.map((userId) => {
+                  const member = workspaceMembers?.find((m) => m.user_id === userId);
                   return (
                     <div
                       key={userId}
@@ -336,14 +459,13 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
                 })}
               </div>
             )}
-            
-            {/* Button to add assignee */}
-            <MemberDrawer 
-              value="" 
-              onValueChange={handleAddAssignee}
-              positionId={sectorId || undefined}
-            >
-              <Button variant="outline" className={`w-full justify-between ${assignees.length > 0 ? 'border-dashed' : ''}`} type="button">
+
+            <MemberDrawer value="" onValueChange={handleAddAssignee} positionId={sectorId || undefined}>
+              <Button
+                variant="outline"
+                className={`w-full justify-between ${assignees.length > 0 ? "border-dashed" : ""}`}
+                type="button"
+              >
                 <span className="flex items-center gap-2">
                   <Plus size={16} />
                   {assignees.length === 0 ? "Adicionar responsável" : "Adicionar mais"}
@@ -352,8 +474,129 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               </Button>
             </MemberDrawer>
           </div>
+
+          {/* Prioridade */}
           <div className="space-y-2">
-            <Label htmlFor="documentation">Documentação</Label>
+            <Label>Prioridade</Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Baixa</SelectItem>
+                <SelectItem value="medium">Média</SelectItem>
+                <SelectItem value="high">Alta</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todo">A Fazer</SelectItem>
+                <SelectItem value="in_progress">Em Progresso</SelectItem>
+                <SelectItem value="completed">Concluído</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Aprovação */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <Shield size={16} />
+              Aprovação
+            </Label>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Requer aprovação de outra pessoa</span>
+              <Switch
+                checked={requiresApproval}
+                onCheckedChange={(checked) => {
+                  setRequiresApproval(checked);
+                  if (checked) {
+                    setShowReviewerSheet(true);
+                  } else {
+                    setApprovalReviewerId(null);
+                  }
+                }}
+              />
+            </div>
+
+            {requiresApproval && (
+              <Sheet open={showReviewerSheet} onOpenChange={setShowReviewerSheet}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between" type="button">
+                    <span className="flex items-center gap-2">
+                      <UserCircle size={16} />
+                      {approvalReviewerId
+                        ? workspaceMembers?.find((m) => m.user_id === approvalReviewerId)?.profiles?.full_name ||
+                          "Revisor selecionado"
+                        : "Selecionar quem deve aprovar"}
+                    </span>
+                    <ChevronRight size={16} />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[80vh]">
+                  <SheetHeader>
+                    <SheetTitle>Selecionar Revisor</SheetTitle>
+                  </SheetHeader>
+                  <ScrollArea className="h-[calc(80vh-120px)] mt-4">
+                    <div className="space-y-2">
+                      {reviewerCandidates.length > 0 ? (
+                        reviewerCandidates.map((member) => (
+                          <Button
+                            key={member.user_id}
+                            variant={approvalReviewerId === member.user_id ? "default" : "outline"}
+                            className="w-full justify-start"
+                            type="button"
+                            onClick={() => {
+                              setApprovalReviewerId(member.user_id);
+                              setShowReviewerSheet(false);
+                            }}
+                          >
+                            <UserCircle size={16} className="mr-2" />
+                            {member.profiles?.full_name || "Usuário"}
+                          </Button>
+                        ))
+                      ) : (
+                        <div className="text-sm text-muted-foreground py-6 text-center">
+                          Nenhum membro disponível para aprovar.
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </SheetContent>
+              </Sheet>
+            )}
+          </div>
+
+          {/* Datas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="start_date">Data de Início</Label>
+              <Input
+                id="start_date"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="due_date">Data de Fim (Prazo)</Label>
+              <Input id="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Documentação */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2" htmlFor="documentation">
+              <FileText size={16} />
+              Documentação
+            </Label>
             <Textarea
               id="documentation"
               value={documentation}
@@ -361,31 +604,202 @@ export const CreateTaskDialog = ({ open, onOpenChange, projectId }: CreateTaskDi
               placeholder="Adicione documentação, links ou anotações importantes..."
               rows={3}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>POP's Vinculados</Label>
-            <div className="space-y-2">
-              {processes?.map((process) => (
-                <div key={process.id} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`process-${process.id}`}
-                    checked={selectedProcesses.includes(process.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedProcesses([...selectedProcesses, process.id]);
-                      } else {
-                        setSelectedProcesses(selectedProcesses.filter((id) => id !== process.id));
-                      }
-                    }}
+
+            {/* Arquivos + Links */}
+            <div className="space-y-3 pt-2">
+              <div className="flex flex-wrap gap-2">
+                <div>
+                  <Input
+                    id="task-files"
+                    type="file"
+                    multiple
+                    onChange={handleFilesPicked}
+                    className="hidden"
+                    disabled={createMutation.isPending}
                   />
-                  <Label htmlFor={`process-${process.id}`} className="text-sm font-normal cursor-pointer flex-1">
-                    {process.title} <span className="text-muted-foreground">({process.area})</span>
+                  <Label
+                    htmlFor="task-files"
+                    className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-md cursor-pointer transition-colors"
+                  >
+                    <Upload size={14} />
+                    Adicionar Arquivos
                   </Label>
                 </div>
-              ))}
+
+                <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+                  <SheetTrigger asChild />
+                </Dialog>
+
+                <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => setLinkDialogOpen(true)}>
+                  <LinkIcon size={14} />
+                  Adicionar Link
+                </Button>
+              </div>
+
+              {/* Link modal (simple) */}
+              <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Adicionar Link</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Nome do Link</Label>
+                      <Input value={linkName} onChange={(e) => setLinkName(e.target.value)} placeholder="Ex: Grupo do WhatsApp" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>URL</Label>
+                      <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setLinkDialogOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="button" onClick={addLink}>
+                        Adicionar
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {(files.length > 0 || links.length > 0) && (
+                <div className="space-y-2">
+                  {files.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Arquivos</p>
+                      {files.map((f, idx) => (
+                        <div key={`${f.name}-${idx}`} className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1">
+                          <span className="truncate flex-1">{f.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeFile(idx)}
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {links.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Links</p>
+                      {links.map((l, idx) => (
+                        <div key={`${l.url}-${idx}`} className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1">
+                          <LinkIcon size={12} className="text-muted-foreground" />
+                          <span className="truncate flex-1">{l.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeLink(idx)}
+                          >
+                            <X size={12} />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+
+          {/* POPs Vinculados */}
+          <div className="space-y-2">
+            <Label>POP's Vinculados</Label>
+
+            <Sheet open={processDrawerOpen} onOpenChange={setProcessDrawerOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-between"
+                  disabled={!canPickProcesses}
+                >
+                  <span className="flex items-center gap-2">
+                    <Plus size={16} />
+                    {selectedProcesses.length > 0
+                      ? `${selectedProcesses.length} POP(s) selecionado(s)`
+                      : canPickProcesses
+                        ? "Vincular POPs"
+                        : "Selecione um setor primeiro"}
+                  </span>
+                  <ChevronRight size={16} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-[80vh]">
+                <SheetHeader>
+                  <SheetTitle>
+                    Selecionar POPs {sectorId === "Multiplos" ? "(Todos os setores)" : sectorName ? `(${sectorName})` : ""}
+                  </SheetTitle>
+                </SheetHeader>
+
+                <ScrollArea className="h-[calc(80vh-160px)] mt-4">
+                  <div className="space-y-2">
+                    {processesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                      </div>
+                    ) : processes && processes.length > 0 ? (
+                      processes.map((process) => (
+                        <div
+                          key={process.id}
+                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                          onClick={() => toggleProcess(process.id)}
+                        >
+                          <Checkbox checked={selectedProcesses.includes(process.id)} onCheckedChange={() => toggleProcess(process.id)} />
+                          <div className="flex-1">
+                            <p className="font-medium">{process.title}</p>
+                            <p className="text-xs text-muted-foreground">{process.area}</p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                        <p>Nenhum POP encontrado</p>
+                        <p className="text-sm mt-2">
+                          {sectorId
+                            ? "Nenhum processo cadastrado para este setor"
+                            : "Selecione um setor primeiro"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+
+                <div className="pt-4 border-t">
+                  <Button type="button" className="w-full" onClick={() => setProcessDrawerOpen(false)}>
+                    Concluir
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {selectedProcesses.length > 0 && (
+              <div className="space-y-1">
+                {selectedProcesses.map((processId) => {
+                  const p = processes?.find((x) => x.id === processId);
+                  if (!p) return null;
+                  return (
+                    <div key={processId} className="flex items-center gap-2 text-sm">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="truncate">{p.title}</span>
+                      <span className="text-muted-foreground truncate">({p.area})</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
               variant="outline"
