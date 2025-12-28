@@ -107,7 +107,11 @@ export function usePushNotifications() {
       setPermission(permissionResult);
 
       if (permissionResult !== 'granted') {
-        toast.error('Permissão para notificações negada');
+        if (permissionResult === 'denied') {
+          toast.error('Notificações bloqueadas no navegador. Para liberar, clique no cadeado na barra de endereços e permita notificações.');
+        } else {
+          toast.info('Você fechou o prompt. Clique novamente para permitir notificações.');
+        }
         return false;
       }
 

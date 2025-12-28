@@ -64,8 +64,8 @@ export function PushNotificationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Show activation prompt when not subscribed and permission is not denied */}
-        {!isSubscribed && permission !== 'denied' && (
+        {/* Show activation prompt when not subscribed */}
+        {!isSubscribed && (
           <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
             <div className="flex items-start gap-3">
               <BellRing className="h-5 w-5 text-primary mt-0.5" />
