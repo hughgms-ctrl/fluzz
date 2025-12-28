@@ -60,10 +60,10 @@ export const SectorDrawer = ({ value, onValueChange, children, showMultipleSecto
           <div className="space-y-2">
             {showMultipleSectors && (
               <Button
-                variant={value === "multiplos" ? "default" : "outline"}
+                variant={value === "Multiplos" ? "default" : "outline"}
                 className="w-full justify-between h-auto py-4 border-dashed"
                 onClick={() => {
-                  onValueChange("multiplos");
+                  onValueChange("Multiplos");
                   document.querySelector('[data-radix-dialog-close]')?.dispatchEvent(
                     new Event('click', { bubbles: true })
                   );
@@ -78,7 +78,7 @@ export const SectorDrawer = ({ value, onValueChange, children, showMultipleSecto
                     </div>
                   </div>
                 </div>
-                {value === "multiplos" && (
+                {value === "Multiplos" && (
                   <Badge variant="secondary" className="ml-2">Selecionado</Badge>
                 )}
               </Button>

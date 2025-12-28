@@ -32,8 +32,8 @@ export const MemberDrawer = ({ value, onValueChange, children, positionId }: Mem
     return uuidRegex.test(id);
   };
 
-  // "multiplos" means show all members from all sectors
-  const isMultipleSectors = positionId === "multiplos";
+  // "Multiplos" means show all members from all sectors
+  const isMultipleSectors = positionId === "Multiplos";
   const validPositionId = isValidUUID(positionId) ? positionId : undefined;
 
   const { data: workspaceMembers, isLoading } = useQuery({
