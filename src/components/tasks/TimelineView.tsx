@@ -773,7 +773,8 @@ export const TimelineView = ({
                             <span 
                               className="text-xs font-medium text-white whitespace-nowrap select-none"
                               style={{ 
-                                textShadow: '0 0 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7), 1px 1px 2px rgba(0,0,0,0.9), -1px -1px 2px rgba(0,0,0,0.9)' 
+                                WebkitTextStroke: '1px black',
+                                paintOrder: 'stroke fill'
                               }}
                             >
                               {task.title}
