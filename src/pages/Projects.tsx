@@ -5,10 +5,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, LayoutGrid, List, Folder, CalendarDays, Archive } from "lucide-react";
 import { ProjectCard } from "@/components/projects/ProjectCard";
-import { ProjectListView } from "@/components/projects/ProjectListView";
 import { ProjectsTableView } from "@/components/projects/ProjectsTableView";
 import { ProjectsCalendarView } from "@/components/projects/ProjectsCalendarView";
-import { ProjectMobileCard } from "@/components/projects/ProjectMobileCard";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -183,25 +181,8 @@ export default function Projects() {
   const renderProjectsList = (projectsList: any[], isStandalone = false) => {
     if (projectsList.length === 0) return null;
 
-    // Mobile: sempre mostrar cards
-    if (isMobile) {
-      return (
-        <div className="space-y-3">
-          {projectsList.map((project: any) => (
-            <ProjectMobileCard
-              key={project.id}
-              project={project}
-              onDelete={(id) => deleteMutation.mutate(id)}
-              onArchive={(id) => archiveMutation.mutate({ id, archived: true })}
-              isStandaloneFolder={isStandalone}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // Desktop: respeitar viewMode
-    if (viewMode === "grid") {
+    // Always use table view with horizontal scroll (same pattern for mobile and desktop)
+    if (viewMode === "grid" && !isMobile) {
       return (
         <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {projectsList.map((project: any) => (
@@ -233,16 +214,6 @@ export default function Projects() {
         <p className="text-center text-muted-foreground py-8">
           Nenhum projeto arquivado.
         </p>
-      ) : isMobile ? (
-        archivedProjects.map((project: any) => (
-          <ProjectMobileCard
-            key={project.id}
-            project={project}
-            onDelete={(id) => deleteMutation.mutate(id)}
-            onArchive={(id) => archiveMutation.mutate({ id, archived: false })}
-            isArchived
-          />
-        ))
       ) : (
         <ProjectsTableView
           projects={archivedProjects}
