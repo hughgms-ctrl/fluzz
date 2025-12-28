@@ -4,18 +4,24 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  try {
+    // Ensure the string is properly padded
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray.buffer;
+  } catch (error) {
+    console.error('Error decoding base64 string:', error);
+    throw new Error('Invalid VAPID key format');
   }
-  return outputArray.buffer as ArrayBuffer;
 }
 
 export function usePushNotifications() {
@@ -93,17 +99,25 @@ export function usePushNotifications() {
       return false;
     }
 
-    if (!vapidKey) {
-      toast.error('Chave VAPID não configurada. Tente novamente em alguns segundos.');
-      await fetchVapidKey();
-      return false;
-    }
-
     setIsLoading(true);
 
     try {
-      // Request notification permission - this will show browser prompt if permission is 'default'
-      // If permission was already denied, browser won't show prompt again (browser security restriction)
+      // Fetch VAPID key if not available
+      let currentVapidKey = vapidKey;
+      if (!currentVapidKey) {
+        await fetchVapidKey();
+        // Wait a bit for state to update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        currentVapidKey = vapidKey;
+      }
+
+      if (!currentVapidKey) {
+        console.error('VAPID key not available');
+        toast.error('Configuração de notificações incompleta. Tente novamente.');
+        return false;
+      }
+
+      // Request notification permission
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
 
@@ -115,10 +129,20 @@ export function usePushNotifications() {
       // Register service worker
       const registration = await registerServiceWorker();
 
+      // Convert VAPID key and subscribe to push
+      let applicationServerKey: ArrayBuffer;
+      try {
+        applicationServerKey = urlBase64ToUint8Array(currentVapidKey);
+      } catch (error) {
+        console.error('Error converting VAPID key:', error);
+        toast.error('Configuração de notificações inválida. Contate o suporte.');
+        return false;
+      }
+
       // Subscribe to push
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        applicationServerKey: applicationServerKey
       });
 
       const subscriptionJson = subscription.toJSON();
@@ -143,7 +167,8 @@ export function usePushNotifications() {
 
     } catch (error: any) {
       console.error('Error subscribing to push:', error);
-      toast.error('Erro ao ativar notificações: ' + error.message);
+      // Don't show technical error messages to users
+      toast.error('Não foi possível ativar as notificações. Tente novamente.');
       return false;
     } finally {
       setIsLoading(false);
