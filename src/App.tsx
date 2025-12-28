@@ -38,6 +38,7 @@ import TeamMemberPermissions from "./pages/TeamMemberPermissions";
 import WorkspaceManagement from "./pages/WorkspaceManagement";
 import AIAssistant from "./pages/AIAssistant";
 import WorkloadOverview from "./pages/WorkloadOverview";
+import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const App = () => (
             <Route path="/workspaces" element={<WorkspaceManagement />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/workload" element={<WorkloadOverview />} />
+            <Route path="/install" element={<Install />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </WorkspaceProvider>
