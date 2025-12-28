@@ -64,26 +64,30 @@ export function PushNotificationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Permission Status */}
-        {permission === 'default' && !isSubscribed && (
+        {/* Show activation prompt when not subscribed and permission is not denied */}
+        {!isSubscribed && permission !== 'denied' && (
           <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
             <div className="flex items-start gap-3">
               <BellRing className="h-5 w-5 text-primary mt-0.5" />
               <div className="flex-1">
-                <p className="font-medium text-foreground">Permita notificações</p>
+                <p className="font-medium text-foreground">Ative as notificações</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Clique no botão abaixo para permitir que o navegador envie notificações. 
-                  Isso é necessário para receber alertas de tarefas e atualizações.
+                  Clique no botão abaixo para ativar notificações push e receber alertas de tarefas e atualizações importantes.
                 </p>
               </div>
             </div>
             <Button 
-              onClick={handleRequestPermission}
+              onClick={subscribe}
               className="w-full"
               variant="default"
+              disabled={isLoading}
             >
-              <Bell className="h-4 w-4 mr-2" />
-              Permitir Notificações
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Bell className="h-4 w-4 mr-2" />
+              )}
+              Ativar Notificações Push
             </Button>
           </div>
         )}
@@ -97,26 +101,22 @@ export function PushNotificationSettings() {
                 ? 'Notificações bloqueadas pelo navegador'
                 : isSubscribed 
                   ? 'Notificações ativadas ✓'
-                  : permission === 'granted'
-                    ? 'Permissão concedida - clique em Ativar'
-                    : 'Notificações desativadas'}
+                  : 'Notificações desativadas'}
             </p>
           </div>
           
-          {permission !== 'denied' && (
+          {isSubscribed && (
             <Button
-              variant={isSubscribed ? 'outline' : 'default'}
-              onClick={isSubscribed ? unsubscribe : subscribe}
+              variant="outline"
+              onClick={unsubscribe}
               disabled={isLoading}
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : isSubscribed ? (
-                <BellOff className="h-4 w-4 mr-2" />
               ) : (
-                <Bell className="h-4 w-4 mr-2" />
+                <BellOff className="h-4 w-4 mr-2" />
               )}
-              {isSubscribed ? 'Desativar' : 'Ativar'}
+              Desativar
             </Button>
           )}
         </div>
