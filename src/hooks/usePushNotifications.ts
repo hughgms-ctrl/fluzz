@@ -84,14 +84,9 @@ export function usePushNotifications() {
   }, [user]);
 
   const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
-    // First register the push service worker
-    const registration = await navigator.serviceWorker.register('/sw-push.js', {
-      scope: '/'
-    });
-    
+    // Use the main PWA service worker (which now includes push handlers)
     // Wait for the service worker to be ready
-    await navigator.serviceWorker.ready;
-    
+    const registration = await navigator.serviceWorker.ready;
     return registration;
   };
 

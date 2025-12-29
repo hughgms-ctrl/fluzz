@@ -1,18 +1,9 @@
-// Service Worker for Push Notifications
-
-self.addEventListener('install', function(event) {
-  console.log('[Service Worker] Installing...');
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', function(event) {
-  console.log('[Service Worker] Activating...');
-  event.waitUntil(clients.claim());
-});
+// Push notification handlers - imported by the main PWA service worker
+// This file is included via workbox importScripts
 
 self.addEventListener('push', function(event) {
-  console.log('[Service Worker] Push Received.');
-  console.log('[Service Worker] Push data:', event.data ? event.data.text() : 'no data');
+  console.log('[SW Push] Push Received.');
+  console.log('[SW Push] Push data:', event.data ? event.data.text() : 'no data');
   
   let data = {
     title: 'Fluzz',
@@ -26,13 +17,13 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[Service Worker] Parsed payload:', JSON.stringify(payload));
+      console.log('[SW Push] Parsed payload:', JSON.stringify(payload));
       data = {
         ...data,
         ...payload
       };
     } catch (e) {
-      console.error('[Service Worker] Error parsing push data:', e);
+      console.error('[SW Push] Error parsing push data:', e);
       data.body = event.data.text();
     }
   }
@@ -45,22 +36,22 @@ self.addEventListener('push', function(event) {
     vibrate: [200, 100, 200, 100, 200],
     data: data.data || { url: '/' },
     actions: data.actions || [],
-    requireInteraction: data.requireInteraction || true,
+    requireInteraction: data.requireInteraction !== false,
     silent: false,
     renotify: true
   };
 
-  console.log('[Service Worker] Showing notification:', data.title, options);
+  console.log('[SW Push] Showing notification:', data.title, options);
 
   event.waitUntil(
     self.registration.showNotification(data.title, options)
-      .then(() => console.log('[Service Worker] Notification shown successfully'))
-      .catch(err => console.error('[Service Worker] Error showing notification:', err))
+      .then(() => console.log('[SW Push] Notification shown successfully'))
+      .catch(err => console.error('[SW Push] Error showing notification:', err))
   );
 });
 
 self.addEventListener('notificationclick', function(event) {
-  console.log('[Service Worker] Notification click received.');
+  console.log('[SW Push] Notification click received.');
   
   event.notification.close();
 
@@ -86,15 +77,15 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 self.addEventListener('notificationclose', function(event) {
-  console.log('[Service Worker] Notification closed.');
+  console.log('[SW Push] Notification closed.');
 });
 
 // Handle messages from the main thread
 self.addEventListener('message', function(event) {
-  console.log('[Service Worker] Message received:', event.data);
-  
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, options } = event.data;
     self.registration.showNotification(title, options);
   }
 });
+
+console.log('[SW Push] Push handlers loaded');
