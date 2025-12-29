@@ -28,7 +28,6 @@ export function PushNotificationSettings() {
     subscribe,
     unsubscribe,
     sendTestNotification,
-    sendLocalTestNotification,
   } = usePushNotifications();
 
   const handleRequestPermission = async () => {
@@ -178,22 +177,10 @@ export function PushNotificationSettings() {
               </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Button variant="outline" size="sm" onClick={sendLocalTestNotification}>
-                Teste local (sem push)
-              </Button>
-
-              <Button variant="outline" size="sm" onClick={sendTestNotification}>
-                <TestTube className="h-4 w-4 mr-2" />
-                Enviar push de teste
-              </Button>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Se o “Teste local” aparecer no desktop, mas o “push de teste” não, o bloqueio costuma
-              ser do sistema/navegador (ex.: Foco/Não perturbe, notificações do Chrome/Edge
-              desativadas no Windows/macOS).
-            </p>
+            <Button variant="outline" size="sm" className="w-full" onClick={sendTestNotification}>
+              <TestTube className="h-4 w-4 mr-2" />
+              Enviar push de teste
+            </Button>
           </div>
         )}
 
@@ -246,4 +233,3 @@ export function PushNotificationSettings() {
     </Card>
   );
 }
-
