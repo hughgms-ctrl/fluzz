@@ -918,6 +918,39 @@ export type Database = {
         }
         Relationships: []
       }
+      pwa_installations: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          id: string
+          installed_at: string | null
+          last_install_reminder_at: string | null
+          last_profile_reminder_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          installed_at?: string | null
+          last_install_reminder_at?: string | null
+          last_profile_reminder_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          installed_at?: string | null
+          last_install_reminder_at?: string | null
+          last_profile_reminder_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       recurring_tasks: {
         Row: {
           created_at: string

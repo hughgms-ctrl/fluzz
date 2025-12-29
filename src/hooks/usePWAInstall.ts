@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -6,17 +8,63 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function usePWAInstall() {
+  const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
 
+  // Save installation to database
+  const saveInstallation = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const deviceInfo = `${navigator.userAgent.substring(0, 100)}`;
+      
+      // Check if record exists
+      const { data: existing } = await supabase
+        .from('pwa_installations')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing record
+        await supabase
+          .from('pwa_installations')
+          .update({
+            installed_at: new Date().toISOString(),
+            device_info: deviceInfo
+          })
+          .eq('user_id', user.id);
+      } else {
+        // Insert new record
+        await supabase
+          .from('pwa_installations')
+          .insert({
+            user_id: user.id,
+            installed_at: new Date().toISOString(),
+            device_info: deviceInfo
+          });
+      }
+
+      console.log('[PWA] Installation saved to database');
+    } catch (error) {
+      console.error('[PWA] Error saving installation:', error);
+    }
+  }, [user]);
+
   useEffect(() => {
     // Check if already installed (standalone mode)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
       || (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);
+
+    // If installed and user is logged in, save to database
+    if (isStandalone && user) {
+      saveInstallation();
+    }
 
     // Detect platform
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -45,6 +93,11 @@ export function usePWAInstall() {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
+      
+      // Save to database when installed
+      if (user) {
+        saveInstallation();
+      }
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
@@ -53,7 +106,7 @@ export function usePWAInstall() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []);
+  }, [user, saveInstallation]);
 
   const install = async (): Promise<boolean> => {
     if (!deferredPrompt) {
