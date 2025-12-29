@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,6 +33,9 @@ export function usePushNotifications() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [vapidKey, setVapidKey] = useState<string | null>(null);
+  
+  // Debounce ref to prevent duplicate calls
+  const sendingRef = useRef(false);
 
   useEffect(() => {
     // Check if push notifications are supported
@@ -242,6 +245,13 @@ export function usePushNotifications() {
 
   const sendTestNotification = async () => {
     if (!user) return;
+    
+    // Prevent duplicate calls (React StrictMode / double-renders)
+    if (sendingRef.current) {
+      console.log('[Push] Ignoring duplicate sendTestNotification call');
+      return;
+    }
+    sendingRef.current = true;
 
     try {
       const { error } = await supabase.functions.invoke('send-push-notification', {
@@ -252,8 +262,6 @@ export function usePushNotifications() {
           url: '/my-tasks',
           tag: 'task-reminder-test',
           requireInteraction: true,
-
-          // Also create the in-app notification (bell)
           createInApp: true,
           inAppType: 'task_overdue',
           inAppLink: '/my-tasks',
@@ -268,6 +276,11 @@ export function usePushNotifications() {
     } catch (error: any) {
       console.error('Error sending test notification:', error);
       toast.error('Erro ao enviar notificação de teste');
+    } finally {
+      // Reset after a delay to allow for legitimate re-sends
+      setTimeout(() => {
+        sendingRef.current = false;
+      }, 2000);
     }
   };
 
