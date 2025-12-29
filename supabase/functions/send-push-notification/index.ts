@@ -193,7 +193,7 @@ serve(async (req) => {
         const webPush = await import("npm:web-push@3.6.7");
         
         webPush.setVapidDetails(
-          'mailto:contato@fluzz.app',
+          'mailto:contato@fluzzapp.com',
           vapidPublicKey,
           vapidPrivateKey
         );

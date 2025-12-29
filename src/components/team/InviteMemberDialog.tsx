@@ -244,10 +244,8 @@ export const InviteMemberDialog = ({
       let baseUrl;
 
       if (hostname.includes('lovableproject.com') || hostname.includes('lovable.app')) {
-        // Lovable hosted environment - always construct production URL
-        const parts = hostname.split('.');
-        const projectId = parts[0].replace(/^(edit-|preview-)/, '');
-        baseUrl = `https://${projectId}.lovableproject.com`;
+        // Lovable hosted environment - use fluzzapp.com
+        baseUrl = 'https://fluzzapp.com';
       } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // For localhost, we cannot determine production URL automatically
         // User should test invites from the published/preview app, not localhost

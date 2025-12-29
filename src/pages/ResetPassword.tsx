@@ -55,8 +55,8 @@ const ResetPassword = () => {
 
     // If the email link lands on the editor/preview domain via the auth bridge,
     // bounce to the published app keeping the same query/hash tokens.
-    const PUBLISHED_APP_ORIGIN = "https://fluzz.lovable.app";
-    const isPreviewDomain = window.location.hostname.includes("lovableproject.com");
+    const PUBLISHED_APP_ORIGIN = "https://fluzzapp.com";
+    const isPreviewDomain = window.location.hostname.includes("lovableproject.com") || window.location.hostname.includes("lovable.app");
     if (isPreviewDomain && window.location.origin !== PUBLISHED_APP_ORIGIN) {
       const target = `${PUBLISHED_APP_ORIGIN}${window.location.pathname}${window.location.search}${window.location.hash}`;
       window.location.replace(target);

@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const resetPassword = async (email: string) => {
     try {
       // Always send recovery users to the published app URL (not the editor/preview).
-      const redirectUrl = "https://fluzz.lovable.app/reset-password";
+      const redirectUrl = "https://fluzzapp.com/reset-password";
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
