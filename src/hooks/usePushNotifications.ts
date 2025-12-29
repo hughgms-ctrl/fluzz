@@ -309,19 +309,17 @@ export function usePushNotifications() {
         data: { url: '/my-tasks' },
       };
 
-      const active = registration.active ?? navigator.serviceWorker.controller ?? null;
-
-      if (active) {
-        active.postMessage({ type: 'SHOW_NOTIFICATION', title: '✅ Teste local', options });
+      // Prefer: showNotification directly (lets us catch errors immediately)
+      if (typeof registration.showNotification === 'function') {
+        await registration.showNotification('✅ Teste local', options);
       } else {
-        // Fallback: tries direct Notification (some browsers still show it)
         new Notification('✅ Teste local', options);
       }
 
       toast.success('Teste local disparado. Veja se apareceu uma notificação do sistema.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending local test notification:', error);
-      toast.error('Não foi possível disparar o teste local');
+      toast.error(`Não foi possível disparar o teste local${error?.message ? `: ${error.message}` : ''}`);
     }
   };
 
