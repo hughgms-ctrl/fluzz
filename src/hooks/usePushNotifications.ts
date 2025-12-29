@@ -46,15 +46,17 @@ export function usePushNotifications() {
     }
   }, [user]);
 
-  const fetchVapidKey = async () => {
+  const fetchVapidKey = async (): Promise<string | null> => {
     try {
       const { data, error } = await supabase.functions.invoke('get-vapid-key');
       if (error) throw error;
-      if (data?.publicKey) {
-        setVapidKey(data.publicKey);
-      }
+
+      const key = (data?.publicKey as string | undefined) ?? null;
+      if (key) setVapidKey(key);
+      return key;
     } catch (error) {
       console.error('Error fetching VAPID key:', error);
+      return null;
     }
   };
 
@@ -64,22 +66,25 @@ export function usePushNotifications() {
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
-      
+
       if (subscription) {
         // Check if subscription exists in database
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('push_subscriptions')
           .select('id')
           .eq('user_id', user.id)
           .eq('endpoint', subscription.endpoint)
-          .single();
+          .order('updated_at', { ascending: false })
+          .limit(1);
 
-        setIsSubscribed(!!data);
+        if (error) throw error;
+        setIsSubscribed((data?.length ?? 0) > 0);
       } else {
         setIsSubscribed(false);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
+      setIsSubscribed(false);
     }
   }, [user]);
 
@@ -88,6 +93,24 @@ export function usePushNotifications() {
     // Wait for the service worker to be ready
     const registration = await navigator.serviceWorker.ready;
     return registration;
+  };
+
+  const getSubscribeErrorMessage = (error: any) => {
+    const name = error?.name as string | undefined;
+
+    if (name === 'NotAllowedError') {
+      return 'Permissão bloqueada para notificações. Verifique as permissões e tente novamente.';
+    }
+
+    if (name === 'NotSupportedError') {
+      return 'Este dispositivo não suporta notificações push (no iPhone: instale o app na Tela de Início e use iOS 16.4+).';
+    }
+
+    if (name === 'AbortError') {
+      return 'Não foi possível concluir a ativação. Tente novamente.';
+    }
+
+    return 'Não foi possível ativar as notificações. Tente novamente.';
   };
 
   const subscribe = async (): Promise<boolean> => {
@@ -99,14 +122,7 @@ export function usePushNotifications() {
     setIsLoading(true);
 
     try {
-      // Fetch VAPID key if not available
-      let currentVapidKey = vapidKey;
-      if (!currentVapidKey) {
-        await fetchVapidKey();
-        // Wait a bit for state to update
-        await new Promise(resolve => setTimeout(resolve, 100));
-        currentVapidKey = vapidKey;
-      }
+      const currentVapidKey = vapidKey ?? (await fetchVapidKey());
 
       if (!currentVapidKey) {
         console.error('VAPID key not available');
@@ -119,7 +135,11 @@ export function usePushNotifications() {
       setPermission(permissionResult);
 
       if (permissionResult !== 'granted') {
-        // Don't show toast - just return false silently
+        if (permissionResult === 'denied') {
+          toast.error('Permissão de notificações bloqueada. Libere nas configurações e tente novamente.');
+        } else {
+          toast.info('Permissão não concedida. Tente novamente.');
+        }
         return false;
       }
 
@@ -143,36 +163,33 @@ export function usePushNotifications() {
       });
 
       const subscriptionJson = subscription.toJSON();
+      const endpoint = subscriptionJson.endpoint!;
+      const p256dh = subscriptionJson.keys?.p256dh || '';
+      const auth = subscriptionJson.keys?.auth || '';
 
       // Save subscription to database (one per user+device)
-      // First try to update existing subscription for this endpoint
-      const { data: existing } = await supabase
+      const { data: existingRows, error: existingError } = await supabase
         .from('push_subscriptions')
         .select('id')
         .eq('user_id', user.id)
-        .eq('endpoint', subscriptionJson.endpoint!)
-        .maybeSingle();
+        .eq('endpoint', endpoint)
+        .order('updated_at', { ascending: false })
+        .limit(1);
 
-      if (existing) {
-        // Update existing subscription
+      if (existingError) throw existingError;
+
+      const existingId = (existingRows?.[0]?.id as string | undefined) ?? undefined;
+
+      if (existingId) {
         const { error } = await supabase
           .from('push_subscriptions')
-          .update({
-            p256dh: subscriptionJson.keys?.p256dh || '',
-            auth: subscriptionJson.keys?.auth || ''
-          })
-          .eq('id', existing.id);
+          .update({ p256dh, auth })
+          .eq('id', existingId);
         if (error) throw error;
       } else {
-        // Insert new subscription
         const { error } = await supabase
           .from('push_subscriptions')
-          .insert({
-            user_id: user.id,
-            endpoint: subscriptionJson.endpoint!,
-            p256dh: subscriptionJson.keys?.p256dh || '',
-            auth: subscriptionJson.keys?.auth || ''
-          });
+          .insert({ user_id: user.id, endpoint, p256dh, auth });
         if (error) throw error;
       }
 
@@ -182,8 +199,7 @@ export function usePushNotifications() {
 
     } catch (error: any) {
       console.error('Error subscribing to push:', error);
-      // Don't show technical error messages to users
-      toast.error('Não foi possível ativar as notificações. Tente novamente.');
+      toast.error(getSubscribeErrorMessage(error));
       return false;
     } finally {
       setIsLoading(false);

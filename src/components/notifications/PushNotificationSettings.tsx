@@ -3,8 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+
 
 export function PushNotificationSettings() {
+  const navigate = useNavigate();
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone =
+    window.matchMedia?.('(display-mode: standalone)')?.matches ||
+    (navigator as any).standalone === true;
+
   const {
     permission,
     isSubscribed,
@@ -14,6 +23,7 @@ export function PushNotificationSettings() {
     unsubscribe,
     sendTestNotification
   } = usePushNotifications();
+
 
   const handleRequestPermission = async () => {
     if (!isSupported) {
@@ -45,9 +55,28 @@ export function PushNotificationSettings() {
             Notificações Push
           </CardTitle>
           <CardDescription>
-            Seu navegador não suporta notificações push.
+            {isIOS
+              ? 'No iPhone, notificações push só funcionam com o app instalado na Tela de Início (iOS 16.4+).'
+              : 'Seu navegador não suporta notificações push.'}
           </CardDescription>
         </CardHeader>
+        <CardContent className="space-y-3">
+          {isIOS && !isStandalone && (
+            <Button className="w-full" onClick={() => navigate('/install')}>
+              Ir para instalação do app
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              toast.message('Recarregando...');
+              setTimeout(() => window.location.reload(), 50);
+            }}
+          >
+            Recarregar página
+          </Button>
+        </CardContent>
       </Card>
     );
   }
