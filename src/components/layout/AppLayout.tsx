@@ -2,14 +2,16 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { User } from "lucide-react";
+import { RotateCw, User } from "lucide-react";
 import { AIFloatingButton } from "@/components/ai/AIFloatingButton";
+import { toast } from "sonner";
+import { refreshApp } from "@/lib/pwa";
+
 interface AppLayoutProps {
   children: React.ReactNode;
 }
@@ -78,7 +80,26 @@ export const AppLayout = ({
             <div className="flex items-center gap-1 sm:gap-2">
               <ThemeToggle />
               <NotificationBell />
-              <Button variant="ghost" size="icon" onClick={() => navigate("/profile")} className="h-8 w-8 sm:h-9 sm:w-9">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  toast.message("Recarregando...");
+                  setTimeout(() => {
+                    void refreshApp();
+                  }, 50);
+                }}
+                className="h-8 w-8 sm:h-9 sm:w-9"
+              >
+                <RotateCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="sr-only">Atualizar app</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/profile")}
+                className="h-8 w-8 sm:h-9 sm:w-9"
+              >
                 <User className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="sr-only">Perfil</span>
               </Button>
