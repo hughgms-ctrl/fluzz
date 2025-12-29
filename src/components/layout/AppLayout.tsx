@@ -57,7 +57,7 @@ export const AppLayout = ({
     return <Navigate to="/auth" replace />;
   }
   return <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="min-h-screen flex w-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10">

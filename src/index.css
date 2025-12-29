@@ -6,6 +6,18 @@
 All colors MUST be HSL.
 */
 
+/* iOS Safe Area Support */
+html {
+  /* Ensure safe areas are respected */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+body {
+  /* Ensure body fills the viewport properly */
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
 @layer base {
   :root {
     --background: 0 0% 99%;
