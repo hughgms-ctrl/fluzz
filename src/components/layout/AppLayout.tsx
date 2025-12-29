@@ -59,6 +59,11 @@ export const AppLayout = ({
         className="min-h-screen flex w-full bg-background"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
+        {/* Barra fixa que cobre a safe area do iOS */}
+        <div 
+          className="fixed top-0 left-0 right-0 bg-card z-[60]"
+          style={{ height: 'env(safe-area-inset-top, 0px)' }}
+        />
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header 
