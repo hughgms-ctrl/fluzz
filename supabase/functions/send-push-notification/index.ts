@@ -152,11 +152,11 @@ serve(async (req) => {
         const payload = JSON.stringify({
           title,
           body,
-          icon: '/favicon.png',
+          icon: '/icon-192.png',
           badge: '/favicon.png',
-          tag: tag || 'fluzz-notification',
+          ...(tag ? { tag } : {}),
           data: { url: url || '/' },
-          requireInteraction: requireInteraction || false
+          requireInteraction: requireInteraction ?? false,
         });
 
         // Use web-push library via import

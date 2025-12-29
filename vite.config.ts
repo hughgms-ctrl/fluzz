@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Fluzz - Gestão de Equipes e Projetos',
+        name: 'Fluzz',
         short_name: 'Fluzz',
         description: 'Plataforma de gestão de equipes e projetos',
         theme_color: '#F97316',
