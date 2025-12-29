@@ -8,9 +8,8 @@ self.addEventListener('push', function(event) {
   let data = {
     title: 'Fluzz',
     body: 'Você tem uma nova notificação',
-    icon: '/favicon.png',
+    icon: '/icon-192.png',
     badge: '/favicon.png',
-    tag: 'fluzz-notification',
     data: { url: '/' }
   };
 
@@ -30,9 +29,9 @@ self.addEventListener('push', function(event) {
 
   const options = {
     body: data.body,
-    icon: data.icon || '/favicon.png',
+    icon: data.icon || '/icon-192.png',
     badge: data.badge || '/favicon.png',
-    tag: data.tag || 'fluzz-notification',
+    tag: data.tag || undefined,
     vibrate: [200, 100, 200, 100, 200],
     data: data.data || { url: '/' },
     actions: data.actions || [],
