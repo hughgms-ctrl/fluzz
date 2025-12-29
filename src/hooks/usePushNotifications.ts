@@ -144,7 +144,7 @@ export function usePushNotifications() {
 
       const subscriptionJson = subscription.toJSON();
 
-      // Save subscription to database
+      // Save subscription to database (only one per user)
       const { error } = await supabase
         .from('push_subscriptions')
         .upsert({
@@ -153,7 +153,7 @@ export function usePushNotifications() {
           p256dh: subscriptionJson.keys?.p256dh || '',
           auth: subscriptionJson.keys?.auth || ''
         }, {
-          onConflict: 'user_id,endpoint'
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
