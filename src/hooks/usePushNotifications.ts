@@ -268,12 +268,18 @@ export function usePushNotifications() {
           body: 'Se você recebeu isso, as notificações estão funcionando neste dispositivo.',
           url: '/my-tasks',
           requireInteraction: true,
-          // Dispara push E cria notificação no sininho
+          // Cria notificação no sininho (o push é disparado automaticamente pelo backend ao inserir)
           createInApp: true,
+          inAppType: 'test',
+          inAppLink: '/my-tasks',
+          inAppData: { url: '/my-tasks', source: 'test' },
         },
       });
 
       if (error) throw error;
+
+      // Atualiza o sino imediatamente (sem depender de realtime)
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
 
       toast.success('Notificação de teste enviada! Verifique o push e o sininho.');
     } catch (error: any) {

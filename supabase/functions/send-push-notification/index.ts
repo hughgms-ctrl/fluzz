@@ -76,37 +76,8 @@ serve(async (req) => {
       );
     }
 
-    // Best-effort de-dupe (prevents double sends when the same action triggers twice)
-    const nowMs = Date.now();
-    const DEDUPE_WINDOW_MS = 8000;
-
-    const globalKey = '__recentPushSends';
-    const recentPushSends: Map<string, number> = ((globalThis as any)[globalKey] ??=
-      new Map<string, number>());
-
-    // Light cleanup to avoid unbounded growth
-    for (const [k, t] of recentPushSends.entries()) {
-      if (nowMs - t > DEDUPE_WINDOW_MS) recentPushSends.delete(k);
-    }
-
-    const dedupeKeyForUser = (uid: string) => `${uid}|${title}|${body}|${url ?? ''}`;
-
-    const effectiveUserIds = targetUserIds.filter((uid) => {
-      const k = dedupeKeyForUser(uid);
-      const last = recentPushSends.get(k);
-      if (last && nowMs - last < DEDUPE_WINDOW_MS) return false;
-      recentPushSends.set(k, nowMs);
-      return true;
-    });
-
-    if (effectiveUserIds.length === 0) {
-      console.log('Deduped push request (skipping send)');
-      return new Response(
-        JSON.stringify({ message: 'Deduped push request', sent: 0, failed: 0, total: 0 }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    // Optional: create in-app notifications (so it appears in the bell inside the app)
+    // If requested, create in-app notifications (bell) only.
+    // Push delivery is handled by the DB trigger on notifications inserts to avoid double-push.
     if (createInApp) {
       try {
         const { data: members, error: membersError } = await supabase
@@ -139,27 +110,81 @@ serve(async (req) => {
         const { error: inAppError } = await supabase.from('notifications').insert(rows);
         if (inAppError) {
           console.error('Error creating in-app notifications:', inAppError);
-        } else {
-          console.log(`Created ${rows.length} in-app notifications`);
+          return new Response(
+            JSON.stringify({ error: 'Failed to create in-app notification(s)' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
+
+        console.log(`Created ${rows.length} in-app notifications`);
+
+        return new Response(
+          JSON.stringify({ message: 'In-app notification(s) created', created: rows.length }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       } catch (e) {
         console.error('Unexpected error creating in-app notifications:', e);
+        return new Response(
+          JSON.stringify({ error: 'Unexpected error creating in-app notification(s)' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 
+    // Best-effort de-dupe (prevents double sends when the same action triggers twice)
+    const nowMs = Date.now();
+    const DEDUPE_WINDOW_MS = 8000;
+
+    const globalKey = '__recentPushSends';
+    const recentPushSends: Map<string, number> = ((globalThis as any)[globalKey] ??=
+      new Map<string, number>());
+
+    // Light cleanup to avoid unbounded growth
+    for (const [k, t] of recentPushSends.entries()) {
+      if (nowMs - t > DEDUPE_WINDOW_MS) recentPushSends.delete(k);
+    }
+
+    const dedupeKeyForUser = (uid: string) => `${uid}|${title}|${body}|${url ?? ''}`;
+
+    const effectiveUserIds = targetUserIds.filter((uid) => {
+      const k = dedupeKeyForUser(uid);
+      const last = recentPushSends.get(k);
+      if (last && nowMs - last < DEDUPE_WINDOW_MS) return false;
+      recentPushSends.set(k, nowMs);
+      return true;
+    });
+
+    if (effectiveUserIds.length === 0) {
+      console.log('Deduped push request (skipping send)');
+      return new Response(
+        JSON.stringify({ message: 'Deduped push request', sent: 0, failed: 0, total: 0 }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    type DbSub = {
+      id: string;
+      user_id: string;
+      endpoint: string;
+      p256dh: string;
+      auth: string;
+    };
+
     // Get subscriptions for target users
-    const { data: subscriptions, error: subError } = await supabase
+    const { data: subData, error: subError } = await supabase
       .from('push_subscriptions')
       .select('*')
-      .in('user_id', targetUserIds);
+      .in('user_id', effectiveUserIds);
 
     if (subError) {
       console.error('Error fetching subscriptions:', subError);
       throw subError;
     }
 
-    if (!subscriptions || subscriptions.length === 0) {
-      console.log('No subscriptions found for users:', targetUserIds);
+    const subscriptions = (subData as DbSub[]) ?? [];
+
+    if (subscriptions.length === 0) {
+      console.log('No subscriptions found for users:', effectiveUserIds);
       return new Response(
         JSON.stringify({ message: 'No subscriptions found', sent: 0 }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
