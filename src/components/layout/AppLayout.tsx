@@ -7,10 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { RotateCw, User } from "lucide-react";
+import { User } from "lucide-react";
 import { AIFloatingButton } from "@/components/ai/AIFloatingButton";
-import { toast } from "sonner";
-import { refreshApp } from "@/lib/pwa";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -57,14 +55,18 @@ export const AppLayout = ({
     return <Navigate to="/auth" replace />;
   }
   return <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div 
+        className="min-h-screen flex w-full bg-background"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header 
-            className="border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10"
+            className="border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 fixed left-0 right-0 z-50 h-14"
             style={{ 
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
-              minHeight: 'calc(3.5rem + env(safe-area-inset-top, 0px))'
+              top: 'env(safe-area-inset-top, 0px)',
+              paddingLeft: 'max(0.75rem, env(safe-area-inset-left, 0px))',
+              paddingRight: 'max(0.75rem, env(safe-area-inset-right, 0px))'
             }}
           >
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
@@ -89,20 +91,6 @@ export const AppLayout = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
-                  toast.message("Recarregando...");
-                  setTimeout(() => {
-                    void refreshApp();
-                  }, 50);
-                }}
-                className="h-8 w-8 sm:h-9 sm:w-9"
-              >
-                <RotateCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="sr-only">Atualizar app</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
                 onClick={() => navigate("/profile")}
                 className="h-8 w-8 sm:h-9 sm:w-9"
               >
@@ -111,6 +99,8 @@ export const AppLayout = ({
               </Button>
             </div>
           </header>
+          {/* Spacer para compensar o header fixo */}
+          <div className="h-14 shrink-0" />
           <main className="flex-1 p-3 sm:p-6 animate-fade-in min-w-0">
             {children}
           </main>
