@@ -57,10 +57,16 @@ export const AppLayout = ({
     return <Navigate to="/auth" replace />;
   }
   return <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 sm:h-16 border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10">
+          <header 
+            className="border-b border-border bg-card flex items-center justify-between px-3 sm:px-6 sticky top-0 z-10"
+            style={{ 
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+              minHeight: 'calc(3.5rem + env(safe-area-inset-top, 0px))'
+            }}
+          >
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <SidebarTrigger />
               <h1 className="text-base sm:text-xl font-semibold text-primary truncate">Fluzz</h1>
