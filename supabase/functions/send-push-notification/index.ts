@@ -14,6 +14,11 @@ interface PushNotificationRequest {
   url?: string;
   tag?: string;
   requireInteraction?: boolean;
+  /** When true, also creates an in-app notification in the database (service role). */
+  createInApp?: boolean;
+  inAppType?: string;
+  inAppLink?: string;
+  inAppData?: unknown;
 }
 
 serve(async (req) => {
@@ -38,18 +43,78 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { userId, userIds, title, body, url, tag, requireInteraction }: PushNotificationRequest = await req.json();
+    const {
+      userId,
+      userIds,
+      title,
+      body,
+      url,
+      tag,
+      requireInteraction,
+      createInApp,
+      inAppType,
+      inAppLink,
+      inAppData,
+    }: PushNotificationRequest = await req.json();
 
-    console.log('Received push notification request:', { userId, userIds, title, body });
+    console.log('Received push notification request:', {
+      userId,
+      userIds,
+      title,
+      body,
+      createInApp,
+      inAppType,
+    });
 
     // Get target user IDs
     const targetUserIds = userIds || (userId ? [userId] : []);
-    
+
     if (targetUserIds.length === 0) {
       return new Response(
         JSON.stringify({ error: 'No target users specified' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Optional: create in-app notifications (so it appears in the bell inside the app)
+    if (createInApp) {
+      try {
+        const { data: members, error: membersError } = await supabase
+          .from('workspace_members')
+          .select('user_id, workspace_id')
+          .in('user_id', targetUserIds);
+
+        if (membersError) {
+          console.error('Error fetching workspace_members for in-app notifications:', membersError);
+        }
+
+        const workspaceByUser = new Map<string, string | null>();
+        for (const m of members || []) {
+          if (!workspaceByUser.has(m.user_id)) {
+            workspaceByUser.set(m.user_id, m.workspace_id);
+          }
+        }
+
+        const rows = targetUserIds.map((uid) => ({
+          user_id: uid,
+          workspace_id: workspaceByUser.get(uid) ?? null,
+          type: inAppType || 'general',
+          title,
+          message: body,
+          link: inAppLink || url || null,
+          data: (inAppData as any) ?? { url: url || '/' },
+          read: false,
+        }));
+
+        const { error: inAppError } = await supabase.from('notifications').insert(rows);
+        if (inAppError) {
+          console.error('Error creating in-app notifications:', inAppError);
+        } else {
+          console.log(`Created ${rows.length} in-app notifications`);
+        }
+      } catch (e) {
+        console.error('Unexpected error creating in-app notifications:', e);
+      }
     }
 
     // Get subscriptions for target users
