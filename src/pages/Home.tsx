@@ -69,8 +69,10 @@ export default function Home() {
   });
 
   // Filter only active (non-archived) projects that are NOT standalone folders and NOT drafts (pending_notifications = true means draft)
+  // Sort by updated_at descending to show most recently updated first
   const activeProjectsList = useMemo(() => 
-    projects?.filter(p => !p.archived && !p.is_standalone_folder && p.pending_notifications !== true) || [], 
+    (projects?.filter(p => !p.archived && !p.is_standalone_folder && p.pending_notifications !== true) || [])
+      .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime()), 
     [projects]
   );
 
