@@ -292,11 +292,29 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="seu@email.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required />
+                  <Input 
+                    id="login-email" 
+                    type="email" 
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    placeholder="seu@email.com" 
+                    value={loginEmail} 
+                    onChange={e => setLoginEmail(e.target.value)} 
+                    required 
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Senha</Label>
-                  <Input id="login-password" type="password" placeholder="••••••••" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
+                  <Input 
+                    id="login-password" 
+                    type="password" 
+                    autoComplete="current-password"
+                    placeholder="••••••••" 
+                    value={loginPassword} 
+                    onChange={e => setLoginPassword(e.target.value)} 
+                    required 
+                  />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Entrando..." : "Entrar"}
