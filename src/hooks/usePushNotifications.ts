@@ -33,13 +33,15 @@ export function usePushNotifications() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
   const [vapidKey, setVapidKey] = useState<string | null>(null);
-  
+  const [localEndpoint, setLocalEndpoint] = useState<string | null>(null);
+
   // Debounce ref to prevent duplicate calls
   const sendingRef = useRef(false);
 
   useEffect(() => {
     // Check if push notifications are supported
-    const supported = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+    const supported =
+      'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
     setIsSupported(supported);
 
     if (supported) {
@@ -71,6 +73,8 @@ export function usePushNotifications() {
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
+        setLocalEndpoint(subscription.endpoint);
+
         // Check if subscription exists in database
         const { data, error } = await supabase
           .from('push_subscriptions')
@@ -83,10 +87,12 @@ export function usePushNotifications() {
         if (error) throw error;
         setIsSubscribed((data?.length ?? 0) > 0);
       } else {
+        setLocalEndpoint(null);
         setIsSubscribed(false);
       }
     } catch (error) {
       console.error('Error checking subscription:', error);
+      setLocalEndpoint(null);
       setIsSubscribed(false);
     }
   }, [user]);
@@ -162,13 +168,15 @@ export function usePushNotifications() {
       // Subscribe to push
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey
+        applicationServerKey: applicationServerKey,
       });
 
       const subscriptionJson = subscription.toJSON();
       const endpoint = subscriptionJson.endpoint!;
       const p256dh = subscriptionJson.keys?.p256dh || '';
       const auth = subscriptionJson.keys?.auth || '';
+
+      setLocalEndpoint(endpoint);
 
       // Save subscription to database (one per user+device)
       const { data: existingRows, error: existingError } = await supabase
@@ -199,7 +207,6 @@ export function usePushNotifications() {
       setIsSubscribed(true);
       toast.success('Notificações push ativadas!');
       return true;
-
     } catch (error: any) {
       console.error('Error subscribing to push:', error);
       toast.error(getSubscribeErrorMessage(error));
@@ -230,10 +237,10 @@ export function usePushNotifications() {
           .eq('endpoint', subscription.endpoint);
       }
 
+      setLocalEndpoint(null);
       setIsSubscribed(false);
       toast.success('Notificações push desativadas');
       return true;
-
     } catch (error: any) {
       console.error('Error unsubscribing from push:', error);
       toast.error('Erro ao desativar notificações');
@@ -245,7 +252,7 @@ export function usePushNotifications() {
 
   const sendTestNotification = async () => {
     if (!user) return;
-    
+
     // Prevent duplicate calls (React StrictMode / double-renders)
     if (sendingRef.current) {
       console.log('[Push] Ignoring duplicate sendTestNotification call');
@@ -257,30 +264,64 @@ export function usePushNotifications() {
       const { error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           userId: user.id,
-          title: '⏰ Tarefa Atrasada (Teste)',
-          body: 'Você tem uma tarefa atrasada que precisa de atenção!',
+          title: '🔔 Push de teste',
+          body: 'Se você recebeu isso, o push está funcionando neste dispositivo.',
           url: '/my-tasks',
-          tag: 'task-reminder-test',
+          // Não enviar tag fixa aqui (em alguns desktops pode “substituir” e parecer que não chegou)
           requireInteraction: true,
-          createInApp: true,
-          inAppType: 'task_overdue',
-          inAppLink: '/my-tasks',
-          inAppData: { test: true },
+          // Teste deve ser só push (sem criar item no sininho)
+          createInApp: false,
         },
       });
 
       if (error) throw error;
 
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      toast.success('Notificação de teste enviada! Verifique o sino e sua tela.');
+      toast.success('Push de teste enviado!');
     } catch (error: any) {
       console.error('Error sending test notification:', error);
-      toast.error('Erro ao enviar notificação de teste');
+      toast.error('Erro ao enviar push de teste');
     } finally {
-      // Reset after a delay to allow for legitimate re-sends
       setTimeout(() => {
         sendingRef.current = false;
       }, 2000);
+    }
+  };
+
+  const sendLocalTestNotification = async () => {
+    if (!isSupported) {
+      toast.error('Notificações push não são suportadas neste navegador');
+      return;
+    }
+
+    if (Notification.permission !== 'granted') {
+      toast.error('Permita notificações primeiro e tente novamente.');
+      return;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+
+      const options: NotificationOptions = {
+        body: 'Se isso apareceu, o desktop consegue exibir notificações (o problema é a entrega do push).',
+        icon: '/icon-192.png',
+        badge: '/favicon.png',
+        tag: `local-test-${Date.now()}`,
+        data: { url: '/my-tasks' },
+      };
+
+      const active = registration.active ?? navigator.serviceWorker.controller ?? null;
+
+      if (active) {
+        active.postMessage({ type: 'SHOW_NOTIFICATION', title: '✅ Teste local', options });
+      } else {
+        // Fallback: tries direct Notification (some browsers still show it)
+        new Notification('✅ Teste local', options);
+      }
+
+      toast.success('Teste local disparado. Veja se apareceu uma notificação do sistema.');
+    } catch (error) {
+      console.error('Error sending local test notification:', error);
+      toast.error('Não foi possível disparar o teste local');
     }
   };
 
@@ -289,8 +330,13 @@ export function usePushNotifications() {
     isSubscribed,
     isLoading,
     isSupported,
+    localEndpoint,
     subscribe,
     unsubscribe,
-    sendTestNotification
+    sendTestNotification,
+    sendLocalTestNotification,
+    // kept for compatibility (some parts of the app may rely on this)
+    queryClient,
   };
 }
+

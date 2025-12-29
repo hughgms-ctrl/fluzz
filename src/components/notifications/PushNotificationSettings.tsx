@@ -1,10 +1,15 @@
-import { Bell, BellOff, BellRing, Loader2, TestTube } from 'lucide-react';
+import { Bell, BellOff, BellRing, Loader2, TestTube, LaptopMinimal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
+function endpointPreview(endpoint: string | null) {
+  if (!endpoint) return '—';
+  const suffix = endpoint.slice(-14);
+  return `…${suffix}`;
+}
 
 export function PushNotificationSettings() {
   const navigate = useNavigate();
@@ -19,11 +24,12 @@ export function PushNotificationSettings() {
     isSubscribed,
     isLoading,
     isSupported,
+    localEndpoint,
     subscribe,
     unsubscribe,
-    sendTestNotification
+    sendTestNotification,
+    sendLocalTestNotification,
   } = usePushNotifications();
-
 
   const handleRequestPermission = async () => {
     if (!isSupported) {
@@ -93,7 +99,6 @@ export function PushNotificationSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Show activation prompt when not subscribed */}
         {!isSubscribed && (
           <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg space-y-3">
             <div className="flex items-start gap-3">
@@ -101,45 +106,53 @@ export function PushNotificationSettings() {
               <div className="flex-1">
                 <p className="font-medium text-foreground">Ative as notificações</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Clique no botão abaixo para ativar notificações push e receber alertas de tarefas e atualizações importantes.
+                  Clique no botão abaixo para ativar notificações push e receber alertas de tarefas e
+                  atualizações importantes.
                 </p>
               </div>
             </div>
-            <Button 
-              onClick={subscribe}
-              className="w-full"
-              variant="default"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Bell className="h-4 w-4 mr-2" />
-              )}
-              Ativar Notificações Push
-            </Button>
+
+            <div className="space-y-2">
+              <Button
+                onClick={subscribe}
+                className="w-full"
+                variant="default"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Bell className="h-4 w-4 mr-2" />
+                )}
+                Ativar Notificações Push
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleRequestPermission}
+                disabled={isLoading}
+              >
+                Solicitar permissão
+              </Button>
+            </div>
           </div>
         )}
 
-        {/* Subscription Status */}
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium">Status</p>
             <p className="text-sm text-muted-foreground">
-              {permission === 'denied' 
+              {permission === 'denied'
                 ? 'Notificações bloqueadas pelo navegador'
-                : isSubscribed 
+                : isSubscribed
                   ? 'Notificações ativadas ✓'
                   : 'Notificações desativadas'}
             </p>
           </div>
-          
+
           {isSubscribed && (
-            <Button
-              variant="outline"
-              onClick={unsubscribe}
-              disabled={isLoading}
-            >
+            <Button variant="outline" onClick={unsubscribe} disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
@@ -151,33 +164,57 @@ export function PushNotificationSettings() {
         </div>
 
         {isSubscribed && (
-          <div className="pt-4 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={sendTestNotification}
-            >
-              <TestTube className="h-4 w-4 mr-2" />
-              Enviar notificação de teste
-            </Button>
+          <div className="pt-4 border-t space-y-3">
+            <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+              <div className="flex items-center gap-2 text-foreground">
+                <LaptopMinimal className="h-4 w-4" />
+                <span className="font-medium">Diagnóstico deste dispositivo</span>
+              </div>
+              <p>
+                <span className="text-foreground">Permissão:</span> {permission}
+              </p>
+              <p>
+                <span className="text-foreground">Subscription:</span> {endpointPreview(localEndpoint)}
+              </p>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button variant="outline" size="sm" onClick={sendLocalTestNotification}>
+                Teste local (sem push)
+              </Button>
+
+              <Button variant="outline" size="sm" onClick={sendTestNotification}>
+                <TestTube className="h-4 w-4 mr-2" />
+                Enviar push de teste
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Se o “Teste local” aparecer no desktop, mas o “push de teste” não, o bloqueio costuma
+              ser do sistema/navegador (ex.: Foco/Não perturbe, notificações do Chrome/Edge
+              desativadas no Windows/macOS).
+            </p>
           </div>
         )}
 
         {permission === 'denied' && (
           <div className="p-3 bg-destructive/10 rounded-md text-sm space-y-2">
-            <p className="text-destructive font-medium">
-              Notificações bloqueadas
-            </p>
-            <p className="text-muted-foreground">
-              Para liberar as notificações:
-            </p>
+            <p className="text-destructive font-medium">Notificações bloqueadas</p>
+            <p className="text-muted-foreground">Para liberar as notificações:</p>
             <div className="text-muted-foreground space-y-3 text-xs">
               <div>
                 <p className="font-medium text-foreground mb-1">💻 No computador:</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li><strong>Chrome/Edge:</strong> Clique no ícone à esquerda da URL → Permissões → Notificações → Permitir</li>
-                  <li><strong>Firefox:</strong> Clique no cadeado → Conexão segura → Permissões</li>
-                  <li><strong>Safari:</strong> Safari → Preferências → Sites → Notificações</li>
+                  <li>
+                    <strong>Chrome/Edge:</strong> Clique no ícone à esquerda da URL → Permissões →
+                    Notificações → Permitir
+                  </li>
+                  <li>
+                    <strong>Firefox:</strong> Clique no cadeado → Conexão segura → Permissões
+                  </li>
+                  <li>
+                    <strong>Safari:</strong> Safari → Preferências → Sites → Notificações
+                  </li>
                 </ul>
               </div>
               <div>
@@ -191,7 +228,10 @@ export function PushNotificationSettings() {
               <div>
                 <p className="font-medium text-foreground mb-1">🍎 No iPhone (iOS 16.4+):</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Primeiro, adicione o app à tela inicial (Compartilhar → Adicionar à Tela de Início)</li>
+                  <li>
+                    Primeiro, adicione o app à tela inicial (Compartilhar → Adicionar à Tela de
+                    Início)
+                  </li>
                   <li>Abra o app pela tela inicial</li>
                   <li>Vá em Ajustes → Notificações → [Nome do App] → Permitir</li>
                 </ul>
@@ -206,3 +246,4 @@ export function PushNotificationSettings() {
     </Card>
   );
 }
+
