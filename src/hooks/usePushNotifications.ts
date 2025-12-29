@@ -145,18 +145,36 @@ export function usePushNotifications() {
       const subscriptionJson = subscription.toJSON();
 
       // Save subscription to database (one per user+device)
-      const { error } = await supabase
+      // First try to update existing subscription for this endpoint
+      const { data: existing } = await supabase
         .from('push_subscriptions')
-        .upsert({
-          user_id: user.id,
-          endpoint: subscriptionJson.endpoint!,
-          p256dh: subscriptionJson.keys?.p256dh || '',
-          auth: subscriptionJson.keys?.auth || ''
-        }, {
-          onConflict: 'user_id,endpoint'
-        });
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('endpoint', subscriptionJson.endpoint!)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (existing) {
+        // Update existing subscription
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .update({
+            p256dh: subscriptionJson.keys?.p256dh || '',
+            auth: subscriptionJson.keys?.auth || ''
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        // Insert new subscription
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .insert({
+            user_id: user.id,
+            endpoint: subscriptionJson.endpoint!,
+            p256dh: subscriptionJson.keys?.p256dh || '',
+            auth: subscriptionJson.keys?.auth || ''
+          });
+        if (error) throw error;
+      }
 
       setIsSubscribed(true);
       toast.success('Notificações push ativadas!');
