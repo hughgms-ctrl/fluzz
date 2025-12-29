@@ -264,22 +264,21 @@ export function usePushNotifications() {
       const { error } = await supabase.functions.invoke('send-push-notification', {
         body: {
           userId: user.id,
-          title: '🔔 Push de teste',
-          body: 'Se você recebeu isso, o push está funcionando neste dispositivo.',
+          title: '🔔 Notificação de teste',
+          body: 'Se você recebeu isso, as notificações estão funcionando neste dispositivo.',
           url: '/my-tasks',
-          // Não enviar tag fixa aqui (em alguns desktops pode “substituir” e parecer que não chegou)
           requireInteraction: true,
-          // Teste deve ser só push (sem criar item no sininho)
-          createInApp: false,
+          // Dispara push E cria notificação no sininho
+          createInApp: true,
         },
       });
 
       if (error) throw error;
 
-      toast.success('Push de teste enviado!');
+      toast.success('Notificação de teste enviada! Verifique o push e o sininho.');
     } catch (error: any) {
       console.error('Error sending test notification:', error);
-      toast.error('Erro ao enviar push de teste');
+      toast.error('Erro ao enviar notificação de teste');
     } finally {
       setTimeout(() => {
         sendingRef.current = false;
@@ -337,4 +336,3 @@ export function usePushNotifications() {
     queryClient,
   };
 }
-

@@ -179,7 +179,7 @@ export function PushNotificationSettings() {
 
             <Button variant="outline" size="sm" className="w-full" onClick={sendTestNotification}>
               <TestTube className="h-4 w-4 mr-2" />
-              Enviar push de teste
+              Enviar notificação de teste
             </Button>
           </div>
         )}
