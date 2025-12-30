@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { AdminProvider } from "@/contexts/AdminContext";
+import { AdminSubdomainGuard } from "@/components/admin/AdminSubdomainGuard";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -59,51 +60,53 @@ const App = () => (
         <AuthProvider>
           <WorkspaceProvider>
             <AdminProvider>
-              <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/home" element={<Home />} />
-              <Route path="/workspace" element={<Workspace />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/projects/:id" element={<ProjectDetail />} />
-              <Route path="/my-tasks" element={<MyTasks />} />
-              <Route path="/tasks/:id" element={<TaskDetail />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/workspace/culture" element={<Culture />} />
-              <Route path="/workspace/culture/edit" element={<CultureForm />} />
-              <Route path="/workspace/vision" element={<Vision />} />
-              <Route path="/workspace/vision/edit" element={<VisionForm />} />
-              <Route path="/workspace/processes" element={<Processes />} />
-              <Route path="/workspace/processes/new" element={<ProcessForm />} />
-              <Route path="/workspace/processes/:id/edit" element={<ProcessForm />} />
-              <Route path="/workspace/getting-started" element={<GettingStarted />} />
-              <Route path="/workspace/getting-started/new" element={<GettingStartedForm />} />
-              <Route path="/workspace/getting-started/:id" element={<GettingStartedDetail />} />
-              <Route path="/workspace/getting-started/:id/edit" element={<GettingStartedForm />} />
-              <Route path="/positions" element={<Positions />} />
-              <Route path="/positions/:id" element={<PositionDetail />} />
-              <Route path="/inventory" element={<Inventory />} />
-            <Route path="/briefings" element={<BriefingRepository />} />
-            <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
-            <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
-            <Route path="/workspace/setup" element={<WorkspaceSetup />} />
-            <Route path="/team" element={<TeamManagement />} />
-            <Route path="/team/:userId" element={<TeamMemberPermissions />} />
-              <Route path="/workspaces" element={<WorkspaceManagement />} />
-              <Route path="/ai-assistant" element={<AIAssistant />} />
-              <Route path="/workload" element={<WorkloadOverview />} />
-              <Route path="/install" element={<Install />} />
-              <Route path="/admin" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/users" element={<AdminUsers />} />
-              <Route path="/admin/plans" element={<AdminPlans />} />
-              <Route path="/admin/team" element={<AdminTeam />} />
-              <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <AdminSubdomainGuard>
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/home" element={<Home />} />
+                  <Route path="/workspace" element={<Workspace />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/projects/:id" element={<ProjectDetail />} />
+                  <Route path="/my-tasks" element={<MyTasks />} />
+                  <Route path="/tasks/:id" element={<TaskDetail />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/workspace/culture" element={<Culture />} />
+                  <Route path="/workspace/culture/edit" element={<CultureForm />} />
+                  <Route path="/workspace/vision" element={<Vision />} />
+                  <Route path="/workspace/vision/edit" element={<VisionForm />} />
+                  <Route path="/workspace/processes" element={<Processes />} />
+                  <Route path="/workspace/processes/new" element={<ProcessForm />} />
+                  <Route path="/workspace/processes/:id/edit" element={<ProcessForm />} />
+                  <Route path="/workspace/getting-started" element={<GettingStarted />} />
+                  <Route path="/workspace/getting-started/new" element={<GettingStartedForm />} />
+                  <Route path="/workspace/getting-started/:id" element={<GettingStartedDetail />} />
+                  <Route path="/workspace/getting-started/:id/edit" element={<GettingStartedForm />} />
+                  <Route path="/positions" element={<Positions />} />
+                  <Route path="/positions/:id" element={<PositionDetail />} />
+                  <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/briefings" element={<BriefingRepository />} />
+                  <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
+                  <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
+                  <Route path="/workspace/setup" element={<WorkspaceSetup />} />
+                  <Route path="/team" element={<TeamManagement />} />
+                  <Route path="/team/:userId" element={<TeamMemberPermissions />} />
+                  <Route path="/workspaces" element={<WorkspaceManagement />} />
+                  <Route path="/ai-assistant" element={<AIAssistant />} />
+                  <Route path="/workload" element={<WorkloadOverview />} />
+                  <Route path="/install" element={<Install />} />
+                  <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin/users" element={<AdminUsers />} />
+                  <Route path="/admin/plans" element={<AdminPlans />} />
+                  <Route path="/admin/team" element={<AdminTeam />} />
+                  <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AdminSubdomainGuard>
             </AdminProvider>
           </WorkspaceProvider>
         </AuthProvider>
