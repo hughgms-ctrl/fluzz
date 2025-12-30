@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -23,24 +23,56 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const checkIfUserBlocked = useCallback(async (currentUser: User | null) => {
+    if (!currentUser) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke("check-user-blocked");
+      
+      if (error) {
+        console.error("Error checking blocked status:", error);
+        return;
+      }
+
+      if (data?.blocked) {
+        toast.error(data.reason || "Sua conta foi bloqueada. Entre em contato com o suporte.");
+        await supabase.auth.signOut();
+        navigate("/auth");
+      }
+    } catch (error) {
+      console.error("Error checking blocked status:", error);
+    }
+  }, [navigate]);
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Check if user is blocked on login
+        if (event === "SIGNED_IN" && session?.user) {
+          // Use setTimeout to avoid blocking the auth flow
+          setTimeout(() => checkIfUserBlocked(session.user), 100);
+        }
       }
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      
+      // Check if existing user is blocked
+      if (session?.user) {
+        checkIfUserBlocked(session.user);
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [checkIfUserBlocked]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {

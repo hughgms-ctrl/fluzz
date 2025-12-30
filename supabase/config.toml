@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.check-incomplete-profiles]
 verify_jwt = false
+
+[functions.admin-get-user-by-email]
+verify_jwt = true
+
+[functions.admin-setup-super-admin]
+verify_jwt = true
+
+[functions.check-user-blocked]
+verify_jwt = false

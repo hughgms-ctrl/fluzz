@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
+import { UserSubscriptionPanel } from "@/components/subscription/UserSubscriptionPanel";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -369,6 +370,8 @@ export default function Profile() {
         </Card>
 
         <PushNotificationSettings />
+
+        <UserSubscriptionPanel />
       </div>
     </AppLayout>
   );
