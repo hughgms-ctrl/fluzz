@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["admin_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -51,6 +78,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      blocked_emails: {
+        Row: {
+          blocked_by: string | null
+          blocked_reason: string | null
+          created_at: string
+          email: string
+          id: string
+        }
+        Insert: {
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          email: string
+          id?: string
+        }
+        Update: {
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+        }
+        Relationships: []
       }
       briefings: {
         Row: {
@@ -596,6 +647,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_settings: {
+        Row: {
+          api_key_configured: boolean
+          created_at: string
+          id: string
+          is_active: boolean
+          provider: string
+          settings: Json | null
+          updated_at: string
+          webhook_secret_configured: boolean
+        }
+        Insert: {
+          api_key_configured?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider: string
+          settings?: Json | null
+          updated_at?: string
+          webhook_secret_configured?: boolean
+        }
+        Update: {
+          api_key_configured?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          provider?: string
+          settings?: Json | null
+          updated_at?: string
+          webhook_secret_configured?: boolean
+        }
+        Relationships: []
       }
       positions: {
         Row: {
@@ -1199,6 +1283,51 @@ export type Database = {
           },
         ]
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          features: Json | null
+          free_users_limit: number
+          id: string
+          is_active: boolean
+          is_workspace_owner_free: boolean
+          name: string
+          price_per_user: number
+          price_per_workspace: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          features?: Json | null
+          free_users_limit?: number
+          id?: string
+          is_active?: boolean
+          is_workspace_owner_free?: boolean
+          name: string
+          price_per_user?: number
+          price_per_workspace?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          features?: Json | null
+          free_users_limit?: number
+          id?: string
+          is_active?: boolean
+          is_workspace_owner_free?: boolean
+          name?: string
+          price_per_user?: number
+          price_per_workspace?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       subtasks: {
         Row: {
           completed: boolean | null
@@ -1607,6 +1736,57 @@ export type Database = {
           },
         ]
       }
+      user_account_management: {
+        Row: {
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
+          can_access_subscriptions: boolean
+          created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["user_account_status"]
+          subscription_panel_enabled_at: string | null
+          subscription_panel_enabled_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          can_access_subscriptions?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["user_account_status"]
+          subscription_panel_enabled_at?: string | null
+          subscription_panel_enabled_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          can_access_subscriptions?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["user_account_status"]
+          subscription_panel_enabled_at?: string | null
+          subscription_panel_enabled_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_edit_analytics: boolean | null
@@ -1731,6 +1911,93 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions: {
+        Row: {
+          canceled_at: string | null
+          created_at: string
+          current_amount: number
+          current_period_end: string | null
+          current_period_start: string | null
+          discount_by: string | null
+          discount_percentage: number | null
+          discount_reason: string | null
+          exempt_by: string | null
+          exempt_reason: string | null
+          id: string
+          is_exempt: boolean
+          payment_provider: string | null
+          payment_provider_customer_id: string | null
+          payment_provider_subscription_id: string | null
+          plan_id: string | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          canceled_at?: string | null
+          created_at?: string
+          current_amount?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          discount_by?: string | null
+          discount_percentage?: number | null
+          discount_reason?: string | null
+          exempt_by?: string | null
+          exempt_reason?: string | null
+          id?: string
+          is_exempt?: boolean
+          payment_provider?: string | null
+          payment_provider_customer_id?: string | null
+          payment_provider_subscription_id?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          canceled_at?: string | null
+          created_at?: string
+          current_amount?: number
+          current_period_end?: string | null
+          current_period_start?: string | null
+          discount_by?: string | null
+          discount_percentage?: number | null
+          discount_reason?: string | null
+          exempt_by?: string | null
+          exempt_reason?: string | null
+          id?: string
+          is_exempt?: boolean
+          payment_provider?: string | null
+          payment_provider_customer_id?: string | null
+          payment_provider_subscription_id?: string | null
+          plan_id?: string | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_invites: {
         Row: {
           accepted: boolean | null
@@ -1850,6 +2117,14 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_admin_stats: {
+        Args: { _user_id: string }
+        Returns: {
+          total_users_in_workspaces: number
+          workspaces_member: number
+          workspaces_owned: number
+        }[]
+      }
       get_user_by_email: {
         Args: { _email: string }
         Returns: {
@@ -1871,10 +2146,14 @@ export type Database = {
         }[]
       }
       get_user_workspace_id: { Args: { _user_id: string }; Returns: string }
+      is_email_blocked: { Args: { _email: string }; Returns: boolean }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_project_owner: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_user_blocked: { Args: { _user_id: string }; Returns: boolean }
       user_belongs_to_workspace: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -1900,6 +2179,14 @@ export type Database = {
       }
     }
     Enums: {
+      admin_role: "super_admin" | "admin" | "employee"
+      subscription_status:
+        | "active"
+        | "trial"
+        | "canceled"
+        | "past_due"
+        | "exempt"
+      user_account_status: "active" | "blocked" | "deleted"
       workspace_role: "admin" | "gestor" | "membro"
     }
     CompositeTypes: {
@@ -2028,6 +2315,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["super_admin", "admin", "employee"],
+      subscription_status: [
+        "active",
+        "trial",
+        "canceled",
+        "past_due",
+        "exempt",
+      ],
+      user_account_status: ["active", "blocked", "deleted"],
       workspace_role: ["admin", "gestor", "membro"],
     },
   },
