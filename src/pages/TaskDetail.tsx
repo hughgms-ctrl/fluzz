@@ -507,6 +507,8 @@ export default function TaskDetail() {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editDescription, setEditDescription] = useState("");
   const [isEditingProject, setIsEditingProject] = useState(false);
+  const [isEditingDocumentation, setIsEditingDocumentation] = useState(false);
+  const [editDocumentation, setEditDocumentation] = useState("");
   
   const [editedTask, setEditedTask] = useState({
     title: "",
@@ -837,7 +839,7 @@ export default function TaskDetail() {
   });
 
   const inlineUpdateMutation = useMutation({
-    mutationFn: async (updates: { title?: string; description?: string; project_id?: string | null }) => {
+    mutationFn: async (updates: { title?: string; description?: string; documentation?: string; project_id?: string | null }) => {
       const { error } = await supabase
         .from("tasks")
         .update(updates)
@@ -1480,14 +1482,36 @@ export default function TaskDetail() {
                       placeholder="Adicione documentação adicional..."
                       className="mt-2 min-h-[120px] resize-y"
                     />
+                  ) : isEditingDocumentation ? (
+                    <Textarea
+                      value={editDocumentation}
+                      onChange={(e) => setEditDocumentation(e.target.value)}
+                      onBlur={() => {
+                        if (editDocumentation !== task.documentation) {
+                          inlineUpdateMutation.mutate({ documentation: editDocumentation });
+                        }
+                        setIsEditingDocumentation(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setEditDocumentation(task.documentation || "");
+                          setIsEditingDocumentation(false);
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Adicione documentação adicional..."
+                      className="mt-2 min-h-[120px] resize-y"
+                    />
                   ) : (
-                    task.documentation ? (
-                      <div className="text-sm text-foreground p-3 bg-muted/50 rounded mt-2 whitespace-pre-wrap">
-                        {renderDocumentation(task.documentation)}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground mt-2">Sem documentação</p>
-                    )
+                    <div 
+                      className="text-sm text-foreground p-3 bg-muted/50 rounded mt-2 whitespace-pre-wrap cursor-pointer hover:bg-muted/70"
+                      onDoubleClick={() => {
+                        setEditDocumentation(task.documentation || "");
+                        setIsEditingDocumentation(true);
+                      }}
+                    >
+                      {task.documentation ? renderDocumentation(task.documentation) : <span className="text-muted-foreground">Sem documentação (duplo clique para editar)</span>}
+                    </div>
                   )}
                 </div>
 
