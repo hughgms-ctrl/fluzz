@@ -6,8 +6,8 @@ import { useAdmin } from "@/contexts/AdminContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Lock, Mail } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Shield, Lock, Mail, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -15,15 +15,33 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading, checkAdminStatus } = useAdmin();
 
   useEffect(() => {
+    checkIfAdminExists();
+  }, []);
+
+  useEffect(() => {
     if (user && !adminLoading && isAdmin) {
-      navigate("/admin");
+      navigate("/admin/dashboard");
     }
   }, [user, isAdmin, adminLoading, navigate]);
+
+  const checkIfAdminExists = async () => {
+    const { data, error } = await supabase
+      .from("admin_users")
+      .select("id")
+      .eq("role", "super_admin")
+      .limit(1);
+
+    if (!error) {
+      setHasAdmin(data && data.length > 0);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +75,47 @@ const AdminLogin = () => {
 
       await checkAdminStatus();
       toast.success("Login realizado com sucesso!");
-      navigate("/admin");
+      navigate("/admin/dashboard");
     } catch {
       toast.error("Erro ao fazer login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSetupSuperAdmin = async () => {
+    if (!user) {
+      toast.error("Você precisa estar logado para se configurar como super admin");
+      return;
+    }
+
+    setSetupLoading(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-setup-super-admin");
+
+      if (error) {
+        toast.error("Erro ao configurar super admin");
+        console.error("Setup error:", error);
+        setSetupLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
+        setSetupLoading(false);
+        return;
+      }
+
+      toast.success("Super administrador configurado com sucesso!");
+      await checkAdminStatus();
+      setHasAdmin(true);
+      navigate("/admin/dashboard");
+    } catch (error) {
+      console.error("Error setting up super admin:", error);
+      toast.error("Erro ao configurar super admin");
+    } finally {
+      setSetupLoading(false);
     }
   };
 
@@ -118,6 +172,35 @@ const AdminLogin = () => {
             </Button>
           </form>
         </CardContent>
+        
+        {hasAdmin === false && user && (
+          <CardFooter className="flex flex-col border-t pt-6">
+            <p className="text-sm text-muted-foreground mb-4 text-center">
+              Nenhum super administrador configurado. 
+              <br />
+              Você pode se configurar como o primeiro admin.
+            </p>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2"
+              onClick={handleSetupSuperAdmin}
+              disabled={setupLoading}
+            >
+              <UserPlus className="h-4 w-4" />
+              {setupLoading ? "Configurando..." : "Configurar como Super Admin"}
+            </Button>
+          </CardFooter>
+        )}
+        
+        {hasAdmin === false && !user && (
+          <CardFooter className="flex flex-col border-t pt-6">
+            <p className="text-sm text-muted-foreground text-center">
+              Nenhum super administrador configurado.
+              <br />
+              Faça login com sua conta Fluzz para se configurar como admin.
+            </p>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );
