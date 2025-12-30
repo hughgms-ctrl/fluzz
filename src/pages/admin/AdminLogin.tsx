@@ -22,26 +22,33 @@ const AdminLogin = () => {
   const { isAdmin, loading: adminLoading, checkAdminStatus } = useAdmin();
 
   useEffect(() => {
-    checkIfAdminExists();
-  }, []);
-
-  useEffect(() => {
-    if (user && !adminLoading && isAdmin) {
-      navigate("/admin/dashboard");
+    // Evita falso-negativo: a tabela admin_users é protegida e pode não retornar dados
+    // para usuários não-admin. Só verificamos existência de super admin após login.
+    if (!user) {
+      setHasAdmin(null);
+      return;
     }
-  }, [user, isAdmin, adminLoading, navigate]);
 
-  const checkIfAdminExists = async () => {
-    const { data, error } = await supabase
-      .from("admin_users")
-      .select("id")
-      .eq("role", "super_admin")
-      .limit(1);
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke(
+          "admin-check-super-admin-exists"
+        );
 
-    if (!error) {
-      setHasAdmin(data && data.length > 0);
-    }
-  };
+        if (error) {
+          console.error("Error checking super admin:", error);
+          setHasAdmin(null);
+          return;
+        }
+
+        setHasAdmin(Boolean(data?.hasSuperAdmin));
+      } catch (err) {
+        console.error("Error checking super admin:", err);
+        setHasAdmin(null);
+      }
+    })();
+  }, [user]);
+
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,15 +199,6 @@ const AdminLogin = () => {
           </CardFooter>
         )}
         
-        {hasAdmin === false && !user && (
-          <CardFooter className="flex flex-col border-t pt-6">
-            <p className="text-sm text-muted-foreground text-center">
-              Nenhum super administrador configurado.
-              <br />
-              Faça login com sua conta Fluzz para se configurar como admin.
-            </p>
-          </CardFooter>
-        )}
       </Card>
     </div>
   );
