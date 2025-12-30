@@ -16,16 +16,17 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [setupLoading, setSetupLoading] = useState(false);
-  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+  // Default to true to never show setup button unless explicitly confirmed no admin exists
+  const [hasAdmin, setHasAdmin] = useState<boolean>(true);
+  const [checkComplete, setCheckComplete] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading, checkAdminStatus } = useAdmin();
 
   useEffect(() => {
-    // Evita falso-negativo: a tabela admin_users é protegida e pode não retornar dados
-    // para usuários não-admin. Só verificamos existência de super admin após login.
+    // Only check after user logs in
     if (!user) {
-      setHasAdmin(null);
+      setCheckComplete(false);
       return;
     }
 
@@ -37,18 +38,22 @@ const AdminLogin = () => {
 
         if (error) {
           console.error("Error checking super admin:", error);
-          setHasAdmin(null);
+          // On error, assume admin exists (safer - don't show setup button)
+          setHasAdmin(true);
+          setCheckComplete(true);
           return;
         }
 
         setHasAdmin(Boolean(data?.hasSuperAdmin));
+        setCheckComplete(true);
       } catch (err) {
         console.error("Error checking super admin:", err);
-        setHasAdmin(null);
+        // On error, assume admin exists (safer - don't show setup button)
+        setHasAdmin(true);
+        setCheckComplete(true);
       }
     })();
   }, [user]);
-
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +79,7 @@ const AdminLogin = () => {
         .single();
 
       if (adminError || !adminData) {
-        toast.error("Acesso negado. Você não tem permissão de administrador.");
+        toast.error("Você não tem permissão para acessar esta área.");
         await supabase.auth.signOut();
         setLoading(false);
         return;
@@ -180,7 +185,7 @@ const AdminLogin = () => {
           </form>
         </CardContent>
         
-        {hasAdmin === false && user && (
+        {checkComplete && hasAdmin === false && user && (
           <CardFooter className="flex flex-col border-t pt-6">
             <p className="text-sm text-muted-foreground mb-4 text-center">
               Nenhum super administrador configurado. 
