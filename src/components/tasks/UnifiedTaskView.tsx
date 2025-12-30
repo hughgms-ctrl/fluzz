@@ -32,6 +32,7 @@ import {
   FolderOpen,
   RefreshCw,
   User,
+  CheckCircle2,
 } from "lucide-react";
 import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
@@ -200,9 +201,21 @@ function TaskTableRow({
   
   // Get assignee from task_assignees relationship
   const taskAssignees = task.task_assignees || [];
+  
+  // Add approval_reviewer_id if present and not already in list
+  const allAssigneesIds = new Set(taskAssignees.map((ta: any) => ta.user_id));
+  const approverProfile = task.approval_reviewer_id && !allAssigneesIds.has(task.approval_reviewer_id)
+    ? profiles?.find(p => p.id === task.approval_reviewer_id)
+    : null;
+  
   const assigneeProfiles = taskAssignees
-    .map((ta: any) => profiles?.find(p => p.id === ta.user_id))
-    .filter(Boolean);
+    .map((ta: any) => ({ ...profiles?.find(p => p.id === ta.user_id), is_reviewer: false }))
+    .filter((p: any) => p && p.id);
+  
+  // Add approver with is_reviewer flag
+  if (approverProfile) {
+    assigneeProfiles.push({ ...approverProfile, is_reviewer: true });
+  }
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
   const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig.medium;
@@ -310,27 +323,42 @@ function TaskTableRow({
           </span>
         )}
       </TableCell>
-      <TableCell className="w-[80px]">
+      <TableCell className="w-[100px]">
         <div className="flex justify-center items-center" onClick={(e) => e.stopPropagation()}>
           {assigneeProfiles.length > 0 ? (
-            <div className="flex items-center cursor-pointer" onClick={() => setAssigneeDialogOpen(true)}>
-              {assigneeProfiles.slice(0, 2).map((user: any, index: number) => (
-                <Avatar 
-                  key={user.id} 
-                  className={`h-6 w-6 border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
-                >
-                  <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {assigneeProfiles.length > 2 && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  +{assigneeProfiles.length - 2}
-                </span>
-              )}
-            </div>
+            <TooltipProvider>
+              <div className="flex items-center cursor-pointer" onClick={() => setAssigneeDialogOpen(true)}>
+                {assigneeProfiles.slice(0, 3).map((user: any, index: number) => (
+                  <Tooltip key={user.id}>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <Avatar 
+                          className={`h-6 w-6 border-2 ${user.is_reviewer ? 'border-amber-400' : 'border-background'} ${index > 0 ? '-ml-2' : ''}`}
+                        >
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className={`text-xs ${user.is_reviewer ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                            {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        {user.is_reviewer && (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5">
+                            <CheckCircle2 className="h-2 w-2 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{user.full_name || "Usuário"}{user.is_reviewer ? ' (Aprovador)' : ''}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                {assigneeProfiles.length > 3 && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    +{assigneeProfiles.length - 3}
+                  </span>
+                )}
+              </div>
+            </TooltipProvider>
           ) : (
             <Avatar 
               className="h-6 w-6 cursor-pointer" 

@@ -50,6 +50,7 @@ import {
   Bookmark,
   FileEdit,
   Folder,
+  CheckCircle2,
 } from "lucide-react";
 import { formatDateBR, formatDateShort, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
@@ -191,16 +192,16 @@ function TaskTableRow({
   const [editedTitle, setEditedTitle] = useState(task.title);
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Get all assignees (assigned_to + approval_reviewer_id)
+  // Get all assignees (assigned_to + approval_reviewer_id) with is_reviewer flag
   const getAssignees = () => {
     const assignees: any[] = [];
     if (task.assigned_to) {
       const user = profiles?.find(p => p.id === task.assigned_to);
-      if (user) assignees.push(user);
+      if (user) assignees.push({ ...user, is_reviewer: false });
     }
     if (task.approval_reviewer_id && task.approval_reviewer_id !== task.assigned_to) {
       const reviewer = profiles?.find(p => p.id === task.approval_reviewer_id);
-      if (reviewer) assignees.push(reviewer);
+      if (reviewer) assignees.push({ ...reviewer, is_reviewer: true });
     }
     return assignees;
   };
@@ -313,27 +314,42 @@ function TaskTableRow({
           </span>
         )}
       </TableCell>
-      <TableCell className="w-[80px]">
+      <TableCell className="w-[100px]">
         <div className="flex justify-center items-center">
           {taskAssignees.length > 0 ? (
-            <div className="flex items-center">
-              {taskAssignees.slice(0, 2).map((user, index) => (
-                <Avatar 
-                  key={user.id} 
-                  className={`h-6 w-6 border-2 border-background ${index > 0 ? '-ml-2' : ''}`}
-                >
-                  <AvatarImage src={user.avatar_url} />
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {taskAssignees.length > 2 && (
-                <span className="text-xs text-muted-foreground ml-1">
-                  +{taskAssignees.length - 2}
-                </span>
-              )}
-            </div>
+            <TooltipProvider>
+              <div className="flex items-center">
+                {taskAssignees.slice(0, 3).map((user, index) => (
+                  <Tooltip key={user.id}>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <Avatar 
+                          className={`h-6 w-6 border-2 ${user.is_reviewer ? 'border-amber-400' : 'border-background'} ${index > 0 ? '-ml-2' : ''}`}
+                        >
+                          <AvatarImage src={user.avatar_url} />
+                          <AvatarFallback className={`text-xs ${user.is_reviewer ? 'bg-amber-500/20 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                            {user.full_name?.charAt(0)?.toUpperCase() || <User className="h-3 w-3" />}
+                          </AvatarFallback>
+                        </Avatar>
+                        {user.is_reviewer && (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5">
+                            <CheckCircle2 className="h-2 w-2 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>{user.full_name || "Usuário"}{user.is_reviewer ? ' (Aprovador)' : ''}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                {taskAssignees.length > 3 && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    +{taskAssignees.length - 3}
+                  </span>
+                )}
+              </div>
+            </TooltipProvider>
           ) : (
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs bg-muted">
