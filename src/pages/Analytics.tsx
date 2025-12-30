@@ -63,7 +63,8 @@ export default function Analytics() {
         .from("tasks")
         .select(`
           *,
-          projects!inner(id, name, workspace_id, archived, is_standalone_folder, pending_notifications)
+          projects!inner(id, name, workspace_id, archived, is_standalone_folder, pending_notifications),
+          task_assignees(user_id)
         `)
         .eq("projects.workspace_id", workspace.id)
         .eq("projects.archived", false)
@@ -91,7 +92,7 @@ export default function Analytics() {
       
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, task_assignees(user_id)")
         .is("project_id", null)
         .is("routine_id", null)
         .in("assigned_to", members.map(m => m.user_id));
@@ -118,7 +119,7 @@ export default function Analytics() {
       
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select("*, task_assignees(user_id)")
         .not("routine_id", "is", null)
         .in("assigned_to", members.map(m => m.user_id));
       

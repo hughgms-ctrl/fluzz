@@ -29,13 +29,13 @@ export function useMultipleTasksAssignees(taskIds: string[], tasks?: any[]) {
         .in("task_id", taskIds);
       if (error) throw error;
       
-      // Group by task_id
-      const grouped: Record<string, { user_id: string }[]> = {};
+      // Group by task_id with role info
+      const grouped: Record<string, { user_id: string; is_reviewer?: boolean }[]> = {};
       data?.forEach(item => {
         if (!grouped[item.task_id]) {
           grouped[item.task_id] = [];
         }
-        grouped[item.task_id].push({ user_id: item.user_id });
+        grouped[item.task_id].push({ user_id: item.user_id, is_reviewer: false });
       });
       
       // Add approval_reviewer_id from tasks if available
@@ -50,7 +50,7 @@ export function useMultipleTasksAssignees(taskIds: string[], tasks?: any[]) {
               a => a.user_id === task.approval_reviewer_id
             );
             if (!alreadyExists) {
-              grouped[task.id].push({ user_id: task.approval_reviewer_id });
+              grouped[task.id].push({ user_id: task.approval_reviewer_id, is_reviewer: true });
             }
           }
         });

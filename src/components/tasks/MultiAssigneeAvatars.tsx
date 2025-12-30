@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Plus } from "lucide-react";
+import { User, Plus, CheckCircle2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 interface MultiAssigneeAvatarsProps {
   taskId: string;
-  assignees?: { user_id: string }[];
+  assignees?: { user_id: string; is_reviewer?: boolean }[];
   maxDisplay?: number;
   size?: "sm" | "md" | "lg";
   showAddButton?: boolean;
@@ -97,25 +97,37 @@ export function MultiAssigneeAvatars({
           {displayedAssignees.map((assignee, index) => {
             const profile = getProfile(assignee.user_id);
             const initials = getInitials(profile?.full_name || null);
+            const isReviewer = assignee.is_reviewer;
             
             return (
               <Tooltip key={assignee.user_id}>
                 <TooltipTrigger asChild>
-                  <Avatar 
-                    className={cn(
-                      sizeClasses[size],
-                      "border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110",
-                      index > 0 && overlapClasses[size]
+                  <div className="relative">
+                    <Avatar 
+                      className={cn(
+                        sizeClasses[size],
+                        "border-2 cursor-pointer hover:z-10 transition-transform hover:scale-110",
+                        isReviewer ? "border-amber-400" : "border-background",
+                        index > 0 && overlapClasses[size]
+                      )}
+                    >
+                      <AvatarImage src={profile?.avatar_url || undefined} />
+                      <AvatarFallback className={cn(
+                        "font-medium",
+                        isReviewer ? "bg-amber-500/20 text-amber-600" : "bg-primary/10 text-primary"
+                      )}>
+                        {initials || <User className="h-3 w-3" />}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isReviewer && (
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-amber-500 rounded-full p-0.5">
+                        <CheckCircle2 className="h-2 w-2 text-white" />
+                      </div>
                     )}
-                  >
-                    <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {initials || <User className="h-3 w-3" />}
-                    </AvatarFallback>
-                  </Avatar>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>{profile?.full_name || "Usuário"}</p>
+                  <p>{profile?.full_name || "Usuário"}{isReviewer ? ' (Aprovador)' : ''}</p>
                 </TooltipContent>
               </Tooltip>
             );
