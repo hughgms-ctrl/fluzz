@@ -314,7 +314,7 @@ const AdminTeam = () => {
                       {isSuperAdmin && admin.role !== "super_admin" ? (
                         <Select
                           value={admin.role}
-                          onValueChange={(v) =>
+                          onValueChange={(v: "admin" | "employee" | "super_admin") =>
                             updateRoleMutation.mutate({ id: admin.id, role: v })
                           }
                         >
