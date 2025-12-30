@@ -86,59 +86,14 @@ const AdminUsers = () => {
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ["admin-users", search],
     queryFn: async () => {
-      // Get all profiles
-      let query = supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (search) {
-        query = query.ilike("full_name", `%${search}%`);
-      }
-
-      const { data: profiles, error } = await query;
-      if (error) throw error;
-
-      // Get account management data
-      const { data: accountData } = await supabase
-        .from("user_account_management")
-        .select("*");
-
-      // Get workspace counts (how many workspaces the user is a member of)
-      const { data: workspaceCounts } = await supabase
-        .from("workspace_members")
-        .select("user_id, workspace_id");
-
-      // Get workspaces owned by each user
-      const { data: workspacesOwned } = await supabase
-        .from("workspaces")
-        .select("id, created_by");
-
-      // Get all workspace members to count members in each workspace
-      const { data: allMembers } = await supabase
-        .from("workspace_members")
-        .select("workspace_id, user_id");
-
-      // Combine data
-      return profiles?.map((profile) => {
-        const account = accountData?.find((a) => a.user_id === profile.id);
-        const memberOf = workspaceCounts?.filter((w) => w.user_id === profile.id) || [];
-        const ownedWorkspaces = workspacesOwned?.filter((w) => w.created_by === profile.id) || [];
-        
-        // Count total members in workspaces owned by this user
-        const ownedWorkspaceIds = ownedWorkspaces.map(w => w.id);
-        const membersInOwnedWorkspaces = allMembers?.filter(m => ownedWorkspaceIds.includes(m.workspace_id)) || [];
-        const uniqueMemberIds = new Set(membersInOwnedWorkspaces.map(m => m.user_id));
-
-        return {
-          ...profile,
-          status: account?.status || "active",
-          can_access_subscriptions: account?.can_access_subscriptions || false,
-          workspaces_count: memberOf.length,
-          workspaces_owned: ownedWorkspaces.length,
-          total_members_in_owned_workspaces: uniqueMemberIds.size,
-        } as UserWithDetails;
+      const { data, error } = await supabase.functions.invoke("admin-get-users-stats", {
+        body: { search },
       });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return (data?.users || []) as UserWithDetails[];
     },
   });
 
