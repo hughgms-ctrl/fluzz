@@ -9,19 +9,29 @@ interface AdminSubdomainGuardProps {
 export const AdminSubdomainGuard = ({ children }: AdminSubdomainGuardProps) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!isAdminSubdomain()) return;
-
-    // If on admin subdomain but not on an /admin route, redirect
-    if (!location.pathname.startsWith("/admin")) {
-      setIsRedirecting(true);
-      navigate("/admin", { replace: true });
-    } else {
-      setIsRedirecting(false);
+    if (!isAdminSubdomain()) {
+      setHasChecked(true);
+      return;
     }
+
+    // If on admin subdomain but not on an /admin route, redirect immediately
+    if (!location.pathname.startsWith("/admin")) {
+      navigate("/admin", { replace: true });
+    }
+    setHasChecked(true);
   }, [location.pathname, navigate]);
+
+  // Don't render anything until we've checked
+  if (!hasChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
 
   // On admin subdomain, block all non-admin routes entirely
   if (isAdminSubdomain() && !location.pathname.startsWith("/admin")) {
@@ -34,4 +44,3 @@ export const AdminSubdomainGuard = ({ children }: AdminSubdomainGuardProps) => {
 
   return <>{children}</>;
 };
-
