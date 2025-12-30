@@ -1,24 +1,23 @@
-import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
-const ADMIN_SUBDOMAIN = 'admin.fluzzapp.com';
+const ADMIN_HOSTS = new Set(["admin.fluzzapp.com", "www.admin.fluzzapp.com"]);
 
 export const isAdminSubdomain = (): boolean => {
-  return window.location.hostname === ADMIN_SUBDOMAIN;
+  return ADMIN_HOSTS.has(window.location.hostname);
 };
 
 export const useAdminSubdomain = () => {
-  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (isAdminSubdomain()) {
-      // Se estiver no subdomínio admin e não estiver em uma rota admin, redireciona
-      if (!location.pathname.startsWith('/admin')) {
-        navigate('/admin', { replace: true });
-      }
+    if (!isAdminSubdomain()) return;
+
+    if (!location.pathname.startsWith("/admin")) {
+      window.location.replace("/admin");
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname]);
 
   return { isAdminSubdomain: isAdminSubdomain() };
 };
+
