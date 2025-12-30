@@ -69,6 +69,7 @@ interface UserWithDetails {
   can_access_subscriptions?: boolean;
   workspaces_count?: number;
   workspaces_owned?: number;
+  total_members_in_owned_workspaces?: number;
 }
 
 const AdminUsers = () => {
@@ -103,27 +104,39 @@ const AdminUsers = () => {
         .from("user_account_management")
         .select("*");
 
-      // Get workspace counts
+      // Get workspace counts (how many workspaces the user is a member of)
       const { data: workspaceCounts } = await supabase
         .from("workspace_members")
         .select("user_id, workspace_id");
 
+      // Get workspaces owned by each user
       const { data: workspacesOwned } = await supabase
         .from("workspaces")
-        .select("created_by");
+        .select("id, created_by");
+
+      // Get all workspace members to count members in each workspace
+      const { data: allMembers } = await supabase
+        .from("workspace_members")
+        .select("workspace_id, user_id");
 
       // Combine data
       return profiles?.map((profile) => {
         const account = accountData?.find((a) => a.user_id === profile.id);
         const memberOf = workspaceCounts?.filter((w) => w.user_id === profile.id) || [];
-        const owned = workspacesOwned?.filter((w) => w.created_by === profile.id) || [];
+        const ownedWorkspaces = workspacesOwned?.filter((w) => w.created_by === profile.id) || [];
+        
+        // Count total members in workspaces owned by this user
+        const ownedWorkspaceIds = ownedWorkspaces.map(w => w.id);
+        const membersInOwnedWorkspaces = allMembers?.filter(m => ownedWorkspaceIds.includes(m.workspace_id)) || [];
+        const uniqueMemberIds = new Set(membersInOwnedWorkspaces.map(m => m.user_id));
 
         return {
           ...profile,
           status: account?.status || "active",
           can_access_subscriptions: account?.can_access_subscriptions || false,
           workspaces_count: memberOf.length,
-          workspaces_owned: owned.length,
+          workspaces_owned: ownedWorkspaces.length,
+          total_members_in_owned_workspaces: uniqueMemberIds.size,
         } as UserWithDetails;
       });
     },
@@ -445,7 +458,7 @@ const AdminUsers = () => {
                           <Building2 className="h-4 w-4 text-muted-foreground" />
                           <span>{user.workspaces_owned} próprios</span>
                           <Users className="h-4 w-4 text-muted-foreground ml-2" />
-                          <span>{user.workspaces_count} total</span>
+                          <span>{user.total_members_in_owned_workspaces || 0} membros</span>
                         </div>
                       </TableCell>
                       <TableCell>
