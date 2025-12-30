@@ -1,17 +1,20 @@
 import React from "react";
-import { useLocation } from "react-router-dom";
 import { isAdminSubdomain } from "@/hooks/useAdminSubdomain";
 
 interface AdminSubdomainGuardProps {
   children: React.ReactNode;
 }
 
-export const AdminSubdomainGuard = ({ children }: AdminSubdomainGuardProps) => {
-  const location = useLocation();
+const ADMIN_REDIRECT_TARGET = "https://fluzzapp.com/admin/login";
 
-  // Immediate synchronous check - hard redirect before React processes
-  if (isAdminSubdomain() && !location.pathname.startsWith("/admin")) {
-    window.location.replace("/admin");
+export const AdminSubdomainGuard = ({ children }: AdminSubdomainGuardProps) => {
+  // Important: if admin.fluzzapp.com is configured to *serve* this app, force a hard redirect
+  // to the main domain admin login.
+  if (isAdminSubdomain()) {
+    if (window.location.href !== ADMIN_REDIRECT_TARGET) {
+      window.location.replace(ADMIN_REDIRECT_TARGET);
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <p className="text-muted-foreground">Redirecionando...</p>
@@ -21,3 +24,4 @@ export const AdminSubdomainGuard = ({ children }: AdminSubdomainGuardProps) => {
 
   return <>{children}</>;
 };
+
