@@ -40,6 +40,12 @@ import AIAssistant from "./pages/AIAssistant";
 import WorkloadOverview from "./pages/WorkloadOverview";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminPlans from "./pages/admin/AdminPlans";
+import AdminTeam from "./pages/admin/AdminTeam";
+import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 
 const queryClient = new QueryClient();
 
@@ -88,6 +94,12 @@ const App = () => (
             <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/workload" element={<WorkloadOverview />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/admin" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/plans" element={<AdminPlans />} />
+            <Route path="/admin/team" element={<AdminTeam />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </WorkspaceProvider>

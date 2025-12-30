@@ -195,8 +195,12 @@ const AdminSubscriptions = () => {
 
   const openEditDialog = (sub: SubscriptionWithDetails) => {
     setSelectedSub(sub);
+    const validStatuses = ["active", "trial", "canceled", "past_due", "exempt"] as const;
+    const status = validStatuses.includes(sub.status as typeof validStatuses[number]) 
+      ? (sub.status as typeof validStatuses[number]) 
+      : "active";
     setFormData({
-      status: sub.status,
+      status,
       is_exempt: sub.is_exempt,
       exempt_reason: sub.exempt_reason || "",
       discount_percentage: sub.discount_percentage,
@@ -375,7 +379,7 @@ const AdminSubscriptions = () => {
                 <Label>Status</Label>
                 <Select
                   value={formData.status}
-                  onValueChange={(v) => setFormData({ ...formData, status: v })}
+                  onValueChange={(v: "active" | "trial" | "canceled" | "past_due" | "exempt") => setFormData({ ...formData, status: v })}
                 >
                   <SelectTrigger>
                     <SelectValue />
