@@ -25,7 +25,7 @@ interface AdminLayoutProps {
 }
 
 const menuItems = [
-  { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { path: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/users", label: "Usuários", icon: Users },
   { path: "/admin/subscriptions", label: "Assinaturas", icon: CreditCard },
   { path: "/admin/plans", label: "Planos", icon: Settings },
@@ -41,7 +41,7 @@ export const AdminLayout = ({ children, title, description }: AdminLayoutProps) 
 
   useEffect(() => {
     if (!loading && !isAdmin) {
-      navigate("/admin/login");
+      navigate("/admin", { replace: true });
     }
   }, [isAdmin, loading, navigate]);
 

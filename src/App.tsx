@@ -99,6 +99,7 @@ const App = () => (
                   <Route path="/workload" element={<WorkloadOverview />} />
                   <Route path="/install" element={<Install />} />
                   <Route path="/admin" element={<AdminLogin />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
                   <Route path="/admin/users" element={<AdminUsers />} />
                   <Route path="/admin/plans" element={<AdminPlans />} />
