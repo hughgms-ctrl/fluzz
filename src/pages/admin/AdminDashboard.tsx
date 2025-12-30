@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,33 +154,33 @@ const AdminDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <a 
-              href="/admin/users" 
+            <Link 
+              to="/admin/users" 
               className="block p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
             >
               <p className="font-medium">Gerenciar Usuários</p>
               <p className="text-sm text-muted-foreground">
                 Bloquear, excluir ou gerenciar permissões de usuários
               </p>
-            </a>
-            <a 
-              href="/admin/plans" 
+            </Link>
+            <Link 
+              to="/admin/plans" 
               className="block p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
             >
               <p className="font-medium">Configurar Planos</p>
               <p className="text-sm text-muted-foreground">
                 Criar e editar planos de assinatura
               </p>
-            </a>
-            <a 
-              href="/admin/team" 
+            </Link>
+            <Link 
+              to="/admin/team" 
               className="block p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
             >
               <p className="font-medium">Equipe Administrativa</p>
               <p className="text-sm text-muted-foreground">
                 Adicionar ou remover administradores
               </p>
-            </a>
+            </Link>
           </CardContent>
         </Card>
 
