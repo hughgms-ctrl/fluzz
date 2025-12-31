@@ -60,6 +60,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminAudit } from "@/hooks/useAdminAudit";
 
 interface UserWithDetails {
   id: string;
@@ -84,6 +85,7 @@ const AdminUsers = () => {
   const [blockReason, setBlockReason] = useState("");
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const { logAction } = useAdminAudit();
 
   const { data: users, isLoading, refetch } = useQuery({
     queryKey: ["admin-users", search],
@@ -100,7 +102,7 @@ const AdminUsers = () => {
   });
 
   const blockUserMutation = useMutation({
-    mutationFn: async ({ userId, reason }: { userId: string; reason: string }) => {
+    mutationFn: async ({ userId, reason, userEmail }: { userId: string; reason: string; userEmail?: string }) => {
       // First check if record exists
       const { data: existing } = await supabase
         .from("user_account_management")
@@ -131,6 +133,15 @@ const AdminUsers = () => {
           });
         if (error) throw error;
       }
+
+      // Log audit action
+      await logAction({
+        action: "user_blocked",
+        targetType: "user",
+        targetId: userId,
+        targetEmail: userEmail,
+        details: { reason },
+      });
     },
     onSuccess: () => {
       toast.success("Usuário bloqueado com sucesso");
@@ -145,7 +156,7 @@ const AdminUsers = () => {
   });
 
   const unblockUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, userEmail }: { userId: string; userEmail?: string }) => {
       const { error } = await supabase
         .from("user_account_management")
         .update({
@@ -156,6 +167,14 @@ const AdminUsers = () => {
         })
         .eq("user_id", userId);
       if (error) throw error;
+
+      // Log audit action
+      await logAction({
+        action: "user_unblocked",
+        targetType: "user",
+        targetId: userId,
+        targetEmail: userEmail,
+      });
     },
     onSuccess: () => {
       toast.success("Usuário desbloqueado com sucesso");
@@ -167,7 +186,7 @@ const AdminUsers = () => {
   });
 
   const deleteUserMutation = useMutation({
-    mutationFn: async (userId: string) => {
+    mutationFn: async ({ userId, userEmail }: { userId: string; userEmail?: string }) => {
       // Get user email first
       const { data: profileData } = await supabase
         .from("profiles")
@@ -182,9 +201,11 @@ const AdminUsers = () => {
         body: { userId },
       });
 
-      if (authUser?.email) {
+      const emailToBlock = userEmail || authUser?.email;
+
+      if (emailToBlock) {
         await supabase.from("blocked_emails").insert({
-          email: authUser.email,
+          email: emailToBlock,
           blocked_by: currentUser?.id,
           blocked_reason: "Conta excluída permanentemente",
         });
@@ -214,6 +235,14 @@ const AdminUsers = () => {
           deleted_by: currentUser?.id,
         });
       }
+
+      // Log audit action
+      await logAction({
+        action: "user_deleted",
+        targetType: "user",
+        targetId: userId,
+        targetEmail: emailToBlock,
+      });
     },
     onSuccess: () => {
       toast.success("Usuário excluído permanentemente");
@@ -227,7 +256,7 @@ const AdminUsers = () => {
   });
 
   const toggleSubscriptionAccessMutation = useMutation({
-    mutationFn: async ({ userId, enable }: { userId: string; enable: boolean }) => {
+    mutationFn: async ({ userId, enable, userEmail }: { userId: string; enable: boolean; userEmail?: string }) => {
       const payload = {
         user_id: userId,
         can_access_subscriptions: enable,
@@ -240,6 +269,14 @@ const AdminUsers = () => {
         .upsert(payload, { onConflict: "user_id" });
 
       if (error) throw error;
+
+      // Log audit action
+      await logAction({
+        action: enable ? "subscription_access_enabled" : "subscription_access_disabled",
+        targetType: "user",
+        targetId: userId,
+        targetEmail: userEmail,
+      });
     },
     onSuccess: (_, variables) => {
       toast.success(
@@ -278,6 +315,16 @@ const AdminUsers = () => {
         .upsert(rows, { onConflict: "user_id" });
 
       if (error) throw error;
+
+      // Log audit actions for each user
+      for (const userId of userIds) {
+        await logAction({
+          action: enable ? "subscription_access_enabled" : "subscription_access_disabled",
+          targetType: "user",
+          targetId: userId,
+          details: { bulk_action: true, total_users: userIds.length },
+        });
+      }
     },
     onSuccess: (_, variables) => {
       toast.success(
@@ -523,6 +570,7 @@ const AdminUsers = () => {
                                   toggleSubscriptionAccessMutation.mutate({
                                     userId: user.id,
                                     enable: !user.can_access_subscriptions,
+                                    userEmail: user.email,
                                   })
                                 }
                               >
@@ -534,7 +582,7 @@ const AdminUsers = () => {
                               <DropdownMenuSeparator />
                               {user.status === "blocked" ? (
                                 <DropdownMenuItem
-                                  onClick={() => unblockUserMutation.mutate(user.id)}
+                                  onClick={() => unblockUserMutation.mutate({ userId: user.id, userEmail: user.email })}
                                 >
                                   <RefreshCw className="h-4 w-4 mr-2" />
                                   Desbloquear
@@ -608,7 +656,7 @@ const AdminUsers = () => {
               variant="destructive"
               onClick={() =>
                 selectedUser &&
-                blockUserMutation.mutate({ userId: selectedUser.id, reason: blockReason })
+                blockUserMutation.mutate({ userId: selectedUser.id, reason: blockReason, userEmail: selectedUser.email })
               }
               disabled={blockUserMutation.isPending}
             >
@@ -632,7 +680,7 @@ const AdminUsers = () => {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => selectedUser && deleteUserMutation.mutate(selectedUser.id)}
+              onClick={() => selectedUser && deleteUserMutation.mutate({ userId: selectedUser.id, userEmail: selectedUser.email })}
             >
               Excluir Permanentemente
             </AlertDialogAction>
