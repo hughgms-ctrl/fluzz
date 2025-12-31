@@ -348,19 +348,35 @@ const AdminUsers = () => {
               <span className="hidden sm:inline">Atualizar</span>
             </Button>
             {selectedUsers.length > 0 && (
-              <Button
-                size="sm"
-                onClick={() =>
-                  bulkSetSubscriptionsMutation.mutate({ userIds: selectedUsers, enable: true })
-                }
-                disabled={bulkSetSubscriptionsMutation.isPending}
-                className="flex-1 sm:flex-none"
-              >
-                <CreditCard className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Liberar Assinaturas</span>
-                <span className="sm:hidden">Liberar</span>
-                <span className="ml-1">({selectedUsers.length})</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={bulkSetSubscriptionsMutation.isPending}
+                    className="flex-1 sm:flex-none"
+                  >
+                    <CreditCard className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Assinaturas</span>
+                    <span className="ml-1">({selectedUsers.length})</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      bulkSetSubscriptionsMutation.mutate({ userIds: selectedUsers, enable: true })
+                    }
+                  >
+                    Liberar painel assinaturas
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      bulkSetSubscriptionsMutation.mutate({ userIds: selectedUsers, enable: false })
+                    }
+                  >
+                    Bloquear painel assinaturas
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </CardHeader>
