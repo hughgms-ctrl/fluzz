@@ -11,7 +11,8 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const menuItems = [
   { path: "/admin/subscriptions", label: "Assinaturas", icon: CreditCard },
   { path: "/admin/plans", label: "Planos", icon: Settings },
   { path: "/admin/team", label: "Equipe Admin", icon: Shield },
+  { path: "/admin/audit", label: "Auditoria", icon: FileText },
 ];
 
 export const AdminLayout = ({ children, title, description }: AdminLayoutProps) => {
