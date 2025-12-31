@@ -84,36 +84,59 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   });
 
   // Check for active admin view sessions (can be multiple)
-  const fetchAdminViewSessions = useCallback(async (): Promise<AdminViewSession[]> => {
-    if (!user) return [];
+  const fetchAdminViewSessions = useCallback(async (): Promise<{ sessions: AdminViewSession[], workspaces: Workspace[] }> => {
+    if (!user) return { sessions: [], workspaces: [] };
 
     try {
-      const { data, error } = await supabase
+      // First, fetch admin view sessions
+      const { data: sessionsData, error: sessionsError } = await supabase
         .from("admin_view_sessions")
-        .select(`
-          id, 
-          workspace_id, 
-          expires_at,
-          workspaces:workspace_id (id, name, created_at, updated_at, created_by)
-        `)
+        .select("id, workspace_id, expires_at")
         .eq("admin_user_id", user.id)
         .gt("expires_at", new Date().toISOString())
         .order("started_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching admin view sessions:", error);
-        return [];
+      if (sessionsError) {
+        console.error("Error fetching admin view sessions:", sessionsError);
+        return { sessions: [], workspaces: [] };
       }
 
-      return (data || []).map(session => ({
+      if (!sessionsData || sessionsData.length === 0) {
+        return { sessions: [], workspaces: [] };
+      }
+
+      // Use RPC function to fetch workspaces that admin can access
+      const workspaceIds = sessionsData.map(s => s.workspace_id);
+      
+      // Fetch workspaces directly - the can_access_workspace function in DB should allow this
+      const { data: workspacesData, error: workspacesError } = await supabase
+        .from("workspaces")
+        .select("*")
+        .in("id", workspaceIds);
+
+      if (workspacesError) {
+        console.error("Error fetching admin workspaces:", workspacesError);
+        // Return sessions anyway, we'll handle missing workspace names
+      }
+
+      const workspacesMap = new Map((workspacesData || []).map(w => [w.id, w]));
+
+      const sessions = sessionsData.map(session => ({
         id: session.id,
         workspace_id: session.workspace_id,
-        workspace_name: (session.workspaces as any)?.name || "Workspace",
+        workspace_name: workspacesMap.get(session.workspace_id)?.name || "Workspace",
         expires_at: session.expires_at,
       }));
+
+      const workspaces = (workspacesData || []).map(ws => ({
+        ...ws,
+        isAdminView: true,
+      }));
+
+      return { sessions, workspaces };
     } catch (err) {
       console.error("Error fetching admin view sessions:", err);
-      return [];
+      return { sessions: [], workspaces: [] };
     }
   }, [user]);
 
@@ -132,24 +155,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       // Fetch admin view sessions to add to workspace list
-      const adminSessions = await fetchAdminViewSessions();
+      const { sessions: adminSessions, workspaces: adminWsFromSessions } = await fetchAdminViewSessions();
       
-      // Fetch workspaces from admin sessions
-      let adminWorkspacesList: Workspace[] = [];
-      if (adminSessions.length > 0) {
-        const adminWsIds = adminSessions.map(s => s.workspace_id);
-        const { data: adminWsData } = await supabase
-          .from("workspaces")
-          .select("*")
-          .in("id", adminWsIds);
-        
-        if (adminWsData) {
-          adminWorkspacesList = adminWsData.map(ws => ({
-            ...ws,
-            isAdminView: true,
-          }));
-        }
-      }
+      // Use workspaces directly from the fetch function
+      const adminWorkspacesList = adminWsFromSessions;
       
       setAdminViewWorkspaces(adminWorkspacesList);
 
