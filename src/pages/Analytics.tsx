@@ -8,7 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, CheckCircle2, Clock, AlertCircle, FolderOpen, User, RefreshCw, ChevronDown, ChevronRight, Calendar, Users } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import {
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  FolderOpen,
+  User,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  Users,
+} from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { formatDateShort, parseDateOnly, formatUserName, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -45,7 +58,8 @@ export default function Analytics() {
   
   const [activeTab, setActiveTab] = useState(getInitialTab());
   const [selectedMember, setSelectedMember] = useState<string>("all");
-  
+  const [includeStandaloneTasks, setIncludeStandaloneTasks] = useState(false);
+
   // Update tab when URL filter changes
   useEffect(() => {
     if (urlFilter) {
@@ -108,21 +122,25 @@ export default function Analytics() {
     queryKey: ["analytics-routine-tasks", workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) return [];
-      
+
       // Get all workspace members
       const { data: members } = await supabase
         .from("workspace_members")
         .select("user_id")
         .eq("workspace_id", workspace.id);
-      
+
       if (!members || members.length === 0) return [];
-      
+
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, task_assignees(user_id)")
+        .select("*, task_assignees(user_id), routines!inner(id, workspace_id)")
         .not("routine_id", "is", null)
-        .in("assigned_to", members.map(m => m.user_id));
-      
+        .eq("routines.workspace_id", workspace.id)
+        .in(
+          "assigned_to",
+          members.map((m) => m.user_id)
+        );
+
       if (error) throw error;
       return data;
     },
@@ -197,8 +215,9 @@ export default function Analytics() {
 
   // Combine all tasks
   const allTasksRaw = useMemo(() => {
-    return [...(projectTasks || []), ...(standaloneTasks || []), ...(routineTasks || [])];
-  }, [projectTasks, standaloneTasks, routineTasks]);
+    const standalone = includeStandaloneTasks ? standaloneTasks || [] : [];
+    return [...(projectTasks || []), ...standalone, ...(routineTasks || [])];
+  }, [projectTasks, standaloneTasks, routineTasks, includeStandaloneTasks]);
 
   // Filter by selected member
   const allTasks = useMemo(() => {
@@ -447,22 +466,38 @@ export default function Analytics() {
             </p>
           </div>
           
-          {/* Member Filter */}
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedMember} onValueChange={setSelectedMember}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os membros</SelectItem>
-                {workspaceMembers?.map(member => (
-                  <SelectItem key={member.id} value={member.id}>
-                    {formatUserName(member.full_name) || "Usuário"}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Filtros */}
+          <div className="space-y-1">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <Select value={selectedMember} onValueChange={setSelectedMember}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filtrar por responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os membros</SelectItem>
+                    {workspaceMembers?.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {formatUserName(member.full_name) || "Usuário"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2 sm:pl-3 sm:border-l sm:border-border">
+                <Switch
+                  checked={includeStandaloneTasks}
+                  onCheckedChange={setIncludeStandaloneTasks}
+                />
+                <span className="text-sm text-muted-foreground">Incluir tarefas avulsas</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              Tarefas avulsas não são vinculadas a um workspace (sem projeto) e podem aparecer em mais de um workspace.
+            </p>
           </div>
         </div>
 
