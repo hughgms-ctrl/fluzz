@@ -82,8 +82,8 @@ serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    // Get workspaces owned by user
-    const { data: ownedWorkspaces } = await supabaseClient
+    // Get workspaces owned/created by user
+    const { data: ownedWorkspaces, error: ownedError } = await supabaseClient
       .from("workspaces")
       .select(`
         id,
@@ -102,20 +102,67 @@ serve(async (req) => {
       `)
       .eq("created_by", userId);
 
-    // Get workspaces where user is a member
-    const { data: memberWorkspaces } = await supabaseClient
+    if (ownedError) {
+      console.error("Error fetching owned workspaces:", ownedError);
+    }
+
+    // Get workspaces where user is a member (include all members for each workspace)
+    const { data: memberWorkspacesRaw, error: memberError } = await supabaseClient
       .from("workspace_members")
       .select(`
         id,
         role,
-        workspace:workspace_id (
-          id,
-          name,
-          created_by,
-          created_at
-        )
+        workspace_id
       `)
       .eq("user_id", userId);
+
+    if (memberError) {
+      console.error("Error fetching member workspaces:", memberError);
+    }
+
+    // For each workspace where user is a member, fetch workspace details and all members
+    const memberWorkspaces = [];
+    if (memberWorkspacesRaw) {
+      for (const membership of memberWorkspacesRaw) {
+        // Skip workspaces that the user owns (already in ownedWorkspaces)
+        const isOwned = ownedWorkspaces?.some(w => w.id === membership.workspace_id);
+        
+        // Get workspace details
+        const { data: workspace } = await supabaseClient
+          .from("workspaces")
+          .select(`
+            id,
+            name,
+            created_by,
+            created_at
+          `)
+          .eq("id", membership.workspace_id)
+          .single();
+
+        // Get all members of this workspace
+        const { data: members } = await supabaseClient
+          .from("workspace_members")
+          .select(`
+            id,
+            user_id,
+            role,
+            profiles:user_id (
+              id,
+              full_name,
+              avatar_url
+            )
+          `)
+          .eq("workspace_id", membership.workspace_id);
+
+        memberWorkspaces.push({
+          id: membership.id,
+          role: membership.role,
+          workspace,
+          workspace_members: members || [],
+          isOwned,
+        });
+      }
+    }
 
     // Get workspace member blocks for this user
     const { data: memberBlocks } = await supabaseClient

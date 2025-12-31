@@ -64,12 +64,14 @@ interface OwnedWorkspace {
 interface MemberWorkspace {
   id: string;
   role: string;
+  isOwned?: boolean;
   workspace: {
     id: string;
     name: string;
     created_by: string;
     created_at: string;
   } | null;
+  workspace_members?: WorkspaceMember[];
 }
 
 interface MemberBlock {
@@ -433,36 +435,152 @@ export const AdminUserWorkspaces = ({
         <CardContent>
           {memberWorkspaces.filter(m => m.workspace).length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
-              Não é membro de nenhum outro workspace
+              Não é membro de nenhum workspace
             </p>
           ) : (
-            <div className="space-y-2">
+            <Accordion type="single" collapsible className="w-full">
               {memberWorkspaces.filter(m => m.workspace).map((membership) => {
                 const isBlocked = isMemberBlocked(membership.workspace!.id, userId);
+                const isOwner = membership.isOwned;
                 return (
-                  <div
-                    key={membership.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium">{membership.workspace!.name}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {getRoleBadge(membership.role)}
-                          {isBlocked && (
-                            <Badge variant="destructive" className="text-xs">
-                              <Ban className="h-3 w-3 mr-1" />
-                              Bloqueado
-                            </Badge>
-                          )}
+                  <AccordionItem key={membership.id} value={membership.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3 text-left">
+                        <Building2 className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium">{membership.workspace!.name}</p>
+                            {isOwner && (
+                              <Badge variant="outline" className="text-xs">
+                                <Crown className="h-3 w-3 mr-1" />
+                                Criador
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {getRoleBadge(membership.role)}
+                            {isBlocked && (
+                              <Badge variant="destructive" className="text-xs">
+                                <Ban className="h-3 w-3 mr-1" />
+                                Bloqueado
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {membership.workspace_members?.length || 0} membros
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="space-y-3 pt-2">
+                        <p className="text-sm font-medium flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Membros do Workspace
+                        </p>
+                        {!membership.workspace_members || membership.workspace_members.length === 0 ? (
+                          <p className="text-sm text-muted-foreground pl-6">
+                            Nenhum membro encontrado
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {membership.workspace_members.map((member) => {
+                              const isMemberBlocked = memberBlocks.some(
+                                b => b.workspace_id === membership.workspace!.id && b.user_id === member.user_id
+                              );
+                              const isCurrentUser = member.user_id === userId;
+                              
+                              return (
+                                <div
+                                  key={member.id}
+                                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg bg-muted/50"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={member.profiles?.avatar_url || undefined} />
+                                      <AvatarFallback>
+                                        {member.profiles?.full_name?.charAt(0) || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <p className="font-medium text-sm">
+                                          {member.profiles?.full_name || "Sem nome"}
+                                        </p>
+                                        {getRoleBadge(member.role)}
+                                        {isMemberBlocked && (
+                                          <Badge variant="destructive" className="text-xs">
+                                            <Ban className="h-3 w-3 mr-1" />
+                                            Bloqueado
+                                          </Badge>
+                                        )}
+                                        {isCurrentUser && (
+                                          <Badge variant="outline" className="text-xs">
+                                            Este usuário
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-1 flex-wrap">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openActionDialog(member, membership.workspace!.id, "role")}
+                                    >
+                                      <Shield className="h-4 w-4" />
+                                      <span className="sr-only sm:not-sr-only sm:ml-1">Cargo</span>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => openActionDialog(member, membership.workspace!.id, "permissions")}
+                                    >
+                                      <Shield className="h-4 w-4" />
+                                      <span className="sr-only sm:not-sr-only sm:ml-1">Permissões</span>
+                                    </Button>
+                                    {isMemberBlocked ? (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => unblockMember(membership.workspace!.id, member.user_id)}
+                                      >
+                                        <RefreshCw className="h-4 w-4" />
+                                        <span className="sr-only sm:not-sr-only sm:ml-1">Desbloquear</span>
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => openActionDialog(member, membership.workspace!.id, "block")}
+                                      >
+                                        <Ban className="h-4 w-4" />
+                                        <span className="sr-only sm:not-sr-only sm:ml-1">Bloquear</span>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      onClick={() => openActionDialog(member, membership.workspace!.id, "remove")}
+                                    >
+                                      <UserMinus className="h-4 w-4" />
+                                      <span className="sr-only sm:not-sr-only sm:ml-1">Remover</span>
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 );
               })}
-            </div>
+            </Accordion>
           )}
         </CardContent>
       </Card>
