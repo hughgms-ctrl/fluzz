@@ -73,7 +73,7 @@ serve(async (req) => {
     }
 
     // Get user email from auth
-    const { data: { user: authUser }, error: authUserError } = await supabaseClient.auth.admin.getUserById(userId);
+    const { data: { user: authUser } } = await supabaseClient.auth.admin.getUserById(userId);
     
     // Get user account management data
     const { data: accountManagement } = await supabaseClient
@@ -85,35 +85,50 @@ serve(async (req) => {
     // Get workspaces owned/created by user
     const { data: ownedWorkspaces, error: ownedError } = await supabaseClient
       .from("workspaces")
-      .select(`
-        id,
-        name,
-        created_at,
-        workspace_members (
-          id,
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            full_name,
-            avatar_url
-          )
-        )
-      `)
+      .select("id, name, created_at")
       .eq("created_by", userId);
 
     if (ownedError) {
       console.error("Error fetching owned workspaces:", ownedError);
     }
 
-    // Get workspaces where user is a member (include all members for each workspace)
+    // For each owned workspace, fetch all members with their profiles
+    const ownedWorkspacesWithMembers = [];
+    if (ownedWorkspaces) {
+      for (const workspace of ownedWorkspaces) {
+        const { data: members } = await supabaseClient
+          .from("workspace_members")
+          .select("id, user_id, role")
+          .eq("workspace_id", workspace.id);
+
+        // Fetch profiles for each member
+        const membersWithProfiles = [];
+        if (members) {
+          for (const member of members) {
+            const { data: memberProfile } = await supabaseClient
+              .from("profiles")
+              .select("id, full_name, avatar_url")
+              .eq("id", member.user_id)
+              .single();
+            
+            membersWithProfiles.push({
+              ...member,
+              profiles: memberProfile || { id: member.user_id, full_name: null, avatar_url: null }
+            });
+          }
+        }
+
+        ownedWorkspacesWithMembers.push({
+          ...workspace,
+          workspace_members: membersWithProfiles
+        });
+      }
+    }
+
+    // Get workspaces where user is a member
     const { data: memberWorkspacesRaw, error: memberError } = await supabaseClient
       .from("workspace_members")
-      .select(`
-        id,
-        role,
-        workspace_id
-      `)
+      .select("id, role, workspace_id")
       .eq("user_id", userId);
 
     if (memberError) {
@@ -124,41 +139,54 @@ serve(async (req) => {
     const memberWorkspaces = [];
     if (memberWorkspacesRaw) {
       for (const membership of memberWorkspacesRaw) {
-        // Skip workspaces that the user owns (already in ownedWorkspaces)
-        const isOwned = ownedWorkspaces?.some(w => w.id === membership.workspace_id);
+        // Check if this workspace is owned by the user
+        const isOwned = ownedWorkspaces?.some(w => w.id === membership.workspace_id) || false;
         
         // Get workspace details
         const { data: workspace } = await supabaseClient
           .from("workspaces")
-          .select(`
-            id,
-            name,
-            created_by,
-            created_at
-          `)
+          .select("id, name, created_by, created_at")
           .eq("id", membership.workspace_id)
           .single();
 
         // Get all members of this workspace
         const { data: members } = await supabaseClient
           .from("workspace_members")
-          .select(`
-            id,
-            user_id,
-            role,
-            profiles:user_id (
-              id,
-              full_name,
-              avatar_url
-            )
-          `)
+          .select("id, user_id, role")
           .eq("workspace_id", membership.workspace_id);
+
+        // Fetch profiles for each member
+        const membersWithProfiles = [];
+        if (members) {
+          for (const member of members) {
+            const { data: memberProfile } = await supabaseClient
+              .from("profiles")
+              .select("id, full_name, avatar_url")
+              .eq("id", member.user_id)
+              .single();
+
+            // Check if member is blocked in this workspace
+            const { data: memberBlock } = await supabaseClient
+              .from("workspace_member_blocks")
+              .select("*")
+              .eq("user_id", member.user_id)
+              .eq("workspace_id", membership.workspace_id)
+              .single();
+            
+            membersWithProfiles.push({
+              ...member,
+              profiles: memberProfile || { id: member.user_id, full_name: null, avatar_url: null },
+              is_blocked: !!memberBlock,
+              block_reason: memberBlock?.blocked_reason || null
+            });
+          }
+        }
 
         memberWorkspaces.push({
           id: membership.id,
           role: membership.role,
           workspace,
-          workspace_members: members || [],
+          workspace_members: membersWithProfiles,
           isOwned,
         });
       }
@@ -193,14 +221,25 @@ serve(async (req) => {
     // Get user permissions across workspaces
     const { data: permissions } = await supabaseClient
       .from("user_permissions")
-      .select(`
-        *,
-        workspace:workspace_id (
-          id,
-          name
-        )
-      `)
+      .select("*")
       .eq("user_id", userId);
+
+    // For each permission, get workspace name
+    const permissionsWithWorkspace = [];
+    if (permissions) {
+      for (const permission of permissions) {
+        const { data: workspace } = await supabaseClient
+          .from("workspaces")
+          .select("id, name")
+          .eq("id", permission.workspace_id)
+          .single();
+        
+        permissionsWithWorkspace.push({
+          ...permission,
+          workspace
+        });
+      }
+    }
 
     return new Response(
       JSON.stringify({
@@ -211,11 +250,11 @@ serve(async (req) => {
           last_sign_in_at: authUser?.last_sign_in_at || null,
         },
         accountManagement,
-        ownedWorkspaces: ownedWorkspaces || [],
+        ownedWorkspaces: ownedWorkspacesWithMembers || [],
         memberWorkspaces: memberWorkspaces || [],
         memberBlocks: memberBlocks || [],
         subscription,
-        permissions: permissions || [],
+        permissions: permissionsWithWorkspace || [],
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
