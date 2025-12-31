@@ -1285,6 +1285,10 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          annual_discount_percentage: number | null
+          annual_price_per_user: number | null
+          annual_price_per_workspace: number | null
+          billing_period: string
           created_at: string
           created_by: string | null
           description: string | null
@@ -1299,6 +1303,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          annual_discount_percentage?: number | null
+          annual_price_per_user?: number | null
+          annual_price_per_workspace?: number | null
+          billing_period?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1313,6 +1321,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          annual_discount_percentage?: number | null
+          annual_price_per_user?: number | null
+          annual_price_per_workspace?: number | null
+          billing_period?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1738,6 +1750,7 @@ export type Database = {
       }
       user_account_management: {
         Row: {
+          admin_notes: string | null
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
@@ -1754,6 +1767,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_notes?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -1770,6 +1784,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_notes?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -2038,6 +2053,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "workspace_invites_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_member_blocks: {
+        Row: {
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
+          created_at: string
+          id: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
+          created_at?: string
+          id?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_member_blocks_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
