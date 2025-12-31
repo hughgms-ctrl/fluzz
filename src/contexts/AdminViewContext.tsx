@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/contexts/AdminContext";
+import { useNavigate } from "react-router-dom";
 
 interface AdminViewSession {
   id: string;
@@ -14,6 +15,7 @@ interface AdminViewContextType {
   activeSession: AdminViewSession | null;
   isAdminViewing: boolean;
   isLoading: boolean;
+  navigateToWorkspace: (workspaceId: string, workspaceName: string) => Promise<void>;
   startSession: (workspaceId: string, workspaceName: string) => Promise<void>;
   endSession: () => Promise<void>;
   checkActiveSession: () => Promise<void>;
@@ -114,6 +116,12 @@ export const AdminViewProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const navigateToWorkspace = async (workspaceId: string, workspaceName: string) => {
+    await startSession(workspaceId, workspaceName);
+    // Force page reload to reset all contexts with the admin session
+    window.location.href = "/";
+  };
+
   const endSession = async () => {
     if (!user || !activeSession) return;
 
@@ -139,6 +147,7 @@ export const AdminViewProvider = ({ children }: { children: ReactNode }) => {
         startSession,
         endSession,
         checkActiveSession,
+        navigateToWorkspace,
       }}
     >
       {children}
