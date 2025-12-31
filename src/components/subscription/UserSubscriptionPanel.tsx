@@ -39,16 +39,19 @@ export const UserSubscriptionPanel = () => {
         .from("user_account_management")
         .select("can_access_subscriptions")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         console.error("Error checking subscription access:", error);
         return false;
       }
 
+      console.log("Subscription access check:", { userId: user.id, data });
       return data?.can_access_subscriptions ?? false;
     },
     enabled: !!user?.id,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Get user's subscription
