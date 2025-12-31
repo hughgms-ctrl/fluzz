@@ -24,6 +24,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -37,7 +47,9 @@ import {
   Shield,
   UserMinus,
   RefreshCw,
-  Crown
+  Crown,
+  Trash2,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -149,6 +161,9 @@ export const AdminUserWorkspaces = ({
   const [blockReason, setBlockReason] = useState("");
   const [newRole, setNewRole] = useState("membro");
   const [permissions, setPermissions] = useState<PermissionsState>(defaultPermissions);
+  const [deleteWorkspaceDialogOpen, setDeleteWorkspaceDialogOpen] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<OwnedWorkspace | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   const manageMemberMutation = useMutation({
     mutationFn: async (params: { action: string; workspaceId: string; targetUserId: string; role?: string; reason?: string; permissions?: PermissionsState }) => {
@@ -177,6 +192,27 @@ export const AdminUserWorkspaces = ({
     setNewRole("membro");
     setPermissions(defaultPermissions);
   };
+
+  const deleteWorkspaceMutation = useMutation({
+    mutationFn: async (workspaceId: string) => {
+      const { data, error } = await supabase.functions.invoke("admin-delete-workspace", {
+        body: { workspaceId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || "Workspace excluído com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] });
+      setDeleteWorkspaceDialogOpen(false);
+      setWorkspaceToDelete(null);
+      setDeleteConfirmText("");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao excluir workspace");
+    },
+  });
 
   const openActionDialog = (
     member: WorkspaceMember, 
@@ -311,6 +347,22 @@ export const AdminUserWorkspaces = ({
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3 pt-2">
+                      {/* Delete Workspace Button */}
+                      <div className="flex justify-end pb-2 border-b">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWorkspaceToDelete(workspace);
+                            setDeleteWorkspaceDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir Workspace
+                        </Button>
+                      </div>
+
                       <p className="text-sm font-medium flex items-center gap-2">
                         <Users className="h-4 w-4" />
                         Membros do Workspace
@@ -676,6 +728,70 @@ export const AdminUserWorkspaces = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Workspace Confirmation Dialog */}
+      <AlertDialog open={deleteWorkspaceDialogOpen} onOpenChange={setDeleteWorkspaceDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir Workspace Permanentemente
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="font-medium text-destructive">
+                  ⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!
+                </p>
+                <p className="text-sm mt-2">
+                  Ao excluir o workspace <strong>"{workspaceToDelete?.name}"</strong>, você irá remover permanentemente:
+                </p>
+                <ul className="text-sm mt-2 ml-4 list-disc space-y-1">
+                  <li>Todos os projetos e tarefas</li>
+                  <li>Todos os membros e suas permissões</li>
+                  <li>Briefings, debriefings e documentação</li>
+                  <li>Inventário, cargos e rotinas</li>
+                  <li>Templates, setores e configurações</li>
+                  <li>Notificações e conversas com IA</li>
+                </ul>
+              </div>
+              <div className="mt-4">
+                <Label htmlFor="confirm-delete" className="text-sm font-medium">
+                  Para confirmar, digite o nome do workspace: <strong>{workspaceToDelete?.name}</strong>
+                </Label>
+                <Input
+                  id="confirm-delete"
+                  placeholder="Digite o nome do workspace"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteConfirmText("");
+              setWorkspaceToDelete(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={
+                deleteConfirmText !== workspaceToDelete?.name ||
+                deleteWorkspaceMutation.isPending
+              }
+              onClick={() => {
+                if (workspaceToDelete) {
+                  deleteWorkspaceMutation.mutate(workspaceToDelete.id);
+                }
+              }}
+            >
+              {deleteWorkspaceMutation.isPending ? "Excluindo..." : "Excluir Permanentemente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
