@@ -10,6 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,6 +50,10 @@ interface Plan {
   is_active: boolean;
   features: string[];
   created_at: string;
+  billing_period: string;
+  annual_price_per_user: number;
+  annual_price_per_workspace: number;
+  annual_discount_percentage: number;
 }
 
 const AdminPlans = () => {
@@ -58,6 +69,10 @@ const AdminPlans = () => {
     is_workspace_owner_free: true,
     is_active: true,
     features: "",
+    billing_period: "monthly",
+    annual_price_per_user: 0,
+    annual_price_per_workspace: 0,
+    annual_discount_percentage: 0,
   });
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -86,6 +101,10 @@ const AdminPlans = () => {
         is_active: data.is_active,
         features: data.features.split("\n").filter((f) => f.trim()),
         created_by: user?.id,
+        billing_period: data.billing_period,
+        annual_price_per_user: data.annual_price_per_user,
+        annual_price_per_workspace: data.annual_price_per_workspace,
+        annual_discount_percentage: data.annual_discount_percentage,
       });
       if (error) throw error;
     },
@@ -113,6 +132,10 @@ const AdminPlans = () => {
           is_workspace_owner_free: data.is_workspace_owner_free,
           is_active: data.is_active,
           features: data.features.split("\n").filter((f) => f.trim()),
+          billing_period: data.billing_period,
+          annual_price_per_user: data.annual_price_per_user,
+          annual_price_per_workspace: data.annual_price_per_workspace,
+          annual_discount_percentage: data.annual_discount_percentage,
         })
         .eq("id", id);
       if (error) throw error;
@@ -154,6 +177,10 @@ const AdminPlans = () => {
       is_workspace_owner_free: true,
       is_active: true,
       features: "",
+      billing_period: "monthly",
+      annual_price_per_user: 0,
+      annual_price_per_workspace: 0,
+      annual_discount_percentage: 0,
     });
     setSelectedPlan(null);
   };
@@ -169,6 +196,10 @@ const AdminPlans = () => {
       is_workspace_owner_free: plan.is_workspace_owner_free,
       is_active: plan.is_active,
       features: (plan.features || []).join("\n"),
+      billing_period: plan.billing_period || "monthly",
+      annual_price_per_user: plan.annual_price_per_user || 0,
+      annual_price_per_workspace: plan.annual_price_per_workspace || 0,
+      annual_discount_percentage: plan.annual_discount_percentage || 0,
     });
     setDialogOpen(true);
   };
@@ -234,32 +265,99 @@ const AdminPlans = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price_workspace">Preço por Workspace (R$)</Label>
-                  <Input
-                    id="price_workspace"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.price_per_workspace}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price_per_workspace: parseFloat(e.target.value) || 0 })
-                    }
-                  />
+              <div className="space-y-2">
+                <Label>Periodicidade Padrão</Label>
+                <Select
+                  value={formData.billing_period}
+                  onValueChange={(value) => setFormData({ ...formData, billing_period: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mensal</SelectItem>
+                    <SelectItem value="annual">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Preços Mensais</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price_workspace" className="text-sm">Por Workspace (R$)</Label>
+                    <Input
+                      id="price_workspace"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price_per_workspace}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price_per_workspace: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price_user" className="text-sm">Por Usuário (R$)</Label>
+                    <Input
+                      id="price_user"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.price_per_user}
+                      onChange={(e) =>
+                        setFormData({ ...formData, price_per_user: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Preços Anuais</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="annual_price_workspace" className="text-sm">Por Workspace (R$)</Label>
+                    <Input
+                      id="annual_price_workspace"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.annual_price_per_workspace}
+                      onChange={(e) =>
+                        setFormData({ ...formData, annual_price_per_workspace: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="annual_price_user" className="text-sm">Por Usuário (R$)</Label>
+                    <Input
+                      id="annual_price_user"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.annual_price_per_user}
+                      onChange={(e) =>
+                        setFormData({ ...formData, annual_price_per_user: parseFloat(e.target.value) || 0 })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="price_user">Preço por Usuário (R$)</Label>
+                  <Label htmlFor="annual_discount">Desconto Anual (%)</Label>
                   <Input
-                    id="price_user"
+                    id="annual_discount"
                     type="number"
                     min="0"
-                    step="0.01"
-                    value={formData.price_per_user}
+                    max="100"
+                    value={formData.annual_discount_percentage}
                     onChange={(e) =>
-                      setFormData({ ...formData, price_per_user: parseFloat(e.target.value) || 0 })
+                      setFormData({ ...formData, annual_discount_percentage: parseFloat(e.target.value) || 0 })
                     }
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Exibido como economia para usuários
+                  </p>
                 </div>
               </div>
 
@@ -373,16 +471,44 @@ const AdminPlans = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Periodicidade:</span>
+                    <Badge variant={plan.billing_period === "annual" ? "default" : "secondary"}>
+                      {plan.billing_period === "annual" ? "Anual" : "Mensal"}
+                    </Badge>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground">Por Workspace</p>
+                    <p className="text-xs text-muted-foreground">Mensal/Workspace</p>
                     <p className="text-lg font-bold">{formatCurrency(plan.price_per_workspace)}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted">
-                    <p className="text-xs text-muted-foreground">Por Usuário</p>
+                    <p className="text-xs text-muted-foreground">Mensal/Usuário</p>
                     <p className="text-lg font-bold">{formatCurrency(plan.price_per_user)}</p>
                   </div>
                 </div>
+
+                {(plan.annual_price_per_workspace > 0 || plan.annual_price_per_user > 0) && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <p className="text-xs text-muted-foreground">Anual/Workspace</p>
+                      <p className="text-lg font-bold">{formatCurrency(plan.annual_price_per_workspace)}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <p className="text-xs text-muted-foreground">Anual/Usuário</p>
+                      <p className="text-lg font-bold">{formatCurrency(plan.annual_price_per_user)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {plan.annual_discount_percentage > 0 && (
+                  <Badge className="bg-green-500">
+                    Economia de {plan.annual_discount_percentage}% no plano anual
+                  </Badge>
+                )}
 
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="h-4 w-4 text-muted-foreground" />
