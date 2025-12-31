@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -49,11 +50,13 @@ import {
   RefreshCw,
   Crown,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAdminView } from "@/contexts/AdminViewContext";
 
 interface WorkspaceMember {
   id: string;
@@ -153,6 +156,8 @@ export const AdminUserWorkspaces = ({
   memberBlocks,
 }: AdminUserWorkspacesProps) => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { startSession, isLoading: isStartingSession } = useAdminView();
   
   const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
@@ -164,6 +169,29 @@ export const AdminUserWorkspaces = ({
   const [deleteWorkspaceDialogOpen, setDeleteWorkspaceDialogOpen] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<OwnedWorkspace | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [accessConfirmDialogOpen, setAccessConfirmDialogOpen] = useState(false);
+  const [workspaceToAccess, setWorkspaceToAccess] = useState<{ id: string; name: string } | null>(null);
+
+  const handleAccessWorkspace = async () => {
+    if (!workspaceToAccess) return;
+    
+    try {
+      await startSession(workspaceToAccess.id, workspaceToAccess.name);
+      toast.success(`Acessando workspace "${workspaceToAccess.name}" como administrador`);
+      navigate("/home");
+    } catch (error) {
+      console.error("Erro ao iniciar sessão admin:", error);
+      toast.error("Erro ao acessar workspace");
+    } finally {
+      setAccessConfirmDialogOpen(false);
+      setWorkspaceToAccess(null);
+    }
+  };
+
+  const openAccessDialog = (workspaceId: string, workspaceName: string) => {
+    setWorkspaceToAccess({ id: workspaceId, name: workspaceName });
+    setAccessConfirmDialogOpen(true);
+  };
 
   const manageMemberMutation = useMutation({
     mutationFn: async (params: { action: string; workspaceId: string; targetUserId: string; role?: string; reason?: string; permissions?: PermissionsState }) => {
@@ -347,8 +375,20 @@ export const AdminUserWorkspaces = ({
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-3 pt-2">
-                      {/* Delete Workspace Button */}
-                      <div className="flex justify-end pb-2 border-b">
+                      {/* Action Buttons */}
+                      <div className="flex justify-between items-center pb-2 border-b gap-2 flex-wrap">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAccessDialog(workspace.id, workspace.name);
+                          }}
+                          disabled={isStartingSession}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Acessar como Admin
+                        </Button>
                         <Button
                           variant="destructive"
                           size="sm"
@@ -788,6 +828,47 @@ export const AdminUserWorkspaces = ({
               }}
             >
               {deleteWorkspaceMutation.isPending ? "Excluindo..." : "Excluir Permanentemente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Access Workspace Confirmation Dialog */}
+      <AlertDialog open={accessConfirmDialogOpen} onOpenChange={setAccessConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Acessar Workspace como Administrador
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Você está prestes a acessar o workspace <strong>"{workspaceToAccess?.name}"</strong> no modo administrador.
+                </p>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-amber-600 dark:text-amber-400 text-sm">
+                  <p className="font-medium mb-1">⚠️ Atenção:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Você terá acesso completo a todos os dados do workspace</li>
+                    <li>Suas ações serão registradas para auditoria</li>
+                    <li>A sessão expira em 2 horas automaticamente</li>
+                    <li>Um banner visível indicará que você está no modo administrador</li>
+                  </ul>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setWorkspaceToAccess(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleAccessWorkspace}
+              disabled={isStartingSession}
+            >
+              {isStartingSession ? "Acessando..." : "Confirmar Acesso"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

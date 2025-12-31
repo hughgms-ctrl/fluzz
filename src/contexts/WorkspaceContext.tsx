@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 import { toast } from "sonner";
@@ -34,6 +34,12 @@ interface UserPermissions {
   can_view_workload: boolean;
 }
 
+interface AdminViewSession {
+  id: string;
+  workspace_id: string;
+  expires_at: string;
+}
+
 interface WorkspaceContextType {
   workspace: Workspace | null;
   workspaceMember: WorkspaceMember | null;
@@ -45,6 +51,7 @@ interface WorkspaceContextType {
   canManageMembers: boolean;
   canCreateTasks: boolean;
   permissions: UserPermissions;
+  isAdminViewMode: boolean;
   refetchWorkspace: () => Promise<void>;
   changeWorkspace: (workspaceId: string) => Promise<void>;
 }
@@ -57,6 +64,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const [workspaceMember, setWorkspaceMember] = useState<WorkspaceMember | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdminViewMode, setIsAdminViewMode] = useState(false);
   const [permissions, setPermissions] = useState<UserPermissions>({
     can_view_projects: false,
     can_view_tasks: false,
@@ -71,18 +79,90 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     can_view_workload: false,
   });
 
+  // Check for active admin view session
+  const checkAdminViewSession = useCallback(async (): Promise<AdminViewSession | null> => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("admin_view_sessions")
+        .select("id, workspace_id, expires_at")
+        .eq("admin_user_id", user.id)
+        .gt("expires_at", new Date().toISOString())
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking admin view session:", error);
+        return null;
+      }
+
+      return data;
+    } catch (err) {
+      console.error("Error checking admin view session:", err);
+      return null;
+    }
+  }, [user]);
+
   const fetchWorkspace = async (preferredWorkspaceId?: string) => {
     if (!user) {
       setWorkspace(null);
       setWorkspaceMember(null);
       setWorkspaces([]);
       setLoading(false);
+      setIsAdminViewMode(false);
       return;
     }
 
     setLoading(true);
 
     try {
+      // Check for active admin view session first
+      const adminSession = await checkAdminViewSession();
+      
+      if (adminSession) {
+        // Admin is viewing a workspace - fetch that workspace directly
+        const { data: adminWorkspace, error: wsError } = await supabase
+          .from("workspaces")
+          .select("*")
+          .eq("id", adminSession.workspace_id)
+          .single();
+
+        if (!wsError && adminWorkspace) {
+          setWorkspace(adminWorkspace);
+          setWorkspaces([adminWorkspace]);
+          // Create a virtual member with admin role for the session
+          setWorkspaceMember({
+            id: 'admin-view-session',
+            workspace_id: adminSession.workspace_id,
+            user_id: user.id,
+            role: 'admin',
+            invited_by: null,
+            created_at: new Date().toISOString(),
+          });
+          setIsAdminViewMode(true);
+          // Full permissions for admin view
+          setPermissions({
+            can_view_projects: true,
+            can_view_tasks: true,
+            can_view_positions: true,
+            can_view_analytics: true,
+            can_view_briefings: true,
+            can_view_culture: true,
+            can_view_vision: true,
+            can_view_processes: true,
+            can_view_inventory: true,
+            can_view_ai: true,
+            can_view_workload: true,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Reset admin view mode if no active session
+      setIsAdminViewMode(false);
       // Buscar todos os memberships do usuário sem depender de RLS recursivo
       const { data: memberData, error: memberError } = await supabase
         .rpc('user_workspace_ids', { _user_id: user.id });
@@ -285,12 +365,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         workspaceMember,
         workspaces,
         loading,
-        isAdmin,
-        isGestor,
+        isAdmin: isAdminViewMode || isAdmin,
+        isGestor: isAdminViewMode || isGestor,
         isMembro,
-        canManageMembers,
-        canCreateTasks,
+        canManageMembers: isAdminViewMode || canManageMembers,
+        canCreateTasks: isAdminViewMode || canCreateTasks,
         permissions,
+        isAdminViewMode,
         refetchWorkspace: fetchWorkspace,
         changeWorkspace,
       }}

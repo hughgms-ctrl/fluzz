@@ -77,6 +77,41 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_view_sessions: {
+        Row: {
+          admin_user_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          started_at: string
+          workspace_id: string
+        }
+        Insert: {
+          admin_user_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          started_at?: string
+          workspace_id: string
+        }
+        Update: {
+          admin_user_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          started_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_view_sessions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_conversations: {
         Row: {
           created_at: string
@@ -2206,6 +2241,11 @@ export type Database = {
         }
         Returns: string
       }
+      can_access_workspace: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      cleanup_expired_admin_sessions: { Args: never; Returns: undefined }
       get_user_admin_stats: {
         Args: { _user_id: string }
         Returns: {
@@ -2235,6 +2275,10 @@ export type Database = {
         }[]
       }
       get_user_workspace_id: { Args: { _user_id: string }; Returns: string }
+      has_admin_view_session: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       is_email_blocked: { Args: { _email: string }; Returns: boolean }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_project_owner: {
