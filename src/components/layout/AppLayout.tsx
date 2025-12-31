@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Button } from "@/components/ui/button";
-import { User } from "lucide-react";
+import { User, Shield } from "lucide-react";
 import { AIFloatingButton } from "@/components/ai/AIFloatingButton";
 import { AdminViewBanner } from "@/components/admin/AdminViewBanner";
 
@@ -26,7 +26,8 @@ export const AppLayout = ({
     workspaceMember,
     workspaces,
     loading: workspaceLoading,
-    changeWorkspace
+    changeWorkspace,
+    isAdminViewMode
   } = useWorkspace();
   const navigate = useNavigate();
 
@@ -85,13 +86,23 @@ export const AppLayout = ({
               {workspaceMember && workspaces.length > 0 && <Select value={workspace?.id} onValueChange={value => {
               void changeWorkspace(value);
             }}>
-                  <SelectTrigger className="w-[160px] sm:w-[220px] text-xs sm:text-sm">
+                  <SelectTrigger className={`w-[160px] sm:w-[220px] text-xs sm:text-sm ${isAdminViewMode ? 'border-orange-500 bg-orange-500/10' : ''}`}>
                     <SelectValue placeholder="Selecionar workspace" />
                   </SelectTrigger>
                   <SelectContent>
-                    {workspaces.map(ws => <SelectItem key={ws.id} value={ws.id}>
-                        {ws.name}
-                      </SelectItem>)}
+                    {workspaces.map(ws => (
+                      <SelectItem key={ws.id} value={ws.id}>
+                        <div className="flex items-center gap-2">
+                          {ws.isAdminView && (
+                            <Shield className="h-3 w-3 text-orange-500" />
+                          )}
+                          <span>{ws.name}</span>
+                          {ws.isAdminView && (
+                            <span className="text-[10px] text-orange-500 font-medium">(Admin)</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>}
             </div>
