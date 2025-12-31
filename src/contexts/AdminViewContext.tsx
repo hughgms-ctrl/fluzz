@@ -118,8 +118,10 @@ export const AdminViewProvider = ({ children }: { children: ReactNode }) => {
 
   const navigateToWorkspace = async (workspaceId: string, workspaceName: string) => {
     await startSession(workspaceId, workspaceName);
+    // Save to localStorage so WorkspaceContext picks it up
+    window.localStorage.setItem("currentWorkspaceId", workspaceId);
     // Force page reload to reset all contexts with the admin session
-    window.location.href = "/";
+    window.location.href = "/home";
   };
 
   const endSession = async () => {
