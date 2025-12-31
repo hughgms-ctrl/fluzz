@@ -77,51 +77,105 @@ export default function MyTasks() {
   ].filter(Boolean).length;
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ["my-tasks", user?.id],
+    queryKey: ["my-tasks", user?.id, workspace?.id],
     queryFn: async () => {
-      // Get tasks assigned to me
-      const { data: myTasks, error: myTasksError } = await supabase
-        .from("tasks")
-        .select("*, projects(id, name, archived, pending_notifications), task_assignees(user_id)")
-        .eq("assigned_to", user!.id)
-        .order("created_at", { ascending: false });
-      if (myTasksError) throw myTasksError;
+      if (!user || !workspace) return [];
 
-      // Get tasks I need to review (where I'm the approval_reviewer_id)
-      const { data: reviewTasks, error: reviewError } = await supabase
-        .from("tasks")
-        .select("*, projects(id, name, archived, pending_notifications), task_assignees(user_id)")
-        .eq("approval_reviewer_id", user!.id)
-        .eq("requires_approval", true)
-        .eq("approval_status", "pending")
-        .order("created_at", { ascending: false });
-      if (reviewError) throw reviewError;
+      // Scope project tasks to the currently selected workspace.
+      const { data: wsProjects, error: wsProjectsError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("workspace_id", workspace.id);
+      if (wsProjectsError) throw wsProjectsError;
+
+      const projectIds = (wsProjects || []).map((p) => p.id);
+      const selectFields =
+        "*, projects(id, name, archived, pending_notifications, workspace_id), task_assignees(user_id)";
+
+      const fetchAssignedProjectTasks = async () => {
+        if (projectIds.length === 0) return [];
+        const { data, error } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .eq("assigned_to", user.id)
+          .in("project_id", projectIds)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      };
+
+      const fetchAssignedStandaloneTasks = async () => {
+        const { data, error } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .eq("assigned_to", user.id)
+          .is("project_id", null)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      };
+
+      const fetchReviewProjectTasks = async () => {
+        if (projectIds.length === 0) return [];
+        const { data, error } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .eq("approval_reviewer_id", user.id)
+          .eq("requires_approval", true)
+          .eq("approval_status", "pending")
+          .in("project_id", projectIds)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      };
+
+      const fetchReviewStandaloneTasks = async () => {
+        const { data, error } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .eq("approval_reviewer_id", user.id)
+          .eq("requires_approval", true)
+          .eq("approval_status", "pending")
+          .is("project_id", null)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      };
+
+      const [assignedProject, assignedStandalone, reviewProject, reviewStandalone] = await Promise.all([
+        fetchAssignedProjectTasks(),
+        fetchAssignedStandaloneTasks(),
+        fetchReviewProjectTasks(),
+        fetchReviewStandaloneTasks(),
+      ]);
 
       // Combine and deduplicate
-      const allTasks = [...(myTasks || [])];
-      reviewTasks?.forEach((task) => {
-        if (!allTasks.find((t) => t.id === task.id)) {
-          allTasks.push(task);
-        }
+      const byId = new Map<string, any>();
+      [...assignedProject, ...assignedStandalone, ...reviewProject, ...reviewStandalone].forEach((t) => {
+        byId.set(t.id, t);
       });
+
+      const allTasks = Array.from(byId.values());
 
       // IMPORTANT: Do NOT show tasks from draft projects (rascunho)
       // A draft project is identified by pending_notifications === true.
       return (
-        allTasks?.filter((task) => {
-          // Standalone tasks are always visible
-          if (!task.project_id) return true;
+        allTasks
+          ?.filter((task) => {
+            // Standalone tasks are always visible
+            if (!task.project_id) return true;
 
-          // If it's a project task, only show when project is published and not archived
-          if (!task.projects) return false;
-          if (task.projects.archived) return false;
-          if (task.projects.pending_notifications === true) return false;
+            // If it's a project task, only show when project is published and not archived
+            if (!task.projects) return false;
+            if (task.projects.archived) return false;
+            if (task.projects.pending_notifications === true) return false;
 
-          return true;
-        }) || []
+            return true;
+          })
+          .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")) || []
       );
     },
-    enabled: !!user,
+    enabled: !!user && !!workspace,
   });
 
   const { data: projects } = useQuery({
