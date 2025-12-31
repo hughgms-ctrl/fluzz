@@ -228,80 +228,79 @@ const AdminUsers = () => {
 
   const toggleSubscriptionAccessMutation = useMutation({
     mutationFn: async ({ userId, enable }: { userId: string; enable: boolean }) => {
-      const { data: existing } = await supabase
-        .from("user_account_management")
-        .select("id")
-        .eq("user_id", userId)
-        .single();
-
-      const updateData = {
+      const payload = {
+        user_id: userId,
         can_access_subscriptions: enable,
         subscription_panel_enabled_at: enable ? new Date().toISOString() : null,
         subscription_panel_enabled_by: enable ? currentUser?.id : null,
       };
 
-      if (existing) {
-        const { error } = await supabase
-          .from("user_account_management")
-          .update(updateData)
-          .eq("user_id", userId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("user_account_management").insert({
-          user_id: userId,
-          ...updateData,
-        });
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from("user_account_management")
+        .upsert(payload, { onConflict: "user_id" });
+
+      if (error) throw error;
     },
     onSuccess: (_, variables) => {
       toast.success(
-        variables.enable
-          ? "Painel de assinaturas liberado"
-          : "Painel de assinaturas bloqueado"
+        variables.enable ? "Painel de assinaturas liberado" : "Painel de assinaturas bloqueado"
       );
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+
+      // Optimistic UI update for the current list
+      queryClient.setQueryData<UserWithDetails[]>(["admin-users", search], (prev) => {
+        if (!prev) return prev as any;
+        return prev.map((u) =>
+          u.id === variables.userId
+            ? { ...u, can_access_subscriptions: variables.enable }
+            : u
+        );
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["admin-users", search] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Erro ao alterar acesso de assinaturas:", error);
       toast.error("Erro ao alterar acesso");
     },
   });
 
-  const bulkEnableSubscriptionsMutation = useMutation({
-    mutationFn: async (userIds: string[]) => {
-      for (const userId of userIds) {
-        const { data: existing } = await supabase
-          .from("user_account_management")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
+  const bulkSetSubscriptionsMutation = useMutation({
+    mutationFn: async ({ userIds, enable }: { userIds: string[]; enable: boolean }) => {
+      const rows = userIds.map((userId) => ({
+        user_id: userId,
+        can_access_subscriptions: enable,
+        subscription_panel_enabled_at: enable ? new Date().toISOString() : null,
+        subscription_panel_enabled_by: enable ? currentUser?.id : null,
+      }));
 
-        const updateData = {
-          can_access_subscriptions: true,
-          subscription_panel_enabled_at: new Date().toISOString(),
-          subscription_panel_enabled_by: currentUser?.id,
-        };
+      const { error } = await supabase
+        .from("user_account_management")
+        .upsert(rows, { onConflict: "user_id" });
 
-        if (existing) {
-          await supabase
-            .from("user_account_management")
-            .update(updateData)
-            .eq("user_id", userId);
-        } else {
-          await supabase.from("user_account_management").insert({
-            user_id: userId,
-            ...updateData,
-          });
-        }
-      }
+      if (error) throw error;
     },
-    onSuccess: () => {
-      toast.success(`Painel de assinaturas liberado para ${selectedUsers.length} usuários`);
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    onSuccess: (_, variables) => {
+      toast.success(
+        variables.enable
+          ? `Painel de assinaturas liberado para ${variables.userIds.length} usuários`
+          : `Painel de assinaturas bloqueado para ${variables.userIds.length} usuários`
+      );
+
+      // Optimistic UI update for the current list
+      queryClient.setQueryData<UserWithDetails[]>(["admin-users", search], (prev) => {
+        if (!prev) return prev as any;
+        const set = new Set(variables.userIds);
+        return prev.map((u) =>
+          set.has(u.id) ? { ...u, can_access_subscriptions: variables.enable } : u
+        );
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["admin-users", search] });
       setSelectedUsers([]);
     },
-    onError: () => {
-      toast.error("Erro ao liberar acesso em massa");
+    onError: (error) => {
+      console.error("Erro ao alterar acesso em massa:", error);
+      toast.error("Erro ao alterar acesso em massa");
     },
   });
 
@@ -351,8 +350,10 @@ const AdminUsers = () => {
             {selectedUsers.length > 0 && (
               <Button
                 size="sm"
-                onClick={() => bulkEnableSubscriptionsMutation.mutate(selectedUsers)}
-                disabled={bulkEnableSubscriptionsMutation.isPending}
+                onClick={() =>
+                  bulkSetSubscriptionsMutation.mutate({ userIds: selectedUsers, enable: true })
+                }
+                disabled={bulkSetSubscriptionsMutation.isPending}
                 className="flex-1 sm:flex-none"
               >
                 <CreditCard className="h-4 w-4 sm:mr-2" />
