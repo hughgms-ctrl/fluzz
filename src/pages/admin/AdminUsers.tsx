@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +53,8 @@ import {
   Building2,
   Users,
   Eye,
-  RefreshCw
+  RefreshCw,
+  ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -73,11 +75,11 @@ interface UserWithDetails {
 }
 
 const AdminUsers = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [userDetailOpen, setUserDetailOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
   const [blockReason, setBlockReason] = useState("");
   const queryClient = useQueryClient();
@@ -341,19 +343,22 @@ const AdminUsers = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="flex-1 sm:flex-none">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
             {selectedUsers.length > 0 && (
               <Button
                 size="sm"
                 onClick={() => bulkEnableSubscriptionsMutation.mutate(selectedUsers)}
                 disabled={bulkEnableSubscriptionsMutation.isPending}
+                className="flex-1 sm:flex-none"
               >
-                <CreditCard className="h-4 w-4 mr-2" />
-                Liberar Assinaturas ({selectedUsers.length})
+                <CreditCard className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Liberar Assinaturas</span>
+                <span className="sm:hidden">Liberar</span>
+                <span className="ml-1">({selectedUsers.length})</span>
               </Button>
             )}
           </div>
@@ -364,136 +369,190 @@ const AdminUsers = () => {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedUsers.length === users?.length && users?.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Workspaces</TableHead>
-                    <TableHead>Assinaturas</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users?.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
+            <>
+              {/* Mobile Card View */}
+              <div className="block lg:hidden space-y-3">
+                {users?.map((user) => (
+                  <div
+                    key={user.id}
+                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => navigate(`/admin/users/${user.id}`)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
                         <Checkbox
                           checked={selectedUsers.includes(user.id)}
                           onCheckedChange={() => toggleSelectUser(user.id)}
+                          onClick={(e) => e.stopPropagation()}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {user.full_name?.charAt(0) || "?"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{user.full_name || "Sem nome"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              ID: {user.id.slice(0, 8)}...
-                            </p>
+                        <Avatar className="h-10 w-10 shrink-0">
+                          <AvatarImage src={user.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {user.full_name?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{user.full_name || "Sem nome"}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {getStatusBadge(user.status || "active")}
+                            {user.can_access_subscriptions && (
+                              <Badge className="bg-green-500 text-xs">Assin.</Badge>
+                            )}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(user.status || "active")}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <span>{user.workspaces_owned} próprios</span>
-                          <Users className="h-4 w-4 text-muted-foreground ml-2" />
-                          <span>{user.total_members_in_owned_workspaces || 0} membros</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {user.can_access_subscriptions ? (
-                          <Badge className="bg-green-500">Liberado</Badge>
-                        ) : (
-                          <Badge variant="secondary">Bloqueado</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setUserDetailOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Ver detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                toggleSubscriptionAccessMutation.mutate({
-                                  userId: user.id,
-                                  enable: !user.can_access_subscriptions,
-                                })
-                              }
-                            >
-                              <CreditCard className="h-4 w-4 mr-2" />
-                              {user.can_access_subscriptions
-                                ? "Bloquear painel assinaturas"
-                                : "Liberar painel assinaturas"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {user.status === "blocked" ? (
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                    </div>
+                    <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground pl-[52px]">
+                      <span className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {user.workspaces_owned}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {user.total_members_in_owned_workspaces || 0}
+                      </span>
+                      <span>
+                        {format(new Date(user.created_at), "dd/MM/yy", { locale: ptBR })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedUsers.length === users?.length && users?.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Workspaces</TableHead>
+                      <TableHead>Assinaturas</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users?.map((user) => (
+                      <TableRow 
+                        key={user.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => navigate(`/admin/users/${user.id}`)}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedUsers.includes(user.id)}
+                            onCheckedChange={() => toggleSelectUser(user.id)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={user.avatar_url || undefined} />
+                              <AvatarFallback>
+                                {user.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">{user.full_name || "Sem nome"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                ID: {user.id.slice(0, 8)}...
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(user.status || "active")}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span>{user.workspaces_owned} próprios</span>
+                            <Users className="h-4 w-4 text-muted-foreground ml-2" />
+                            <span>{user.total_members_in_owned_workspaces || 0} membros</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {user.can_access_subscriptions ? (
+                            <Badge className="bg-green-500">Liberado</Badge>
+                          ) : (
+                            <Badge variant="secondary">Bloqueado</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(user.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => unblockUserMutation.mutate(user.id)}
+                                onClick={() => navigate(`/admin/users/${user.id}`)}
                               >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Desbloquear
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver detalhes
                               </DropdownMenuItem>
-                            ) : (
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  toggleSubscriptionAccessMutation.mutate({
+                                    userId: user.id,
+                                    enable: !user.can_access_subscriptions,
+                                  })
+                                }
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                {user.can_access_subscriptions
+                                  ? "Bloquear painel assinaturas"
+                                  : "Liberar painel assinaturas"}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {user.status === "blocked" ? (
+                                <DropdownMenuItem
+                                  onClick={() => unblockUserMutation.mutate(user.id)}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Desbloquear
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setBlockDialogOpen(true);
+                                  }}
+                                >
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Bloquear acesso
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 className="text-destructive"
                                 onClick={() => {
                                   setSelectedUser(user);
-                                  setBlockDialogOpen(true);
+                                  setDeleteDialogOpen(true);
                                 }}
                               >
-                                <Ban className="h-4 w-4 mr-2" />
-                                Bloquear acesso
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir permanentemente
                               </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir permanentemente
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -563,65 +622,6 @@ const AdminUsers = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* User Detail Dialog */}
-      <Dialog open={userDetailOpen} onOpenChange={setUserDetailOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Usuário</DialogTitle>
-          </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedUser.avatar_url || undefined} />
-                  <AvatarFallback className="text-xl">
-                    {selectedUser.full_name?.charAt(0) || "?"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-xl font-semibold">
-                    {selectedUser.full_name || "Sem nome"}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">ID: {selectedUser.id}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <p className="font-medium mt-1">
-                    {getStatusBadge(selectedUser.status || "active")}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-sm text-muted-foreground">Painel Assinaturas</p>
-                  <p className="font-medium mt-1">
-                    {selectedUser.can_access_subscriptions ? "Liberado" : "Bloqueado"}
-                  </p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-sm text-muted-foreground">Workspaces Próprios</p>
-                  <p className="font-medium mt-1">{selectedUser.workspaces_owned}</p>
-                </div>
-                <div className="p-4 rounded-lg bg-muted">
-                  <p className="text-sm text-muted-foreground">Membro de Workspaces</p>
-                  <p className="font-medium mt-1">{selectedUser.workspaces_count}</p>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-lg bg-muted">
-                <p className="text-sm text-muted-foreground">Criado em</p>
-                <p className="font-medium mt-1">
-                  {format(new Date(selectedUser.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
-                    locale: ptBR,
-                  })}
-                </p>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };
