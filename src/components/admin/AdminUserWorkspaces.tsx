@@ -157,8 +157,7 @@ export const AdminUserWorkspaces = ({
 }: AdminUserWorkspacesProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { startSession, isLoading: isStartingSession } = useAdminView();
-  
+  const { navigateToWorkspace, isLoading: isStartingSession } = useAdminView();
   const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(null);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
@@ -176,13 +175,11 @@ export const AdminUserWorkspaces = ({
     if (!workspaceToAccess) return;
     
     try {
-      await startSession(workspaceToAccess.id, workspaceToAccess.name);
       toast.success(`Acessando workspace "${workspaceToAccess.name}" como administrador`);
-      navigate("/home");
+      await navigateToWorkspace(workspaceToAccess.id, workspaceToAccess.name);
     } catch (error) {
       console.error("Erro ao iniciar sessão admin:", error);
       toast.error("Erro ao acessar workspace");
-    } finally {
       setAccessConfirmDialogOpen(false);
       setWorkspaceToAccess(null);
     }

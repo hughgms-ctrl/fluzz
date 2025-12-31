@@ -19,13 +19,13 @@ export const AdminViewBanner = () => {
   };
 
   return (
-    <div className="bg-destructive text-destructive-foreground px-4 py-2 flex items-center justify-between gap-4 flex-wrap">
+    <div className="bg-orange-500 text-white px-4 py-3 flex items-center justify-between gap-4 flex-wrap shadow-lg">
       <div className="flex items-center gap-3">
         <Shield className="h-5 w-5" />
         <div className="text-sm">
-          <span className="font-semibold">Modo Administrador:</span>{" "}
+          <span className="font-bold">MODO ADMINISTRADOR:</span>{" "}
           <span>Visualizando workspace "{activeSession.workspace_name}"</span>
-          <span className="hidden sm:inline text-destructive-foreground/80 ml-2">
+          <span className="hidden sm:inline opacity-80 ml-2">
             • Expira às {format(expiresAt, "HH:mm", { locale: ptBR })}
           </span>
         </div>
@@ -35,7 +35,7 @@ export const AdminViewBanner = () => {
           variant="secondary"
           size="sm"
           onClick={() => navigate("/admin/users")}
-          className="h-7 text-xs"
+          className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
         >
           <ExternalLink className="h-3 w-3 mr-1" />
           Voltar ao Painel
@@ -45,10 +45,10 @@ export const AdminViewBanner = () => {
           size="sm"
           onClick={handleEndSession}
           disabled={isLoading}
-          className="h-7 text-xs bg-transparent border-destructive-foreground/30 hover:bg-destructive-foreground/10"
+          className="h-7 text-xs bg-transparent border-white/50 text-white hover:bg-white/20"
         >
           <X className="h-3 w-3 mr-1" />
-          Encerrar
+          Encerrar Sessão
         </Button>
       </div>
     </div>
