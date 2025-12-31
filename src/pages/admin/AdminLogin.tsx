@@ -23,6 +23,13 @@ const AdminLogin = () => {
   const { user } = useAuth();
   const { isAdmin, loading: adminLoading, checkAdminStatus } = useAdmin();
 
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (!adminLoading && isAdmin && user) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAdmin, adminLoading, user, navigate]);
+
   useEffect(() => {
     // Only check after user logs in
     if (!user) {
@@ -130,6 +137,18 @@ const AdminLogin = () => {
       setSetupLoading(false);
     }
   };
+
+  // Show loading while checking admin status
+  if (adminLoading || (user && isAdmin)) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-muted-foreground">Verificando acesso...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
