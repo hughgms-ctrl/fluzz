@@ -1619,6 +1619,7 @@ export type Database = {
           task_order: number | null
           title: string
           updated_at: string | null
+          workspace_id: string | null
         }
         Insert: {
           approval_reviewer_id?: string | null
@@ -1642,6 +1643,7 @@ export type Database = {
           task_order?: number | null
           title: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Update: {
           approval_reviewer_id?: string | null
@@ -1665,6 +1667,7 @@ export type Database = {
           task_order?: number | null
           title?: string
           updated_at?: string | null
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -1693,6 +1696,13 @@ export type Database = {
             columns: ["routine_id"]
             isOneToOne: false
             referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]

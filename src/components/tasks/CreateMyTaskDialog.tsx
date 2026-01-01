@@ -171,6 +171,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
         due_date: dueDate || null,
         documentation: fullDocumentation || null,
         project_id: null,
+        workspace_id: workspace?.id || null,
       };
       
       const { data, error } = await supabase

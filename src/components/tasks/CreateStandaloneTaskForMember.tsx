@@ -101,6 +101,7 @@ export const CreateStandaloneTaskForMember = ({
             assigned_to: assignedTo,
             documentation: documentation || null,
             setor: setor || null,
+            workspace_id: workspace?.id || null,
           },
         ])
         .select()

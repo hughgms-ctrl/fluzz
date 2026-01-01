@@ -90,26 +90,18 @@ export default function Analytics() {
     enabled: !!workspace?.id,
   });
 
-  // Fetch standalone tasks (no project)
+  // Fetch standalone tasks from this workspace
   const { data: standaloneTasks } = useQuery({
     queryKey: ["analytics-standalone-tasks", workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) return [];
-      
-      // Get all workspace members
-      const { data: members } = await supabase
-        .from("workspace_members")
-        .select("user_id")
-        .eq("workspace_id", workspace.id);
-      
-      if (!members || members.length === 0) return [];
       
       const { data, error } = await supabase
         .from("tasks")
         .select("*, task_assignees(user_id)")
         .is("project_id", null)
         .is("routine_id", null)
-        .in("assigned_to", members.map(m => m.user_id));
+        .eq("workspace_id", workspace.id);
       
       if (error) throw error;
       return data;
@@ -117,29 +109,17 @@ export default function Analytics() {
     enabled: !!workspace?.id,
   });
 
-  // Fetch routine tasks
+  // Fetch routine tasks from this workspace
   const { data: routineTasks } = useQuery({
     queryKey: ["analytics-routine-tasks", workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) return [];
 
-      // Get all workspace members
-      const { data: members } = await supabase
-        .from("workspace_members")
-        .select("user_id")
-        .eq("workspace_id", workspace.id);
-
-      if (!members || members.length === 0) return [];
-
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, task_assignees(user_id), routines!inner(id, workspace_id)")
+        .select("*, task_assignees(user_id)")
         .not("routine_id", "is", null)
-        .eq("routines.workspace_id", workspace.id)
-        .in(
-          "assigned_to",
-          members.map((m) => m.user_id)
-        );
+        .eq("workspace_id", workspace.id);
 
       if (error) throw error;
       return data;

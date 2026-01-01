@@ -282,6 +282,7 @@ serve(async (req) => {
             setor: params.setor || null,
             due_date: params.due_date || null,
             status: "a fazer",
+            workspace_id: workspace_id,
           })
           .select("id, title")
           .single();

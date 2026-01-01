@@ -121,6 +121,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
         assigned_to: assignedTo || user.id,
         setor: sectorId || null,
         project_id: null,
+        workspace_id: workspace?.id || null,
       };
       
       console.log("Task data:", taskData);
