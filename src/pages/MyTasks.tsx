@@ -110,6 +110,7 @@ export default function MyTasks() {
           .select(selectFields)
           .eq("assigned_to", user.id)
           .is("project_id", null)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];
@@ -137,6 +138,7 @@ export default function MyTasks() {
           .eq("requires_approval", true)
           .eq("approval_status", "pending")
           .is("project_id", null)
+          .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false });
         if (error) throw error;
         return data || [];

@@ -11,6 +11,7 @@ interface Routine {
   recurrence_type: string;
   start_date: string;
   recurrence_config: any;
+  workspace_id: string | null;
 }
 
 interface RoutineTask {
@@ -139,6 +140,7 @@ Deno.serve(async (req) => {
             assigned_to: targetUserId,
             due_date: dueDate,
             routine_id: routine.id,
+            workspace_id: routine.workspace_id,
           };
 
           const { data: newTask, error: insertError } = await supabase

@@ -127,28 +127,20 @@ export default function WorkloadOverview() {
         projectTasks = (data || []) as TaskWithAssignee[];
       }
       
-      // Get workspace member IDs
-      const { data: workspaceMembers } = await supabase
-        .from("workspace_members")
-        .select("user_id")
-        .eq("workspace_id", workspace.id);
-      
-      const memberIds = workspaceMembers?.map(m => m.user_id) || [];
-      
-      // Fetch standalone tasks
+      // Fetch standalone tasks (by workspace_id now)
       const { data: standaloneTasks } = await supabase
         .from("tasks")
         .select("id, title, status, priority, due_date, assigned_to, project_id")
         .is("project_id", null)
         .is("routine_id", null)
-        .in("assigned_to", memberIds);
+        .eq("workspace_id", workspace.id);
       
-      // Fetch routine tasks
+      // Fetch routine tasks (by workspace_id now)
       const { data: routineTasks } = await supabase
         .from("tasks")
         .select("id, title, status, priority, due_date, assigned_to, project_id")
         .not("routine_id", "is", null)
-        .in("assigned_to", memberIds);
+        .eq("workspace_id", workspace.id);
       
       return [
         ...projectTasks,

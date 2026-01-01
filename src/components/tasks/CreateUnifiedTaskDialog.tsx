@@ -230,6 +230,7 @@ export const CreateUnifiedTaskDialog = ({
         setor: setor || null,
         project_id: null,
         routine_id: null,
+        workspace_id: workspace?.id || null,
       };
 
       if (taskType === "project") {

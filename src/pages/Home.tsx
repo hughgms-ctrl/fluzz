@@ -116,23 +116,23 @@ export default function Home() {
           allTasksResult = [...(projectTasks || [])];
         }
         
-        // 2. Standalone tasks (no project, no routine) from workspace members
+        // 2. Standalone tasks from this workspace
         const { data: standaloneTasks } = await supabase
           .from("tasks")
           .select("*")
           .is("project_id", null)
           .is("routine_id", null)
-          .in("assigned_to", memberIds);
+          .eq("workspace_id", workspace.id);
         allTasksResult = [...allTasksResult, ...(standaloneTasks || [])];
         
-        // 3. Routine tasks from workspace members
+        // 3. Routine tasks from this workspace
         const { data: routineTasks } = await supabase
           .from("tasks")
           .select("*")
           .not("routine_id", "is", null)
-          .in("assigned_to", memberIds);
+          .eq("workspace_id", workspace.id);
         allTasksResult = [...allTasksResult, ...(routineTasks || [])];
-        
+
       } else {
         // Member: get only tasks assigned to them
         // 1. Project tasks
@@ -145,20 +145,22 @@ export default function Home() {
           allTasksResult = [...(projectTasks || [])];
         }
         
-        // 2. Standalone tasks
+        // 2. Standalone tasks from this workspace assigned to current user
         const { data: standaloneTasks } = await supabase
           .from("tasks")
           .select("*")
           .is("project_id", null)
           .is("routine_id", null)
+          .eq("workspace_id", workspace.id)
           .eq("assigned_to", user?.id);
         allTasksResult = [...allTasksResult, ...(standaloneTasks || [])];
         
-        // 3. Routine tasks
+        // 3. Routine tasks from this workspace assigned to current user
         const { data: routineTasks } = await supabase
           .from("tasks")
           .select("*")
           .not("routine_id", "is", null)
+          .eq("workspace_id", workspace.id)
           .eq("assigned_to", user?.id);
         allTasksResult = [...allTasksResult, ...(routineTasks || [])];
       }
