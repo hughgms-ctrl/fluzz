@@ -47,12 +47,28 @@ export const AppLayout = ({
     );
   }
 
-  // IMPORTANTE: Apenas redireciona para setup se o usuário não tem NENHUM workspace
-  // Usuários convidados devem ter workspaces carregados pelo WorkspaceContext
-  if (user && !workspaceLoading && workspaces.length === 0) {
-    console.log("Redirecionando para setup - sem workspaces");
-    return <Navigate to="/workspace/setup" replace />;
+  // Verifica se já completou o onboarding
+  const hasCompletedOnboarding = () => {
+    if (!user) return false;
+    const completed = localStorage.getItem(`fluzz_onboarding_completed_${user.id}`);
+    return completed === "true";
+  };
+
+  // Redireciona para setup se:
+  // 1. Usuário não tem nenhum workspace (precisa criar)
+  // 2. Usuário tem workspaces MAS ainda não completou o onboarding (primeira vez)
+  if (user && !workspaceLoading) {
+    if (workspaces.length === 0) {
+      console.log("Redirecionando para setup - sem workspaces");
+      return <Navigate to="/workspace/setup" replace />;
+    }
+    
+    if (!hasCompletedOnboarding()) {
+      console.log("Redirecionando para setup - onboarding não completado");
+      return <Navigate to="/workspace/setup" replace />;
+    }
   }
+
   if (!user) {
     return <Navigate to="/auth" replace />;
   }

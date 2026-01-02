@@ -16,6 +16,8 @@ interface ExistingWorkspaceInfo {
   invitedByName: string | null;
 }
 
+const ONBOARDING_COMPLETED_KEY = "fluzz_onboarding_completed";
+
 export default function WorkspaceSetup() {
   const { user } = useAuth();
   const { workspaces, loading: workspaceLoading, changeWorkspace } = useWorkspace();
@@ -26,9 +28,29 @@ export default function WorkspaceSetup() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [checkingExisting, setCheckingExisting] = useState(true);
 
+  // Verifica se já completou o onboarding anteriormente
+  const hasCompletedOnboarding = () => {
+    if (!user) return false;
+    const completed = localStorage.getItem(`${ONBOARDING_COMPLETED_KEY}_${user.id}`);
+    return completed === "true";
+  };
+
+  // Marca o onboarding como completado
+  const markOnboardingComplete = () => {
+    if (user) {
+      localStorage.setItem(`${ONBOARDING_COMPLETED_KEY}_${user.id}`, "true");
+    }
+  };
+
   useEffect(() => {
     const checkExistingWorkspace = async () => {
       if (!user || workspaceLoading) return;
+      
+      // Se já completou o onboarding e tem workspaces, redireciona direto
+      if (hasCompletedOnboarding() && workspaces.length > 0) {
+        setCheckingExisting(false);
+        return;
+      }
       
       // Se já tem workspaces, busca informações do primeiro
       if (workspaces.length > 0) {
@@ -81,8 +103,8 @@ export default function WorkspaceSetup() {
     );
   }
 
-  // Se tem workspace existente e não está mostrando o form de criar, redireciona para home
-  if (workspaces.length > 0 && !existingWorkspace && !showCreateForm) {
+  // Se já completou o onboarding e tem workspaces, redireciona para home
+  if (hasCompletedOnboarding() && workspaces.length > 0) {
     return <Navigate to="/" replace />;
   }
 
@@ -118,6 +140,9 @@ export default function WorkspaceSetup() {
 
       if (memberError) throw memberError;
 
+      // Marcar onboarding como completo
+      markOnboardingComplete();
+      
       toast.success("Workspace criado com sucesso!");
       await changeWorkspace(workspace.id);
       navigate("/", { replace: true });
@@ -131,6 +156,9 @@ export default function WorkspaceSetup() {
 
   const handleContinueToWorkspace = async () => {
     if (existingWorkspace) {
+      // Marcar onboarding como completo
+      markOnboardingComplete();
+      
       await changeWorkspace(existingWorkspace.workspaceId);
       navigate("/", { replace: true });
     }
