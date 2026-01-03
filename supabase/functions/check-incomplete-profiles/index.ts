@@ -6,9 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Intervalos em dias
-const PROFILE_REMINDER_INTERVAL_DAYS = 2; // Lembrete a cada 2 dias para cadastro incompleto
-const INSTALL_REMINDER_INTERVAL_DAYS = 5; // Lembrete a cada 5 dias para instalar o app
+// Intervalo em dias para todos os lembretes
+const REMINDER_INTERVAL_DAYS = 3; // Lembrete a cada 3 dias
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -91,6 +90,7 @@ serve(async (req) => {
       user_id: string;
       last_profile_reminder_at?: string;
       last_install_reminder_at?: string;
+      last_push_reminder_at?: string;
     }> = [];
 
     // Check each profile
@@ -103,37 +103,29 @@ serve(async (req) => {
       const pwaRecord = pwaInstallMap.get(profile.id);
       const isInstalled = pwaRecord?.installed_at != null;
 
-      // Check profile incomplete (foto ou push faltando) - lembrete a cada 2 dias
-      const missingItems: string[] = [];
-      if (!hasAvatar) missingItems.push('foto de perfil');
-      if (!hasPush) missingItems.push('notificações push');
+      // Helper para verificar se deve enviar lembrete
+      const shouldSendReminder = (lastReminderAt: string | null): boolean => {
+        if (!lastReminderAt) return true; // Primeiro lembrete
+        const lastReminder = new Date(lastReminderAt);
+        const daysSinceReminder = (now.getTime() - lastReminder.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceReminder >= REMINDER_INTERVAL_DAYS;
+      };
 
-      if (missingItems.length > 0) {
-        const lastProfileReminder = pwaRecord?.last_profile_reminder_at 
-          ? new Date(pwaRecord.last_profile_reminder_at)
-          : null;
-
-        const daysSinceProfileReminder = lastProfileReminder 
-          ? (now.getTime() - lastProfileReminder.getTime()) / (1000 * 60 * 60 * 24)
-          : PROFILE_REMINDER_INTERVAL_DAYS + 1; // Force first reminder
-
-        if (daysSinceProfileReminder >= PROFILE_REMINDER_INTERVAL_DAYS) {
-          const message = `Complete seu perfil adicionando: ${missingItems.join(' e ')}`;
-          
+      // 1. Verificar foto de perfil - lembrete a cada 3 dias
+      if (!hasAvatar) {
+        const shouldRemindAvatar = shouldSendReminder(pwaRecord?.last_profile_reminder_at);
+        
+        if (shouldRemindAvatar) {
           notificationsToCreate.push({
             user_id: profile.id,
             workspace_id: workspaceId,
-            type: 'profile_incomplete',
-            title: 'Complete seu perfil',
-            message: message,
+            type: 'profile_avatar_reminder',
+            title: 'Adicione sua foto de perfil',
+            message: 'Complete seu cadastro adicionando uma foto de perfil para que sua equipe possa identificá-lo facilmente.',
             link: '/profile',
-            data: {
-              missing_avatar: !hasAvatar,
-              missing_push: !hasPush
-            }
+            data: { reminder_type: 'avatar' }
           });
 
-          // Update last profile reminder timestamp
           const existingUpsert = pwaRecordsToUpsert.find(r => r.user_id === profile.id);
           if (existingUpsert) {
             existingUpsert.last_profile_reminder_at = now.toISOString();
@@ -146,30 +138,21 @@ serve(async (req) => {
         }
       }
 
-      // Check PWA not installed - lembrete a cada 5 dias até instalar
+      // 2. Verificar instalação do PWA - lembrete a cada 3 dias
       if (!isInstalled) {
-        const lastInstallReminder = pwaRecord?.last_install_reminder_at 
-          ? new Date(pwaRecord.last_install_reminder_at)
-          : null;
-
-        const daysSinceInstallReminder = lastInstallReminder 
-          ? (now.getTime() - lastInstallReminder.getTime()) / (1000 * 60 * 60 * 24)
-          : INSTALL_REMINDER_INTERVAL_DAYS + 1; // Force first reminder
-
-        if (daysSinceInstallReminder >= INSTALL_REMINDER_INTERVAL_DAYS) {
+        const shouldRemindInstall = shouldSendReminder(pwaRecord?.last_install_reminder_at);
+        
+        if (shouldRemindInstall) {
           notificationsToCreate.push({
             user_id: profile.id,
             workspace_id: workspaceId,
             type: 'pwa_install_reminder',
             title: 'Instale o aplicativo',
-            message: 'Instale o Fluzz na tela inicial do seu dispositivo para uma experiência melhor e receber notificações.',
+            message: 'Instale o Fluzz na tela inicial do seu dispositivo para acesso rápido e uma experiência melhor.',
             link: '/install',
-            data: {
-              reminder_type: 'pwa_install'
-            }
+            data: { reminder_type: 'pwa_install' }
           });
 
-          // Update last install reminder timestamp
           const existingUpsert = pwaRecordsToUpsert.find(r => r.user_id === profile.id);
           if (existingUpsert) {
             existingUpsert.last_install_reminder_at = now.toISOString();
@@ -177,6 +160,33 @@ serve(async (req) => {
             pwaRecordsToUpsert.push({
               user_id: profile.id,
               last_install_reminder_at: now.toISOString()
+            });
+          }
+        }
+      }
+
+      // 3. Verificar notificações push - lembrete a cada 3 dias
+      if (!hasPush) {
+        const shouldRemindPush = shouldSendReminder(pwaRecord?.last_push_reminder_at);
+        
+        if (shouldRemindPush) {
+          notificationsToCreate.push({
+            user_id: profile.id,
+            workspace_id: workspaceId,
+            type: 'push_notification_reminder',
+            title: 'Ative as notificações',
+            message: 'Ative as notificações push para receber alertas importantes sobre suas tarefas e prazos.',
+            link: '/profile',
+            data: { reminder_type: 'push_notifications' }
+          });
+
+          const existingUpsert = pwaRecordsToUpsert.find(r => r.user_id === profile.id);
+          if (existingUpsert) {
+            existingUpsert.last_push_reminder_at = now.toISOString();
+          } else {
+            pwaRecordsToUpsert.push({
+              user_id: profile.id,
+              last_push_reminder_at: now.toISOString()
             });
           }
         }
@@ -211,6 +221,9 @@ serve(async (req) => {
           if (record.last_install_reminder_at) {
             updateData.last_install_reminder_at = record.last_install_reminder_at;
           }
+          if (record.last_push_reminder_at) {
+            updateData.last_push_reminder_at = record.last_push_reminder_at;
+          }
 
           const { error } = await supabase
             .from('pwa_installations')
@@ -227,7 +240,8 @@ serve(async (req) => {
             .insert({
               user_id: record.user_id,
               last_profile_reminder_at: record.last_profile_reminder_at || null,
-              last_install_reminder_at: record.last_install_reminder_at || null
+              last_install_reminder_at: record.last_install_reminder_at || null,
+              last_push_reminder_at: record.last_push_reminder_at || null
             });
 
           if (error) {
