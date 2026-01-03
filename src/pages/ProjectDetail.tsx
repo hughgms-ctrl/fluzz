@@ -745,7 +745,7 @@ export default function ProjectDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* View Toggle - available on all devices */}
+            {/* View Toggle - available on all devices, kanban hidden on mobile */}
             <div className="flex justify-end">
               <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list" | "timeline")}>
                 <TabsList>
@@ -753,10 +753,12 @@ export default function ProjectDetail() {
                     <List size={16} />
                     <span className="hidden sm:inline">Lista</span>
                   </TabsTrigger>
-                  <TabsTrigger value="board" className="gap-2">
-                    <LayoutGrid size={16} />
-                    <span className="hidden sm:inline">Kanban</span>
-                  </TabsTrigger>
+                  {!isMobile && (
+                    <TabsTrigger value="board" className="gap-2">
+                      <LayoutGrid size={16} />
+                      <span className="hidden sm:inline">Kanban</span>
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger value="timeline" className="gap-2">
                     <GanttChartSquare size={16} />
                     <span className="hidden sm:inline">Cronograma</span>
