@@ -32,7 +32,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { formatDateBR } from "@/lib/utils";
+import { formatDateBR, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -261,9 +261,9 @@ export default function Projects() {
             </div>
             
             <div className="flex items-center gap-2">
-              {/* View mode toggle - esconder no mobile */}
-              {!isMobile && (
-                <div className="flex border rounded-md">
+              {/* View mode toggle */}
+              <div className="flex border rounded-md">
+                {!isMobile && (
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="icon"
@@ -273,26 +273,26 @@ export default function Projects() {
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
-                    size="icon"
-                    onClick={() => setViewMode("list")}
-                    className="h-8 w-8"
-                    title="Lista"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "calendar" ? "default" : "ghost"}
-                    size="icon"
-                    onClick={() => setViewMode("calendar")}
-                    className="rounded-l-none h-8 w-8"
-                    title="Calendário"
-                  >
-                    <CalendarDays className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+                )}
+                <Button
+                  variant={viewMode === "list" ? "default" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("list")}
+                  className={cn("h-8 w-8", !isMobile && "rounded-none")}
+                  title="Lista"
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === "calendar" ? "default" : "ghost"}
+                  size="icon"
+                  onClick={() => setViewMode("calendar")}
+                  className="rounded-l-none h-8 w-8"
+                  title="Calendário"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              </div>
               
               {(isAdmin || isGestor) && (
                 <Button 
@@ -335,7 +335,7 @@ export default function Projects() {
           </TabsList>
 
           <TabsContent value="active" className="mt-4">
-            {viewMode === "calendar" && !isMobile ? (
+            {viewMode === "calendar" ? (
               <ProjectsCalendarView
                 projects={calendarProjects}
                 onCreateProject={(date) => {

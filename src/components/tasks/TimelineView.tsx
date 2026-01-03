@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   DndContext, 
   DragEndEvent, 
@@ -447,25 +448,36 @@ export const TimelineView = ({
   const todayPosition = todayIndex * dayWidth;
   const showTodayLine = todayIndex >= 0 && todayIndex < totalDays;
 
-  // Resizable column state
-  const [taskColumnWidth, setTaskColumnWidth] = useState(192); // 12rem = 192px
+  const isMobile = useIsMobile();
+
+  // Resizable column state - smaller default on mobile
+  const [taskColumnWidth, setTaskColumnWidth] = useState(() => isMobile ? 100 : 192);
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartX = useRef(0);
   const resizeStartWidth = useRef(0);
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // Update column width when mobile state changes
+  useEffect(() => {
+    setTaskColumnWidth(isMobile ? 100 : 192);
+  }, [isMobile]);
+
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    resizeStartX.current = e.clientX;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    resizeStartX.current = clientX;
     resizeStartWidth.current = taskColumnWidth;
   };
 
   useEffect(() => {
     if (!isResizing) return;
 
-    const handleResizeMove = (e: MouseEvent) => {
-      const delta = e.clientX - resizeStartX.current;
-      const newWidth = Math.max(120, Math.min(400, resizeStartWidth.current + delta));
+    const handleResizeMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const delta = clientX - resizeStartX.current;
+      const minWidth = isMobile ? 60 : 120;
+      const maxWidth = isMobile ? 200 : 400;
+      const newWidth = Math.max(minWidth, Math.min(maxWidth, resizeStartWidth.current + delta));
       setTaskColumnWidth(newWidth);
     };
 
@@ -475,12 +487,16 @@ export const TimelineView = ({
 
     document.addEventListener("mousemove", handleResizeMove);
     document.addEventListener("mouseup", handleResizeEnd);
+    document.addEventListener("touchmove", handleResizeMove);
+    document.addEventListener("touchend", handleResizeEnd);
 
     return () => {
       document.removeEventListener("mousemove", handleResizeMove);
       document.removeEventListener("mouseup", handleResizeEnd);
+      document.removeEventListener("touchmove", handleResizeMove);
+      document.removeEventListener("touchend", handleResizeEnd);
     };
-  }, [isResizing]);
+  }, [isResizing, isMobile]);
 
   return (
     <div className="space-y-4">
@@ -580,13 +596,15 @@ export const TimelineView = ({
             )}
           </div>
 
-          {/* Resize handle */}
+          {/* Resize handle - touch-friendly on mobile */}
           <div
             className={cn(
-              "w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition-colors z-30",
-              isResizing ? "bg-primary" : "bg-border"
+              "shrink-0 cursor-col-resize hover:bg-primary/50 transition-colors z-30 touch-none",
+              isResizing ? "bg-primary" : "bg-border",
+              isMobile ? "w-3" : "w-1"
             )}
             onMouseDown={handleResizeStart}
+            onTouchStart={handleResizeStart}
           />
 
           {/* Scrollable timeline area */}
