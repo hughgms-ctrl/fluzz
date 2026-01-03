@@ -745,28 +745,25 @@ export default function ProjectDetail() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* View Toggle */}
-            {/* View toggle - only show on desktop */}
-            {!isMobile && (
-              <div className="flex justify-end">
-                <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list" | "timeline")}>
-                  <TabsList>
-                    <TabsTrigger value="list" className="gap-2">
-                      <List size={16} />
-                      <span className="hidden sm:inline">Lista</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="board" className="gap-2">
-                      <LayoutGrid size={16} />
-                      <span className="hidden sm:inline">Kanban</span>
-                    </TabsTrigger>
-                    <TabsTrigger value="timeline" className="gap-2">
-                      <GanttChartSquare size={16} />
-                      <span className="hidden sm:inline">Cronograma</span>
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            )}
+            {/* View Toggle - available on all devices */}
+            <div className="flex justify-end">
+              <Tabs value={view} onValueChange={(v) => setView(v as "board" | "list" | "timeline")}>
+                <TabsList>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List size={16} />
+                    <span className="hidden sm:inline">Lista</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="board" className="gap-2">
+                    <LayoutGrid size={16} />
+                    <span className="hidden sm:inline">Kanban</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="timeline" className="gap-2">
+                    <GanttChartSquare size={16} />
+                    <span className="hidden sm:inline">Cronograma</span>
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
 
             {filteredTasks && filteredTasks.length === 0 ? (
               <div className="text-center py-16">
@@ -784,7 +781,7 @@ export default function ProjectDetail() {
               </div>
             ) : (
               <>
-                {view === "timeline" && !isMobile ? (
+                {view === "timeline" ? (
                   <TimelineView
                     tasks={filteredTasks || []}
                     onUpdateTaskDates={async (taskId, startDate, dueDate) => {
@@ -806,19 +803,34 @@ export default function ProjectDetail() {
                     onSortModeChange={handleSortModeChange}
                     setorNames={positions?.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {}) || {}}
                   />
-                ) : view === "board" && !isMobile ? (
-                  <DraggableTaskBoard
-                    tasks={filteredTasks || []}
-                    onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
-                    onUpdateStatus={(taskId, status) =>
-                      updateTaskStatusMutation.mutate({ taskId, status })
-                    }
-                    onUpdateOrder={(taskId, newOrder, status) =>
-                      updateTaskOrderMutation.mutate({ taskId, newOrder, status })
-                    }
-                    sortMode={sortMode}
-                    onSortModeChange={handleSortModeChange}
-                  />
+                ) : view === "board" ? (
+                  isMobile ? (
+                    <MobileKanbanBoard
+                      tasks={filteredTasks || []}
+                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                      onUpdateStatus={(taskId, status) =>
+                        updateTaskStatusMutation.mutate({ taskId, status })
+                      }
+                      onUpdateOrder={(taskId, newOrder, status) =>
+                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                      }
+                      sortMode={sortMode}
+                      onSortModeChange={handleSortModeChange}
+                    />
+                  ) : (
+                    <DraggableTaskBoard
+                      tasks={filteredTasks || []}
+                      onDeleteTask={(taskId) => deleteTaskMutation.mutate(taskId)}
+                      onUpdateStatus={(taskId, status) =>
+                        updateTaskStatusMutation.mutate({ taskId, status })
+                      }
+                      onUpdateOrder={(taskId, newOrder, status) =>
+                        updateTaskOrderMutation.mutate({ taskId, newOrder, status })
+                      }
+                      sortMode={sortMode}
+                      onSortModeChange={handleSortModeChange}
+                    />
+                  )
                 ) : (
                   <TaskTableView
                     tasks={filteredTasks || []}
