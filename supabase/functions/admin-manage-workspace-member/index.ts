@@ -49,12 +49,32 @@ serve(async (req) => {
       );
     }
 
-    const { action, workspaceId, userId, role, reason, permissions } = await req.json();
+    const { action, workspaceId, userId, targetUserId, role, reason, permissions } = await req.json();
 
-    if (!action || !workspaceId || !userId) {
+    // Support both userId and targetUserId for backwards compatibility
+    const targetUser = targetUserId || userId;
+
+    if (!action || !workspaceId || !targetUser) {
       return new Response(
-        JSON.stringify({ error: "action, workspaceId, and userId are required" }),
+        JSON.stringify({ error: "action, workspaceId, and userId/targetUserId are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if target user is the workspace creator (owner)
+    const { data: workspace } = await supabaseClient
+      .from("workspaces")
+      .select("created_by")
+      .eq("id", workspaceId)
+      .single();
+
+    const isWorkspaceCreator = workspace?.created_by === targetUser;
+
+    // Protect workspace creator from role changes, removal, and blocking
+    if (isWorkspaceCreator && ["update_role", "remove", "block"].includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "O criador do workspace não pode ter seu cargo alterado, ser removido ou bloqueado." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -65,7 +85,7 @@ serve(async (req) => {
           .from("workspace_member_blocks")
           .upsert({
             workspace_id: workspaceId,
-            user_id: userId,
+            user_id: targetUser,
             blocked_by: callerUser.id,
             blocked_reason: reason || null,
           });
@@ -85,7 +105,7 @@ serve(async (req) => {
           .from("workspace_member_blocks")
           .delete()
           .eq("workspace_id", workspaceId)
-          .eq("user_id", userId);
+          .eq("user_id", targetUser);
 
         if (unblockError) {
           return new Response(
@@ -108,7 +128,7 @@ serve(async (req) => {
           .from("workspace_members")
           .update({ role })
           .eq("workspace_id", workspaceId)
-          .eq("user_id", userId);
+          .eq("user_id", targetUser);
 
         if (roleError) {
           return new Response(
@@ -132,7 +152,7 @@ serve(async (req) => {
           .from("user_permissions")
           .upsert({
             workspace_id: workspaceId,
-            user_id: userId,
+            user_id: targetUser,
             ...permissions,
           }, {
             onConflict: 'user_id,workspace_id'
@@ -153,7 +173,7 @@ serve(async (req) => {
           .from("workspace_members")
           .delete()
           .eq("workspace_id", workspaceId)
-          .eq("user_id", userId);
+          .eq("user_id", targetUser);
 
         if (removeError) {
           return new Response(
@@ -167,14 +187,14 @@ serve(async (req) => {
           .from("workspace_member_blocks")
           .delete()
           .eq("workspace_id", workspaceId)
-          .eq("user_id", userId);
+          .eq("user_id", targetUser);
 
         // Remove permissions
         await supabaseClient
           .from("user_permissions")
           .delete()
           .eq("workspace_id", workspaceId)
-          .eq("user_id", userId);
+          .eq("user_id", targetUser);
         break;
       }
 
@@ -184,7 +204,7 @@ serve(async (req) => {
           .from("workspace_members")
           .insert({
             workspace_id: workspaceId,
-            user_id: userId,
+            user_id: targetUser,
             role: role || "membro",
           });
 
