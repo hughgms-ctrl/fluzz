@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { User, Shield } from "lucide-react";
 import { AIFloatingButton } from "@/components/ai/AIFloatingButton";
 import { AdminViewBanner } from "@/components/admin/AdminViewBanner";
+import { SetupPopup } from "@/components/onboarding/SetupPopup";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -128,6 +129,7 @@ export const AppLayout = ({
             </main>
           </div>
           <AIFloatingButton />
+          <SetupPopup />
         </div>
       </div>
     </SidebarProvider>;
