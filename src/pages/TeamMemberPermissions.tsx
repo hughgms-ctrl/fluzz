@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,23 @@ export default function TeamMemberPermissions() {
     enabled: !!workspace?.id && !!userId,
   });
 
+  // Check if member is the workspace creator
+  const { data: workspaceData } = useQuery({
+    queryKey: ["workspace-creator", workspace?.id],
+    queryFn: async () => {
+      if (!workspace?.id) return null;
+      const { data } = await supabase
+        .from("workspaces")
+        .select("created_by")
+        .eq("id", workspace.id)
+        .single();
+      return data;
+    },
+    enabled: !!workspace?.id,
+  });
+
+  const isWorkspaceCreator = workspaceData?.created_by === userId;
+
   const { data: permissions } = useQuery({
     queryKey: ["user-permissions", workspace?.id, userId],
     queryFn: async () => {
@@ -167,6 +185,9 @@ export default function TeamMemberPermissions() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async (newRole: "admin" | "gestor" | "membro") => {
+      if (isWorkspaceCreator) {
+        throw new Error("O criador do workspace não pode ter seu cargo alterado");
+      }
       const { error } = await supabase
         .from("workspace_members")
         .update({ role: newRole })
@@ -180,13 +201,16 @@ export default function TeamMemberPermissions() {
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
       toast.success("Função atualizada com sucesso");
     },
-    onError: () => {
-      toast.error("Erro ao atualizar função");
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao atualizar função");
     },
   });
 
   const deleteMemberMutation = useMutation({
     mutationFn: async () => {
+      if (isWorkspaceCreator) {
+        throw new Error("O criador do workspace não pode ser removido");
+      }
       await supabase
         .from("user_permissions")
         .delete()
@@ -206,8 +230,8 @@ export default function TeamMemberPermissions() {
       toast.success("Membro removido com sucesso");
       navigate("/team");
     },
-    onError: () => {
-      toast.error("Erro ao remover membro");
+    onError: (error: Error) => {
+      toast.error(error.message || "Erro ao remover membro");
     },
   });
 
@@ -230,6 +254,8 @@ export default function TeamMemberPermissions() {
   };
 
   const isCurrentUser = user?.id === userId;
+  const canModifyRole = !isCurrentUser && !isWorkspaceCreator;
+  const canRemoveMember = !isCurrentUser && !isWorkspaceCreator;
 
   // Only admin and gestor can access this page
   if (!isAdmin && !isGestor) {
@@ -300,11 +326,11 @@ export default function TeamMemberPermissions() {
                 <CardTitle className="text-2xl">
                   {member.profiles?.full_name || "Usuário"}
                 </CardTitle>
-                <CardDescription className="mt-2 flex items-center gap-2">
+                <CardDescription className="mt-2 flex items-center gap-2 flex-wrap">
                   <Select 
                     value={member.role} 
                     onValueChange={(value) => updateRoleMutation.mutate(value as "admin" | "gestor" | "membro")}
-                    disabled={isCurrentUser}
+                    disabled={!canModifyRole}
                   >
                     <SelectTrigger className="w-[140px]">
                       <SelectValue />
@@ -318,9 +344,14 @@ export default function TeamMemberPermissions() {
                   {isCurrentUser && (
                     <span className="text-xs text-muted-foreground">(você)</span>
                   )}
+                  {isWorkspaceCreator && (
+                    <Badge variant="outline" className="text-xs border-primary text-primary">
+                      Criador do Workspace
+                    </Badge>
+                  )}
                 </CardDescription>
               </div>
-              {!isCurrentUser && (
+              {canRemoveMember && (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" size="icon">
