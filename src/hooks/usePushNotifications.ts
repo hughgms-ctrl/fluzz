@@ -32,26 +32,14 @@ export function usePushNotifications() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [localEndpoint, setLocalEndpoint] = useState<string | null>(null);
 
   // Debounce ref to prevent duplicate calls
   const sendingRef = useRef(false);
 
-  useEffect(() => {
-    // Check if push notifications are supported
-    const supported =
-      'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
-    setIsSupported(supported);
-
-    if (supported) {
-      setPermission(Notification.permission);
-      fetchVapidKey();
-      checkSubscription();
-    }
-  }, [user]);
-
-  const fetchVapidKey = async (): Promise<string | null> => {
+  const fetchVapidKey = useCallback(async (): Promise<string | null> => {
     try {
       const { data, error } = await supabase.functions.invoke('get-vapid-key');
       if (error) throw error;
@@ -63,7 +51,7 @@ export function usePushNotifications() {
       console.error('Error fetching VAPID key:', error);
       return null;
     }
-  };
+  }, []);
 
   const checkSubscription = useCallback(async () => {
     if (!user) return;
@@ -96,6 +84,56 @@ export function usePushNotifications() {
       setIsSubscribed(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setIsInitialized(false);
+
+    const init = async () => {
+      // Check if push notifications are supported
+      const supported =
+        'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+      setIsSupported(supported);
+
+      if (!supported) {
+        if (!cancelled) {
+          setIsInitialized(true);
+          setLocalEndpoint(null);
+          setIsSubscribed(false);
+        }
+        return;
+      }
+
+      setPermission(Notification.permission);
+
+      // If there's no user, we still consider the hook initialized (nothing to check)
+      if (!user) {
+        if (!cancelled) {
+          setIsInitialized(true);
+          setLocalEndpoint(null);
+          setIsSubscribed(false);
+        }
+        return;
+      }
+
+      try {
+        // Best-effort (subscribe() will fetch again if needed)
+        await fetchVapidKey();
+        await checkSubscription();
+      } finally {
+        if (!cancelled) {
+          setIsInitialized(true);
+        }
+      }
+    };
+
+    void init();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, fetchVapidKey, checkSubscription]);
 
   const registerServiceWorker = async (): Promise<ServiceWorkerRegistration> => {
     // Use the main PWA service worker (which now includes push handlers)
@@ -330,6 +368,7 @@ export function usePushNotifications() {
 
   return {
     permission,
+    isInitialized,
     isSubscribed,
     isLoading,
     isSupported,

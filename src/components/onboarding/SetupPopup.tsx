@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
 const SESSION_KEY = "setup_popup_dismissed_session";
+const COMPLETED_KEY_PREFIX = "setup_popup_completed_v1";
 
 interface SetupTask {
   id: "photo" | "pwa" | "notifications";
@@ -26,9 +27,24 @@ export function SetupPopup() {
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const { isInstalled, isIOS, canShowPrompt, install } = usePWAInstall();
-  const { isSubscribed, subscribe, permission } = usePushNotifications();
-  
+  const {
+    isInstalled,
+    isIOS,
+    canShowPrompt,
+    install,
+    isInitialized: isPWAReady,
+  } = usePWAInstall();
+  const {
+    isSubscribed,
+    subscribe,
+    permission,
+    isInitialized: isPushReady,
+  } = usePushNotifications();
+
+  const completedKey = user ? `${COMPLETED_KEY_PREFIX}:${user.id}` : COMPLETED_KEY_PREFIX;
+  const isCompletedInBrowser =
+    !!user && typeof window !== "undefined" && localStorage.getItem(completedKey) === "true";
+
   const [isDismissed, setIsDismissed] = useState(false);
   const [showInstructions, setShowInstructions] = useState<string | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -42,7 +58,7 @@ export function SetupPopup() {
   }, []);
 
   // Fetch profile to check for avatar
-  const { data: profile } = useQuery({
+  const { data: profile, isPending: isProfilePending } = useQuery({
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
@@ -57,12 +73,27 @@ export function SetupPopup() {
     enabled: !!user?.id,
   });
 
+  const isSetupStatusReady = !isProfilePending && isPWAReady && isPushReady;
+
   const hasPhoto = !!profile?.avatar_url;
   const hasPWA = isInstalled;
   const hasNotifications = isSubscribed;
 
   // All tasks completed
   const allCompleted = hasPhoto && hasPWA && hasNotifications;
+
+  // Persist completion per user (prevents any future “flash” on navigation)
+  useEffect(() => {
+    if (!user) return;
+    if (!isSetupStatusReady) return;
+    if (!allCompleted) return;
+
+    try {
+      localStorage.setItem(completedKey, "true");
+    } catch {
+      // ignore storage failures
+    }
+  }, [user, isSetupStatusReady, allCompleted, completedKey]);
 
   // Define setup tasks
   const tasks: SetupTask[] = [
@@ -161,6 +192,12 @@ export function SetupPopup() {
 
   // Don't show if not logged in
   if (!user) return null;
+
+  // Nunca piscar se já foi concluído neste navegador
+  if (isCompletedInBrowser) return null;
+
+  // Evita “flash”: só renderiza depois de sabermos o status real das 3 tarefas
+  if (!isSetupStatusReady) return null;
 
   // Don't show if all completed
   if (allCompleted) return null;
