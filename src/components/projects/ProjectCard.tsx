@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MoreVertical, Copy, Trash2, Archive, ArchiveRestore, Bookmark, FileEdit } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useProjectActions } from "@/hooks/useProjectActions";
 
 interface ProjectCardProps {
   project: any;
@@ -39,6 +40,7 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
   const [isEditingName, setIsEditingName] = useState(false);
   const [projectName, setProjectName] = useState(project.name);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { duplicateProject, saveAsTemplate } = useProjectActions();
 
   const updateNameMutation = useMutation({
     mutationFn: async (newName: string) => {
@@ -58,249 +60,6 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
       setProjectName(project.name);
     },
   });
-
-  const saveAsTemplateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      // Create a template entry in project_templates table
-      const { data: newTemplate, error: templateError } = await supabase
-        .from("project_templates")
-        .insert([
-          {
-            name: project.name,
-            description: project.description,
-            workspace_id: project.workspace_id,
-            created_by: user.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (templateError) throw templateError;
-
-      // Copy tasks to template_tasks
-      const { data: tasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*, subtasks(*)")
-        .eq("project_id", project.id);
-
-      if (tasksError) throw tasksError;
-
-      // Fetch task_processes
-      const { data: taskProcesses } = await supabase
-        .from("task_processes")
-        .select("*")
-        .in("task_id", tasks?.map(t => t.id) || []);
-
-      if (tasks && tasks.length > 0) {
-        const taskIdToIndex: Record<string, number> = {};
-        tasks.forEach((task, index) => {
-          taskIdToIndex[task.id] = index;
-        });
-
-        const newTemplateTasks = tasks.map((task, index) => ({
-          template_id: newTemplate.id,
-          title: task.title,
-          description: task.description, // Copiar descrição
-          priority: task.priority,
-          setor: task.setor,
-          documentation: null, // NÃO copiar documentação
-          process_id: task.process_id,
-          task_order: index,
-        }));
-
-        const { data: insertedTasks, error: insertError } = await supabase
-          .from("template_tasks")
-          .insert(newTemplateTasks)
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (insertedTasks && insertedTasks.length > 0) {
-          // Copy subtasks to template_subtasks
-          const allSubtasks: any[] = [];
-          for (let i = 0; i < tasks.length; i++) {
-            const originalTask = tasks[i];
-            const newTask = insertedTasks[i];
-            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any, subIndex: number) => ({
-                template_task_id: newTask.id,
-                title: subtask.title,
-                task_order: subIndex,
-              }));
-              allSubtasks.push(...subtasksForTask);
-            }
-          }
-
-          if (allSubtasks.length > 0) {
-            await supabase.from("template_subtasks").insert(allSubtasks);
-          }
-
-          // Copy task_processes to template_task_processes
-          if (taskProcesses && taskProcesses.length > 0) {
-            const newTaskProcesses = taskProcesses
-              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
-              .map(tp => ({
-                template_task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
-                process_id: tp.process_id,
-              }));
-
-            if (newTaskProcesses.length > 0) {
-              await supabase.from("template_task_processes").insert(newTaskProcesses);
-            }
-          }
-        }
-      }
-
-      return newTemplate;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
-      toast.success("Projeto salvo como modelo!");
-    },
-    onError: () => {
-      toast.error("Erro ao salvar como modelo");
-    },
-  });
-
-  const duplicateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      // Criar novo projeto com status ativo, SEM copiar a descrição e com is_draft = true
-      const { data: newProject, error: projectError } = await supabase
-        .from("projects")
-        .insert([
-          {
-            name: `Cópia de ${project.name}`,
-            description: null,
-            status: 'active',
-            user_id: user.id,
-            workspace_id: project.workspace_id,
-            is_draft: true, // Sempre começa como rascunho
-            pending_notifications: true, // Notificações pendentes - usuário deve clicar para publicar
-          },
-        ])
-        .select()
-        .single();
-
-      if (projectError) throw projectError;
-
-      // Buscar tarefas com subtasks e task_processes
-      const { data: tasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*, subtasks(*)")
-        .eq("project_id", project.id);
-
-      if (tasksError) throw tasksError;
-
-      // Buscar task_processes separadamente
-      const { data: taskProcesses, error: tpError } = await supabase
-        .from("task_processes")
-        .select("*")
-        .in("task_id", tasks?.map(t => t.id) || []);
-
-      if (tpError) console.warn("Erro ao buscar task_processes:", tpError);
-
-      if (tasks && tasks.length > 0) {
-        // Criar mapeamento de task_id antigo -> índice
-        const taskIdToIndex: Record<string, number> = {};
-        tasks.forEach((task, index) => {
-          taskIdToIndex[task.id] = index;
-        });
-
-        // Mapear tarefas: copiar título, descrição, setor, responsável e processos
-        // NÃO copiar: due_date, documentation (links e anexos)
-        const newTasks = tasks.map((task) => ({
-          title: task.title,
-          description: task.description, // Copiar descrição
-          status: 'todo',
-          priority: task.priority,
-          assigned_to: task.assigned_to,
-          setor: task.setor,
-          documentation: null, // NÃO copiar documentação
-          process_id: task.process_id,
-          completed_verified: false,
-          project_id: newProject.id,
-          due_date: null, // NÃO copiar datas
-          start_date: null, // NÃO copiar datas
-        }));
-
-        const { data: insertedTasks, error: insertError } = await supabase
-          .from("tasks")
-          .insert(newTasks)
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (insertedTasks && insertedTasks.length > 0) {
-          // Copiar subtasks para cada tarefa
-          const allSubtasks: any[] = [];
-          
-          for (let i = 0; i < tasks.length; i++) {
-            const originalTask = tasks[i];
-            const newTask = insertedTasks[i];
-            
-            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
-                title: subtask.title,
-                completed: false,
-                task_id: newTask.id,
-              }));
-              
-              allSubtasks.push(...subtasksForTask);
-            }
-          }
-
-          if (allSubtasks.length > 0) {
-            const { error: subtasksError } = await supabase
-              .from("subtasks")
-              .insert(allSubtasks);
-            
-            if (subtasksError) console.warn("Erro ao copiar subtasks:", subtasksError);
-          }
-
-          // Copiar task_processes (relacionamento de tarefas com processos)
-          if (taskProcesses && taskProcesses.length > 0) {
-            const newTaskProcesses = taskProcesses
-              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
-              .map(tp => ({
-                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
-                process_id: tp.process_id,
-              }));
-
-            if (newTaskProcesses.length > 0) {
-              const { error: tpInsertError } = await supabase
-                .from("task_processes")
-                .insert(newTaskProcesses);
-              
-              if (tpInsertError) console.warn("Erro ao copiar task_processes:", tpInsertError);
-            }
-          }
-
-          // NÃO criar notificações imediatamente - o usuário deve clicar no botão "Notificar Responsáveis"
-        }
-      }
-
-      return newProject;
-    },
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Rascunho criado! Edite e clique em 'Publicar' quando estiver pronto.");
-      // Navegar para o novo projeto para edição
-      if (newProject) {
-        navigate(`/projects/${newProject.id}`);
-      }
-    },
-    onError: (error) => {
-      console.error("Erro ao duplicar projeto:", error);
-      toast.error("Erro ao duplicar projeto");
-    },
-  });
-  
   const totalTasks = project.tasks?.length || 0;
   const completedTasks = project.tasks?.filter((t: any) => t.status === "completed").length || 0;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -370,22 +129,22 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
                   <DropdownMenuItem 
                     onClick={(e) => {
                       e.stopPropagation();
-                      duplicateMutation.mutate();
+                      duplicateProject.mutate(project);
                     }}
-                    disabled={duplicateMutation.isPending}
+                    disabled={duplicateProject.isPending}
                   >
                     <Copy className="mr-2 h-4 w-4" />
-                    {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
+                    {duplicateProject.isPending ? "Duplicando..." : "Duplicar"}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={(e) => {
                       e.stopPropagation();
-                      saveAsTemplateMutation.mutate();
+                      saveAsTemplate.mutate(project);
                     }}
-                    disabled={saveAsTemplateMutation.isPending}
+                    disabled={saveAsTemplate.isPending}
                   >
                     <Bookmark className="mr-2 h-4 w-4" />
-                    {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+                    {saveAsTemplate.isPending ? "Salvando..." : "Salvar como Modelo"}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={(e) => {

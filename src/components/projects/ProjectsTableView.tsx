@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { formatDateBR, formatDateShort, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
 import { toast } from "sonner";
+import { useProjectActions } from "@/hooks/useProjectActions";
 interface ProjectsTableViewProps {
   projects: any[];
   onDelete: (id: string) => void;
@@ -461,7 +462,7 @@ function ProjectRow({
   const queryClient = useQueryClient();
   const { isAdmin, isGestor } = useWorkspace();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
+  const { duplicateProject, saveAsTemplate } = useProjectActions();
   const tasks = project.tasks || [];
   const taskCount = tasks.length;
   
@@ -478,59 +479,6 @@ function ProjectRow({
   };
 
   const eventDates = formatEventDates();
-
-  const duplicateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: newProject, error } = await supabase
-        .from("projects")
-        .insert([{
-          name: `Cópia de ${project.name}`,
-          description: null,
-          status: 'active',
-          user_id: user.id,
-          workspace_id: project.workspace_id,
-          is_draft: true,
-          pending_notifications: true,
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return newProject;
-    },
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Rascunho criado!");
-      if (newProject) navigate(`/projects/${newProject.id}`);
-    },
-    onError: () => toast.error("Erro ao duplicar projeto"),
-  });
-
-  const saveAsTemplateMutation = useMutation({
-    mutationFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { error } = await supabase
-        .from("project_templates")
-        .insert([{
-          name: project.name,
-          description: project.description,
-          workspace_id: project.workspace_id,
-          created_by: user.id,
-        }]);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
-      toast.success("Projeto salvo como modelo!");
-    },
-    onError: () => toast.error("Erro ao salvar como modelo"),
-  });
 
   const totalColumns = (isAdmin || isGestor) ? 6 : 5;
 
@@ -664,14 +612,20 @@ function ProjectRow({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="z-50 bg-popover">
-                <DropdownMenuItem onClick={() => duplicateMutation.mutate()}>
+                <DropdownMenuItem 
+                  onClick={() => duplicateProject.mutate(project)}
+                  disabled={duplicateProject.isPending}
+                >
                   <Copy className="mr-2 h-4 w-4" />
-                  Duplicar
+                  {duplicateProject.isPending ? "Duplicando..." : "Duplicar"}
                 </DropdownMenuItem>
                 {!isStandaloneFolder && (
-                  <DropdownMenuItem onClick={() => saveAsTemplateMutation.mutate()}>
+                  <DropdownMenuItem 
+                    onClick={() => saveAsTemplate.mutate(project)}
+                    disabled={saveAsTemplate.isPending}
+                  >
                     <Bookmark className="mr-2 h-4 w-4" />
-                    Salvar como Modelo
+                    {saveAsTemplate.isPending ? "Salvando..." : "Salvar como Modelo"}
                   </DropdownMenuItem>
                 )}
                 {!isStandaloneFolder && (

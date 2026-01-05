@@ -20,14 +20,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Badge } from "@/components/ui/badge";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDateBR, formatDateShort } from "@/lib/utils";
+import { useProjectActions } from "@/hooks/useProjectActions";
 
 interface ProjectListViewProps {
   projects: any[];
@@ -40,10 +37,9 @@ interface ProjectListViewProps {
 
 export function ProjectListView({ projects, onDelete, onArchive, navigate, isArchived, isStandaloneFolder }: ProjectListViewProps) {
   const { isAdmin, isGestor } = useWorkspace();
-  const queryClient = useQueryClient();
-  const navigateHook = useNavigate();
   const isMobile = useIsMobile();
   const [showDeleteDialog, setShowDeleteDialog] = useState<string | null>(null);
+  const { duplicateProject, saveAsTemplate } = useProjectActions();
 
   const getProgress = (project: any) => {
     const tasks = project.tasks || [];
@@ -69,233 +65,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
     return formatDateBR(end || start);
   };
 
-  const saveAsTemplateMutation = useMutation({
-    mutationFn: async (project: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: newTemplate, error: templateError } = await supabase
-        .from("project_templates")
-        .insert([
-          {
-            name: project.name,
-            description: project.description,
-            workspace_id: project.workspace_id,
-            created_by: user.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (templateError) throw templateError;
-
-      const { data: tasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*, subtasks(*)")
-        .eq("project_id", project.id);
-
-      if (tasksError) throw tasksError;
-
-      const { data: taskProcesses } = await supabase
-        .from("task_processes")
-        .select("*")
-        .in("task_id", tasks?.map(t => t.id) || []);
-
-      if (tasks && tasks.length > 0) {
-        const taskIdToIndex: Record<string, number> = {};
-        tasks.forEach((task, index) => {
-          taskIdToIndex[task.id] = index;
-        });
-
-        const newTemplateTasks = tasks.map((task, index) => ({
-          template_id: newTemplate.id,
-          title: task.title,
-          description: task.description,
-          priority: task.priority,
-          setor: task.setor,
-          documentation: null,
-          process_id: task.process_id,
-          task_order: index,
-        }));
-
-        const { data: insertedTasks, error: insertError } = await supabase
-          .from("template_tasks")
-          .insert(newTemplateTasks)
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (insertedTasks && insertedTasks.length > 0) {
-          const allSubtasks: any[] = [];
-          for (let i = 0; i < tasks.length; i++) {
-            const originalTask = tasks[i];
-            const newTask = insertedTasks[i];
-            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any, subIndex: number) => ({
-                template_task_id: newTask.id,
-                title: subtask.title,
-                task_order: subIndex,
-              }));
-              allSubtasks.push(...subtasksForTask);
-            }
-          }
-
-          if (allSubtasks.length > 0) {
-            await supabase.from("template_subtasks").insert(allSubtasks);
-          }
-
-          if (taskProcesses && taskProcesses.length > 0) {
-            const newTaskProcesses = taskProcesses
-              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
-              .map(tp => ({
-                template_task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
-                process_id: tp.process_id,
-              }));
-
-            if (newTaskProcesses.length > 0) {
-              await supabase.from("template_task_processes").insert(newTaskProcesses);
-            }
-          }
-        }
-      }
-
-      return newTemplate;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["project-templates"] });
-      toast.success("Projeto salvo como modelo!");
-    },
-    onError: () => {
-      toast.error("Erro ao salvar como modelo");
-    },
-  });
-
-  const duplicateMutation = useMutation({
-    mutationFn: async (project: any) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
-
-      const { data: newProject, error: projectError } = await supabase
-        .from("projects")
-        .insert([
-          {
-            name: `Cópia de ${project.name}`,
-            description: null,
-            status: 'active',
-            user_id: user.id,
-            workspace_id: project.workspace_id,
-            is_draft: true,
-            pending_notifications: true,
-          },
-        ])
-        .select()
-        .single();
-
-      if (projectError) throw projectError;
-
-      const { data: tasks, error: tasksError } = await supabase
-        .from("tasks")
-        .select("*, subtasks(*)")
-        .eq("project_id", project.id);
-
-      if (tasksError) throw tasksError;
-
-      const { data: taskProcesses, error: tpError } = await supabase
-        .from("task_processes")
-        .select("*")
-        .in("task_id", tasks?.map(t => t.id) || []);
-
-      if (tpError) console.warn("Erro ao buscar task_processes:", tpError);
-
-      if (tasks && tasks.length > 0) {
-        const taskIdToIndex: Record<string, number> = {};
-        tasks.forEach((task, index) => {
-          taskIdToIndex[task.id] = index;
-        });
-
-        const newTasks = tasks.map((task) => ({
-          title: task.title,
-          description: task.description,
-          status: 'todo',
-          priority: task.priority,
-          assigned_to: task.assigned_to,
-          setor: task.setor,
-          documentation: null,
-          process_id: task.process_id,
-          completed_verified: false,
-          project_id: newProject.id,
-          due_date: null,
-          start_date: null,
-        }));
-
-        const { data: insertedTasks, error: insertError } = await supabase
-          .from("tasks")
-          .insert(newTasks)
-          .select();
-
-        if (insertError) throw insertError;
-
-        if (insertedTasks && insertedTasks.length > 0) {
-          const allSubtasks: any[] = [];
-          
-          for (let i = 0; i < tasks.length; i++) {
-            const originalTask = tasks[i];
-            const newTask = insertedTasks[i];
-            
-            if (originalTask.subtasks && originalTask.subtasks.length > 0) {
-              const subtasksForTask = originalTask.subtasks.map((subtask: any) => ({
-                title: subtask.title,
-                completed: false,
-                task_id: newTask.id,
-              }));
-              
-              allSubtasks.push(...subtasksForTask);
-            }
-          }
-
-          if (allSubtasks.length > 0) {
-            const { error: subtasksError } = await supabase
-              .from("subtasks")
-              .insert(allSubtasks);
-            
-            if (subtasksError) console.warn("Erro ao copiar subtasks:", subtasksError);
-          }
-
-          if (taskProcesses && taskProcesses.length > 0) {
-            const newTaskProcesses = taskProcesses
-              .filter(tp => taskIdToIndex[tp.task_id] !== undefined)
-              .map(tp => ({
-                task_id: insertedTasks[taskIdToIndex[tp.task_id]].id,
-                process_id: tp.process_id,
-              }));
-
-            if (newTaskProcesses.length > 0) {
-              const { error: tpInsertError } = await supabase
-                .from("task_processes")
-                .insert(newTaskProcesses);
-              
-              if (tpInsertError) console.warn("Erro ao copiar task_processes:", tpInsertError);
-            }
-          }
-        }
-      }
-
-      return newProject;
-    },
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Rascunho criado! Edite e clique em 'Publicar' quando estiver pronto.");
-      if (newProject) {
-        navigateHook(`/projects/${newProject.id}`);
-      }
-    },
-    onError: (error) => {
-      console.error("Erro ao duplicar projeto:", error);
-      toast.error("Erro ao duplicar projeto");
-    },
-  });
-
-  const renderActionsDropdown = (project: any, e?: React.MouseEvent) => (
+  const renderActionsDropdown = (project: any) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -306,23 +76,23 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
         <DropdownMenuItem 
           onClick={(e) => {
             e.stopPropagation();
-            duplicateMutation.mutate(project);
+            duplicateProject.mutate(project);
           }}
-          disabled={duplicateMutation.isPending}
+          disabled={duplicateProject.isPending}
         >
           <Copy className="mr-2 h-4 w-4" />
-          {duplicateMutation.isPending ? "Duplicando..." : "Duplicar"}
+          {duplicateProject.isPending ? "Duplicando..." : "Duplicar"}
         </DropdownMenuItem>
         {!isStandaloneFolder && (
           <DropdownMenuItem 
             onClick={(e) => {
               e.stopPropagation();
-              saveAsTemplateMutation.mutate(project);
+              saveAsTemplate.mutate(project);
             }}
-            disabled={saveAsTemplateMutation.isPending}
+            disabled={saveAsTemplate.isPending}
           >
             <Bookmark className="mr-2 h-4 w-4" />
-            {saveAsTemplateMutation.isPending ? "Salvando..." : "Salvar como Modelo"}
+            {saveAsTemplate.isPending ? "Salvando..." : "Salvar como Modelo"}
           </DropdownMenuItem>
         )}
         {!isStandaloneFolder && (
