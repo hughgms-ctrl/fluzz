@@ -9,12 +9,37 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function usePWAInstall() {
   const { user } = useAuth();
+
+  const getStandalone = () =>
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
+
+  const getPlatform = () => {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const ios = /iphone|ipad|ipod/.test(userAgent) && !(window as any).MSStream;
+    const android = /android/.test(userAgent);
+    return { ios, android };
+  };
+
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-  const [isAndroid, setIsAndroid] = useState(false);
-
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
+    try {
+      return getStandalone();
+    } catch {
+      return false;
+    }
+  });
+  const initialPlatform = (() => {
+    try {
+      return getPlatform();
+    } catch {
+      return { ios: false, android: false };
+    }
+  })();
+  const [isIOS, setIsIOS] = useState(initialPlatform.ios);
+  const [isAndroid, setIsAndroid] = useState(initialPlatform.android);
+  const [isInitialized, setIsInitialized] = useState(false);
   // Save installation to database
   const saveInstallation = useCallback(async () => {
     if (!user) return;
@@ -56,9 +81,12 @@ export function usePWAInstall() {
   }, [user]);
 
   useEffect(() => {
+    setIsInitialized(false);
+
     // Check if already installed (standalone mode)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
-      || (window.navigator as any).standalone === true;
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);
 
     // If installed and user is logged in, save to database
@@ -70,7 +98,7 @@ export function usePWAInstall() {
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIOSDevice = /iphone|ipad|ipod/.test(userAgent) && !(window as any).MSStream;
     const isAndroidDevice = /android/.test(userAgent);
-    
+
     setIsIOS(isIOSDevice);
     setIsAndroid(isAndroidDevice);
 
@@ -93,7 +121,7 @@ export function usePWAInstall() {
       setIsInstalled(true);
       setIsInstallable(false);
       setDeferredPrompt(null);
-      
+
       // Save to database when installed
       if (user) {
         saveInstallation();
@@ -101,6 +129,8 @@ export function usePWAInstall() {
     };
 
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    setIsInitialized(true);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -134,6 +164,7 @@ export function usePWAInstall() {
     isInstalled,
     isIOS,
     isAndroid,
+    isInitialized,
     canShowPrompt: !!deferredPrompt,
     install
   };
