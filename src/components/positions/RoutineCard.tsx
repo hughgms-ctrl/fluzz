@@ -123,6 +123,7 @@ export function RoutineCard({ routine, positionId }: RoutineCardProps) {
 
         <CreateRoutineTaskDialog
           routineId={routine.id}
+          positionId={positionId}
           open={createTaskDialogOpen}
           onOpenChange={setCreateTaskDialogOpen}
         />

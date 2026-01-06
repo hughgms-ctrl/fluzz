@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -25,26 +24,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { SectorDrawer } from "../tasks/SectorDrawer";
 import { MemberDrawer } from "../tasks/MemberDrawer";
 import { 
-  Briefcase, 
   UserCircle, 
   ChevronRight, 
   FileText, 
   Plus
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { format } from "date-fns";
 
 interface CreateRoutineTaskDialogProps {
   routineId: string;
+  positionId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export function CreateRoutineTaskDialog({
   routineId,
+  positionId,
   open,
   onOpenChange,
 }: CreateRoutineTaskDialogProps) {
@@ -55,7 +53,6 @@ export function CreateRoutineTaskDialog({
   // Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [sectorId, setSectorId] = useState("");
   const [assignedTo, setAssignedTo] = useState("");
   const [priority, setPriority] = useState("medium");
   const [status, setStatus] = useState("todo");
@@ -64,6 +61,21 @@ export function CreateRoutineTaskDialog({
   const [projectId, setProjectId] = useState<string>("none");
   const [selectedProcesses, setSelectedProcesses] = useState<string[]>([]);
   const [showProcessSheet, setShowProcessSheet] = useState(false);
+
+  // Fetch position details
+  const { data: position } = useQuery({
+    queryKey: ["position", positionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select("id, name")
+        .eq("id", positionId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!positionId,
+  });
 
   // Fetch projects
   const { data: projects } = useQuery({
@@ -83,27 +95,21 @@ export function CreateRoutineTaskDialog({
     enabled: open && !!workspace,
   });
 
-  // Fetch sectors/positions
-  const { data: sectors } = useQuery({
-    queryKey: ["positions", workspace?.id],
-    queryFn: async () => {
-      if (!workspace) return [];
-      const { data, error } = await supabase
-        .from("positions")
-        .select("*")
-        .eq("workspace_id", workspace.id)
-        .order("name");
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!workspace && open,
-  });
-
-  // Fetch workspace members
+  // Fetch workspace members assigned to this position
   const { data: workspaceMembers } = useQuery({
-    queryKey: ["workspace-members", workspace?.id],
+    queryKey: ["workspace-members-position", workspace?.id, positionId],
     queryFn: async () => {
       if (!workspace) return [];
+      
+      // Get users assigned to this position
+      const { data: userPositions, error: posError } = await supabase
+        .from("user_positions")
+        .select("user_id")
+        .eq("position_id", positionId);
+      
+      if (posError) throw posError;
+      
+      const assignedUserIds = userPositions?.map(up => up.user_id) || [];
       
       const { data: members, error: membersError } = await supabase
         .from("workspace_members")
@@ -113,7 +119,11 @@ export function CreateRoutineTaskDialog({
       if (membersError) throw membersError;
       if (!members || members.length === 0) return [];
 
-      const userIds = members.map(m => m.user_id);
+      // Filter only members assigned to this position
+      const filteredMembers = members.filter(m => assignedUserIds.includes(m.user_id));
+      if (filteredMembers.length === 0) return [];
+
+      const userIds = filteredMembers.map(m => m.user_id);
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name")
@@ -121,40 +131,32 @@ export function CreateRoutineTaskDialog({
       
       if (profilesError) throw profilesError;
 
-      return members.map(member => ({
+      return filteredMembers.map(member => ({
         user_id: member.user_id,
         role: member.role,
         profiles: profiles?.find(p => p.id === member.user_id)
       }));
     },
-    enabled: !!workspace && open,
+    enabled: !!workspace && open && !!positionId,
   });
 
-  // Fetch processes based on sector
+  // Fetch processes for this position's sector
   const { data: processes } = useQuery({
-    queryKey: ["processes", workspace?.id, sectorId],
+    queryKey: ["processes", workspace?.id, position?.name],
     queryFn: async () => {
-      if (!workspace) return [];
+      if (!workspace || !position) return [];
       
-      let query = supabase
+      const { data, error } = await supabase
         .from("process_documentation")
         .select("id, title, area")
         .eq("workspace_id", workspace.id)
+        .eq("area", position.name)
         .order("title");
       
-      // If a specific sector is selected (not "Multiplos"), filter by area
-      if (sectorId && sectorId !== "Multiplos") {
-        const sectorName = sectors?.find(s => s.id === sectorId)?.name;
-        if (sectorName) {
-          query = query.eq("area", sectorName);
-        }
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: !!workspace && open,
+    enabled: !!workspace && open && !!position?.name,
   });
 
   const createMutation = useMutation({
@@ -167,7 +169,7 @@ export function CreateRoutineTaskDialog({
           description: description || null,
           priority,
           status,
-          setor: sectorId || null,
+          setor: positionId, // Store the position ID
           documentation: documentation || null,
           project_id: projectId === "none" ? null : projectId,
           assigned_to: assignedTo || null,
@@ -195,7 +197,6 @@ export function CreateRoutineTaskDialog({
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setSectorId("");
     setAssignedTo("");
     setPriority("medium");
     setStatus("todo");
@@ -212,11 +213,6 @@ export function CreateRoutineTaskDialog({
       return;
     }
     createMutation.mutate();
-  };
-
-  const getSectorName = (id: string) => {
-    if (id === "Multiplos") return "Múltiplos";
-    return sectors?.find(s => s.id === id)?.name || id;
   };
 
   const getMemberName = (userId: string) => {
@@ -265,34 +261,13 @@ export function CreateRoutineTaskDialog({
             />
           </div>
 
-          {/* 3. Setor */}
-          <div className="space-y-2">
-            <Label>Setor</Label>
-            <SectorDrawer 
-              value={sectorId} 
-              onValueChange={(value) => {
-                setSectorId(value);
-                setAssignedTo("");
-                setSelectedProcesses([]);
-              }}
-            >
-              <Button variant="outline" className="w-full justify-between" type="button">
-                <span className="flex items-center gap-2">
-                  <Briefcase size={16} />
-                  {sectorId ? getSectorName(sectorId) : "Selecione um setor"}
-                </span>
-                <ChevronRight size={16} />
-              </Button>
-            </SectorDrawer>
-          </div>
-
-          {/* 4. Responsável */}
+          {/* 3. Responsável - only members from this position */}
           <div className="space-y-2">
             <Label>Responsável</Label>
             <MemberDrawer 
               value={assignedTo} 
               onValueChange={setAssignedTo}
-              positionId={sectorId === "Multiplos" ? "Multiplos" : (sectorId || undefined)}
+              positionId={positionId}
             >
               <Button variant="outline" className="w-full justify-between" type="button">
                 <span className="flex items-center gap-2">
@@ -304,7 +279,7 @@ export function CreateRoutineTaskDialog({
             </MemberDrawer>
           </div>
 
-          {/* 5. Prioridade */}
+          {/* 4. Prioridade */}
           <div className="space-y-2">
             <Label>Prioridade</Label>
             <Select value={priority} onValueChange={setPriority}>
@@ -319,7 +294,7 @@ export function CreateRoutineTaskDialog({
             </Select>
           </div>
 
-          {/* 6. Status */}
+          {/* 5. Status */}
           <div className="space-y-2">
             <Label>Status</Label>
             <Select value={status} onValueChange={setStatus}>
@@ -334,7 +309,7 @@ export function CreateRoutineTaskDialog({
             </Select>
           </div>
 
-          {/* 7. Datas */}
+          {/* 6. Datas */}
           <div className="space-y-2">
             <Label>Data de Início</Label>
             <Input
@@ -344,7 +319,7 @@ export function CreateRoutineTaskDialog({
             />
           </div>
 
-          {/* 8. Projeto */}
+          {/* 7. Projeto */}
           <div className="space-y-2">
             <Label>Vincular a Projeto (Opcional)</Label>
             <Select value={projectId} onValueChange={setProjectId}>
@@ -362,7 +337,7 @@ export function CreateRoutineTaskDialog({
             </Select>
           </div>
 
-          {/* 9. Documentação */}
+          {/* 8. Documentação */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <FileText size={16} />
@@ -376,7 +351,7 @@ export function CreateRoutineTaskDialog({
             />
           </div>
 
-          {/* 10. POPs Vinculados */}
+          {/* 9. POPs Vinculados */}
           <div className="space-y-2">
             <Label>POP's Vinculados</Label>
             <Sheet open={showProcessSheet} onOpenChange={setShowProcessSheet}>
@@ -419,7 +394,7 @@ export function CreateRoutineTaskDialog({
                         <FileText size={48} className="mx-auto mb-4 opacity-20" />
                         <p>Nenhum POP encontrado</p>
                         <p className="text-sm mt-2">
-                          {sectorId ? "Nenhum processo cadastrado para este setor" : "Selecione um setor primeiro"}
+                          Nenhum processo cadastrado para este setor
                         </p>
                       </div>
                     )}
