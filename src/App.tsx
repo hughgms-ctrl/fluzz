@@ -90,6 +90,7 @@ const App = () => (
                   <Route path="/workspace/getting-started/:id/edit" element={<GettingStartedForm />} />
                   <Route path="/positions" element={<Positions />} />
                   <Route path="/positions/:id" element={<PositionDetail />} />
+                  <Route path="/routine-tasks/:id" element={<RoutineTaskDetail />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/briefings" element={<BriefingRepository />} />
                   <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
