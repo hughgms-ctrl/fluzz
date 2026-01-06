@@ -6,8 +6,9 @@ import { useState } from "react";
 import { EditRoutineTaskDialog } from "./EditRoutineTaskDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
+import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,8 +65,25 @@ const statusColors: Record<string, string> = {
 export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const queryClient = useQueryClient();
-  const { isAdmin, isGestor } = useWorkspace();
+  const navigate = useNavigate();
+  const { isAdmin, isGestor, workspace } = useWorkspace();
   const canEdit = isAdmin || isGestor;
+
+  // Fetch sector name
+  const { data: sectorData } = useQuery({
+    queryKey: ["position-name", task.setor],
+    queryFn: async () => {
+      if (!task.setor) return null;
+      const { data, error } = await supabase
+        .from("positions")
+        .select("name")
+        .eq("id", task.setor)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: !!task.setor,
+  });
 
   const handleDelete = async () => {
     try {
@@ -86,8 +104,12 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
     }
   };
 
+  const handleCardClick = () => {
+    navigate(`/routine-tasks/${task.id}`);
+  };
+
   return (
-    <Card className="bg-muted/50">
+    <Card className="bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors" onClick={handleCardClick}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 space-y-2">
@@ -117,12 +139,6 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
               </p>
             )}
 
-            {task.setor && (
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium">Setor:</span> {task.setor}
-              </div>
-            )}
-
             {task.documentation && (
               <div className="text-sm text-muted-foreground">
                 <span className="font-medium">Documentação:</span>{" "}
@@ -147,7 +163,7 @@ export function RoutineTaskCard({ task }: RoutineTaskCardProps) {
           </div>
 
           {canEdit && (
-            <div className="flex gap-1">
+            <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
               <Button
                 variant="ghost"
                 size="icon"

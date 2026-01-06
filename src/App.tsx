@@ -31,6 +31,7 @@ import GettingStartedDetail from "./pages/workspace/GettingStartedDetail";
 import Positions from "./pages/Positions";
 import Inventory from "./pages/Inventory";
 import PositionDetail from "./pages/PositionDetail";
+import RoutineTaskDetail from "./pages/RoutineTaskDetail";
 import BriefingRepository from "./pages/BriefingRepository";
 import BriefingDocument from "./pages/BriefingDocument";
 import WorkspaceAdmin from "./pages/WorkspaceAdmin";
