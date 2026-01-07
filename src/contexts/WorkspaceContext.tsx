@@ -360,29 +360,32 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       if (user && activeWorkspace) {
         const isAdminOrGestor = activeMember.role === 'admin' || activeMember.role === 'gestor';
         
-        if (isAdminOrGestor) {
-          setPermissions({
-            can_view_projects: true,
-            can_view_tasks: true,
-            can_view_positions: true,
-            can_view_analytics: true,
-            can_view_briefings: true,
-            can_view_culture: true,
-            can_view_vision: true,
-            can_view_processes: true,
-            can_view_inventory: true,
-            can_view_ai: true,
-            can_view_workload: true,
-          });
-        } else {
-          const { data: permissionsData } = await supabase
-            .from("user_permissions")
-            .select("*")
-            .eq("user_id", user.id)
-            .eq("workspace_id", activeWorkspace.id)
-            .single();
+        // Always fetch permissions from DB to respect user preferences
+        const { data: permissionsData } = await supabase
+          .from("user_permissions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("workspace_id", activeWorkspace.id)
+          .single();
 
-          if (permissionsData) {
+        if (permissionsData) {
+          // For admins/gestors: default to true, but respect explicit false
+          if (isAdminOrGestor) {
+            setPermissions({
+              can_view_projects: permissionsData.can_view_projects !== false,
+              can_view_tasks: permissionsData.can_view_tasks !== false,
+              can_view_positions: permissionsData.can_view_positions !== false,
+              can_view_analytics: permissionsData.can_view_analytics !== false,
+              can_view_briefings: permissionsData.can_view_briefings !== false,
+              can_view_culture: permissionsData.can_view_culture !== false,
+              can_view_vision: permissionsData.can_view_vision !== false,
+              can_view_processes: permissionsData.can_view_processes !== false,
+              can_view_inventory: permissionsData.can_view_inventory !== false,
+              can_view_ai: permissionsData.can_view_ai !== false,
+              can_view_workload: permissionsData.can_view_workload !== false,
+            });
+          } else {
+            // For regular members: require explicit true
             setPermissions({
               can_view_projects: permissionsData.can_view_projects,
               can_view_tasks: permissionsData.can_view_tasks,
@@ -395,6 +398,23 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               can_view_inventory: permissionsData.can_view_inventory ?? false,
               can_view_ai: permissionsData.can_view_ai ?? false,
               can_view_workload: permissionsData.can_view_workload ?? false,
+            });
+          }
+        } else {
+          // No permissions record - admins/gestors get full access, members get none
+          if (isAdminOrGestor) {
+            setPermissions({
+              can_view_projects: true,
+              can_view_tasks: true,
+              can_view_positions: true,
+              can_view_analytics: true,
+              can_view_briefings: true,
+              can_view_culture: true,
+              can_view_vision: true,
+              can_view_processes: true,
+              can_view_inventory: true,
+              can_view_ai: true,
+              can_view_workload: true,
             });
           } else {
             setPermissions({
