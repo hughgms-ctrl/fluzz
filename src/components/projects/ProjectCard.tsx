@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -99,8 +100,21 @@ export const ProjectCard = ({ project, onDelete, onArchive, isArchived = false, 
               />
             ) : (
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <h3 
-                  className={`font-semibold text-lg text-foreground line-clamp-1 ${canEdit ? 'hover:text-primary transition-colors cursor-text' : ''}`}
+              <h3 
+                  className={cn(
+                    "font-semibold text-lg line-clamp-1",
+                    project.color === "blue" && "text-blue-500",
+                    project.color === "emerald" && "text-emerald-500",
+                    project.color === "amber" && "text-amber-500",
+                    project.color === "purple" && "text-purple-500",
+                    project.color === "pink" && "text-pink-500",
+                    project.color === "cyan" && "text-cyan-500",
+                    project.color === "rose" && "text-rose-500",
+                    project.color === "orange" && "text-orange-500",
+                    project.color === "teal" && "text-teal-500",
+                    (project.color === "primary" || !project.color) && "text-primary",
+                    canEdit && "cursor-text"
+                  )}
                   onClick={(e) => {
                     if (canEdit) {
                       e.stopPropagation();
