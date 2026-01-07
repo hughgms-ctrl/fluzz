@@ -8,68 +8,189 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Bold, Italic, List, ListOrdered, Image as ImageIcon, Video, Link as LinkIcon, Heading1, Heading2, Quote, Palette, Type, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Image as ImageIcon, Video, Link as LinkIcon } from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { TextStyle } from "@tiptap/extension-text-style";
-import Color from "@tiptap/extension-color";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "36px", "48px"];
-const COLORS = [
-  "#000000", "#374151", "#6b7280", "#9ca3af",
-  "#ef4444", "#f97316", "#eab308", "#22c55e",
-  "#14b8a6", "#3b82f6", "#6366f1", "#a855f7",
-  "#ec4899", "#ffffff"
-];
+interface Step {
+  id: string;
+  content: string;
+}
 
-// Custom extension for font size
-const FontSize = TextStyle.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      fontSize: {
-        default: null,
-        parseHTML: element => element.style.fontSize || null,
-        renderHTML: attributes => {
-          if (!attributes.fontSize) return {};
-          return { style: `font-size: ${attributes.fontSize}` };
-        },
-      },
-    };
-  },
-});
+// Sortable Step Item Component
+function SortableStepItem({ 
+  step, 
+  index, 
+  onContentChange, 
+  onRemove,
+  onAddMedia 
+}: { 
+  step: Step; 
+  index: number; 
+  onContentChange: (id: string, content: string) => void;
+  onRemove: (id: string) => void;
+  onAddMedia: (id: string, type: 'image' | 'video' | 'link') => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: step.id });
 
-// Custom resizable image extension
-const ResizableImage = Image.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      width: {
-        default: null,
-        parseHTML: element => element.getAttribute('width') || element.style.width || null,
-        renderHTML: attributes => {
-          if (!attributes.width) return {};
-          return { width: attributes.width, style: `width: ${attributes.width}` };
-        },
-      },
-      height: {
-        default: null,
-        parseHTML: element => element.getAttribute('height') || element.style.height || null,
-        renderHTML: attributes => {
-          if (!attributes.height) return {};
-          return { height: attributes.height };
-        },
-      },
-    };
-  },
-});
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const base64 = ev.target?.result as string;
+        const newContent = step.content + `\n<img src="${base64}" class="max-w-full h-auto rounded-lg my-2" />`;
+        onContentChange(step.id, newContent);
+      };
+      reader.readAsDataURL(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleAddVideo = () => {
+    const url = window.prompt("URL do vídeo (YouTube, Vimeo):");
+    if (url) {
+      // Convert to embed URL
+      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+      
+      let embedHtml = '';
+      if (youtubeMatch) {
+        embedHtml = `\n<iframe src="https://www.youtube.com/embed/${youtubeMatch[1]}" class="w-full aspect-video rounded-lg my-2" frameborder="0" allowfullscreen></iframe>`;
+      } else if (vimeoMatch) {
+        embedHtml = `\n<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" class="w-full aspect-video rounded-lg my-2" frameborder="0" allowfullscreen></iframe>`;
+      } else {
+        embedHtml = `\n<a href="${url}" target="_blank" class="text-primary underline">${url}</a>`;
+      }
+      onContentChange(step.id, step.content + embedHtml);
+    }
+  };
+
+  const handleAddLink = () => {
+    const url = window.prompt("URL do link:");
+    const text = window.prompt("Texto do link (opcional):");
+    if (url) {
+      const linkText = text || url;
+      const linkHtml = `\n<a href="${url}" target="_blank" class="text-primary underline">${linkText}</a>`;
+      onContentChange(step.id, step.content + linkHtml);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex gap-2 items-start p-3 bg-muted/30 rounded-lg border ${isDragging ? 'opacity-50 border-primary' : ''}`}
+    >
+      <button
+        type="button"
+        className="mt-2 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical size={18} />
+      </button>
+      <div className="flex-1 space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground w-6">{index + 1}.</span>
+          <div className="flex-1">
+            <Textarea
+              value={step.content.replace(/<[^>]*>/g, '')} // Show only text, not HTML
+              onChange={(e) => {
+                // Preserve media HTML and update only text
+                const mediaMatch = step.content.match(/(<img[^>]*>|<iframe[^>]*><\/iframe>|<a[^>]*>[^<]*<\/a>)/g);
+                const newContent = e.target.value + (mediaMatch ? '\n' + mediaMatch.join('\n') : '');
+                onContentChange(step.id, newContent);
+              }}
+              placeholder="Descreva este passo..."
+              className="min-h-[60px] resize-none"
+            />
+          </div>
+        </div>
+        
+        {/* Show embedded media preview */}
+        {step.content.match(/<(img|iframe|a)[^>]*>/g) && (
+          <div 
+            className="ml-8 p-2 bg-background rounded border text-sm prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ 
+              __html: step.content.match(/(<img[^>]*>|<iframe[^>]*><\/iframe>|<a[^>]*>[^<]*<\/a>)/g)?.join('') || '' 
+            }}
+          />
+        )}
+
+        {/* Media buttons */}
+        <div className="ml-8 flex gap-1">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-7 px-2 text-xs"
+          >
+            <ImageIcon size={14} className="mr-1" />
+            Imagem
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAddVideo}
+            className="h-7 px-2 text-xs"
+          >
+            <Video size={14} className="mr-1" />
+            Vídeo
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleAddLink}
+            className="h-7 px-2 text-xs"
+          >
+            <LinkIcon size={14} className="mr-1" />
+            Link
+          </Button>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => onRemove(step.id)}
+        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+      >
+        <Trash2 size={16} />
+      </Button>
+    </div>
+  );
+}
 
 export default function ProcessForm() {
   const { user } = useAuth();
@@ -77,15 +198,28 @@ export default function ProcessForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditing = !!id;
 
+  // Form state
   const [area, setArea] = useState("");
   const [title, setTitle] = useState("");
-  const [selectedImage, setSelectedImage] = useState<{ node: any; pos: number } | null>(null);
-  const [imageWidth, setImageWidth] = useState(100);
+  const [objective, setObjective] = useState("");
+  const [responsible, setResponsible] = useState("");
+  const [approver, setApprover] = useState("");
+  const [materials, setMaterials] = useState("");
+  const [steps, setSteps] = useState<Step[]>([{ id: crypto.randomUUID(), content: "" }]);
+  const [frequency, setFrequency] = useState("");
+  const [observations, setObservations] = useState("");
 
   const canViewProcesses = isAdmin || isGestor || permissions.can_view_processes;
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Redirect if user doesn't have permission to view/edit processes
   useEffect(() => {
@@ -125,159 +259,59 @@ export default function ProcessForm() {
     enabled: !!workspace,
   });
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-        bulletList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-        orderedList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-        // Avoid duplicate extension name warning (StarterKit already includes Link)
-        link: false,
-      }),
-      FontSize,
-      Color,
-      ResizableImage.configure({
-        HTMLAttributes: {
-          class: "rounded-lg my-4 cursor-pointer",
-        },
-      }),
-      Youtube.configure({
-        HTMLAttributes: {
-          class: "w-full aspect-video rounded-lg my-4",
-        },
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-primary underline",
-        },
-      }),
-      Placeholder.configure({
-        placeholder: "Escreva o conteúdo do POP... (Cole imagens com Ctrl+V)",
-      }),
-    ],
-    content: "",
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class: "prose prose-sm sm:prose-base max-w-none focus:outline-none min-h-[400px] p-4",
-      },
-      handleClick: (view, pos, event) => {
-        const target = event.target as HTMLElement;
-        if (target.tagName === 'IMG') {
-          const node = view.state.doc.nodeAt(pos);
-          if (node && node.type.name === 'image') {
-            setSelectedImage({ node, pos });
-            const currentWidth = node.attrs.width;
-            if (currentWidth) {
-              const widthNum = parseInt(currentWidth.replace('%', '').replace('px', ''));
-              setImageWidth(isNaN(widthNum) ? 100 : widthNum);
-            } else {
-              setImageWidth(100);
-            }
-            return true;
-          }
-        }
-        setSelectedImage(null);
-        return false;
-      },
-      handlePaste: (view, event) => {
-        const items = event.clipboardData?.items;
-        if (!items) return false;
-
-        // Check for pasted images
-        for (const item of Array.from(items)) {
-          if (item.type.startsWith('image/')) {
-            event.preventDefault();
-            const file = item.getAsFile();
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const base64 = e.target?.result as string;
-                view.dispatch(view.state.tr.replaceSelectionWith(
-                  view.state.schema.nodes.image.create({ src: base64 })
-                ));
-              };
-              reader.readAsDataURL(file);
-            }
-            return true;
-          }
-        }
-
-        const rawText =
-          event.clipboardData?.getData("text/plain") ||
-          event.clipboardData?.getData("text") ||
-          "";
-        const text = rawText.trim();
-        if (text) {
-          // YouTube URL patterns
-          const youtubeRegex = /(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-          const youtubeMatch = text.match(youtubeRegex);
-
-          if (youtubeMatch) {
-            event.preventDefault();
-            const videoId = youtubeMatch[1];
-            const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            view.dispatch(
-              view.state.tr.replaceSelectionWith(
-                view.state.schema.nodes.youtube.create({ src: embedUrl })
-              )
-            );
-            return true;
-          }
-
-          // Vimeo URL patterns
-          const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?(?:player\.)?vimeo\.com\/(?:video\/)?(\d+)/;
-          const vimeoMatch = text.match(vimeoRegex);
-
-          if (vimeoMatch) {
-            event.preventDefault();
-            const videoId = vimeoMatch[1];
-            const embedUrl = `https://player.vimeo.com/video/${videoId}`;
-            view.dispatch(
-              view.state.tr.replaceSelectionWith(
-                view.state.schema.nodes.youtube.create({ src: embedUrl })
-              )
-            );
-            return true;
-          }
-        }
-
-        return false;
-      },
-    },
-  });
-
   // Load process data when editing
   useEffect(() => {
-    if (process && editor && !editor.isDestroyed) {
-      setArea(process.area);
-      setTitle(process.title);
-      // Only set content if it's different from current content
-      const currentContent = editor.getHTML();
-      if (process.content && process.content !== currentContent) {
-        editor.commands.setContent(process.content);
+    if (process) {
+      setArea(process.area || "");
+      setTitle(process.title || "");
+      setObjective(process.objective || "");
+      setResponsible(process.responsible || "");
+      setApprover((process as any).approver || "");
+      setMaterials((process as any).materials || "");
+      setFrequency((process as any).frequency || "");
+      setObservations((process as any).observations || "");
+      
+      // Parse steps from stored JSON or legacy content
+      if (process.steps) {
+        try {
+          const parsedSteps = JSON.parse(process.steps);
+          if (Array.isArray(parsedSteps) && parsedSteps.length > 0) {
+            setSteps(parsedSteps);
+          }
+        } catch {
+          // If steps is not valid JSON, treat it as single step
+          setSteps([{ id: crypto.randomUUID(), content: process.steps }]);
+        }
+      } else if (process.content) {
+        // Legacy: try to parse content as steps or keep as single content
+        setSteps([{ id: crypto.randomUUID(), content: "" }]);
       }
     }
-  }, [process, editor]);
+  }, [process]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      if (!workspace || !editor) throw new Error("Dados inválidos");
-      const content = editor.getHTML();
+      if (!workspace) throw new Error("Dados inválidos");
+      
+      // Build content HTML for display
+      const contentHtml = buildContentHtml();
+      const stepsJson = JSON.stringify(steps.filter(s => s.content.trim()));
       
       if (isEditing) {
         const { error } = await supabase
           .from("process_documentation")
-          .update({ area, title, content })
+          .update({ 
+            area, 
+            title, 
+            content: contentHtml,
+            objective,
+            responsible,
+            approver,
+            materials,
+            steps: stepsJson,
+            frequency,
+            observations
+          })
           .eq("id", id);
         if (error) throw error;
       } else {
@@ -285,7 +319,14 @@ export default function ProcessForm() {
           {
             area,
             title,
-            content,
+            content: contentHtml,
+            objective,
+            responsible,
+            approver,
+            materials,
+            steps: stepsJson,
+            frequency,
+            observations,
             created_by: user!.id,
             workspace_id: workspace.id,
           },
@@ -303,70 +344,75 @@ export default function ProcessForm() {
     },
   });
 
+  const buildContentHtml = () => {
+    const sections: string[] = [];
+    
+    if (objective) {
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Objetivo</h3><p>${objective}</p></div>`);
+    }
+    
+    if (responsible || approver) {
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Responsáveis</h3><p><strong>Executor:</strong> ${responsible || '-'}</p><p><strong>Aprovador:</strong> ${approver || '-'}</p></div>`);
+    }
+    
+    if (materials) {
+      const materialsList = materials.split('\n').filter(m => m.trim()).map(m => `<li>${m.trim()}</li>`).join('');
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Materiais Necessários</h3><ul class="list-disc pl-5">${materialsList}</ul></div>`);
+    }
+    
+    const validSteps = steps.filter(s => s.content.trim());
+    if (validSteps.length > 0) {
+      const stepsList = validSteps.map((s, i) => {
+        const textContent = s.content.replace(/<[^>]*>/g, '').trim();
+        const mediaContent = s.content.match(/(<img[^>]*>|<iframe[^>]*><\/iframe>|<a[^>]*>[^<]*<\/a>)/g)?.join('') || '';
+        return `<li class="mb-4"><span class="font-medium">${textContent}</span>${mediaContent ? `<div class="mt-2">${mediaContent}</div>` : ''}</li>`;
+      }).join('');
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Passo a Passo</h3><ol class="list-decimal pl-5">${stepsList}</ol></div>`);
+    }
+    
+    if (frequency) {
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Frequência</h3><p>${frequency}</p></div>`);
+    }
+    
+    if (observations) {
+      sections.push(`<div class="mb-6"><h3 class="text-lg font-semibold mb-2">Observações</h3><p>${observations}</p></div>`);
+    }
+    
+    return sections.join('');
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!area.trim() || !title.trim()) {
       toast.error("Preencha o setor e título");
       return;
     }
-    if (!editor?.getHTML().trim() || editor.getHTML() === "<p></p>") {
-      toast.error("Preencha o conteúdo do POP");
-      return;
-    }
     createMutation.mutate();
   };
 
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && editor) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        editor.chain().focus().setImage({ src: base64 }).run();
-      };
-      reader.readAsDataURL(file);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [editor]);
-
-  const addImage = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const addVideo = useCallback(() => {
-    const url = window.prompt("URL do vídeo (YouTube, Vimeo, etc):");
-    if (url && editor) {
-      editor.chain().focus().setYoutubeVideo({ src: url }).run();
-    }
-  }, [editor]);
-
-  const addLink = useCallback(() => {
-    const url = window.prompt("URL do link:");
-    if (url && editor) {
-      editor.chain().focus().setLink({ href: url }).run();
-    }
-  }, [editor]);
-
-  const setFontSize = (size: string) => {
-    if (editor) {
-      editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setSteps((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id);
+        const newIndex = items.findIndex((i) => i.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
   };
 
-  const setColor = (color: string) => {
-    if (editor) {
-      editor.chain().focus().setColor(color).run();
+  const addStep = () => {
+    setSteps([...steps, { id: crypto.randomUUID(), content: "" }]);
+  };
+
+  const removeStep = (id: string) => {
+    if (steps.length > 1) {
+      setSteps(steps.filter((s) => s.id !== id));
     }
   };
 
-  const updateImageWidth = (newWidth: number) => {
-    if (selectedImage && editor) {
-      const { pos } = selectedImage;
-      editor.chain().focus().setNodeSelection(pos).updateAttributes('image', { width: `${newWidth}%` }).run();
-      setImageWidth(newWidth);
-    }
+  const updateStepContent = (id: string, content: string) => {
+    setSteps(steps.map((s) => (s.id === id ? { ...s, content } : s)));
   };
 
   if (isLoadingProcess) {
@@ -391,244 +437,189 @@ export default function ProcessForm() {
               {isEditing ? "Editar POP" : "Novo POP"}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {isEditing ? "Atualize as informações do POP" : "Documente um novo Procedimento Operacional Padrão"}
+              Preencha os campos para criar um procedimento padronizado
             </p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="area">Setor *</Label>
-              <Select value={area} onValueChange={setArea}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sectors && sectors.length > 0 ? (
-                    sectors.map((sector) => (
-                      <SelectItem key={sector.id} value={sector.name}>
-                        {sector.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <div className="px-2 py-4 text-sm text-muted-foreground text-center">
-                      Nenhum setor cadastrado
-                    </div>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title">Título do POP *</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex: Onboarding de novos funcionários"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Conteúdo *</Label>
-            <div className="border rounded-md overflow-hidden bg-background">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
-              
-              {/* Toolbar */}
-              <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/50">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleBold().run()}
-                  className={editor?.isActive("bold") ? "bg-muted" : ""}
-                >
-                  <Bold size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleItalic().run()}
-                  className={editor?.isActive("italic") ? "bg-muted" : ""}
-                >
-                  <Italic size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
-                  className={editor?.isActive("heading", { level: 1 }) ? "bg-muted" : ""}
-                >
-                  <Heading1 size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                  className={editor?.isActive("heading", { level: 2 }) ? "bg-muted" : ""}
-                >
-                  <Heading2 size={16} />
-                </Button>
-                
-                <div className="w-px h-6 bg-border mx-1 self-center" />
-                
-                {/* Font Size */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" title="Tamanho da fonte">
-                      <Type size={16} />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-32 p-2">
-                    <div className="space-y-1">
-                      {FONT_SIZES.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => setFontSize(size)}
-                          className="w-full text-left px-2 py-1 text-sm hover:bg-muted rounded"
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* Color Picker */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" title="Cor da fonte">
-                      <Palette size={16} />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-2">
-                    <div className="grid grid-cols-7 gap-1">
-                      {COLORS.map((color) => (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => setColor(color)}
-                          className="w-6 h-6 rounded border border-border hover:scale-110 transition-transform"
-                          style={{ backgroundColor: color }}
-                          title={color}
-                        />
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-
-                <div className="w-px h-6 bg-border mx-1 self-center" />
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                  className={editor?.isActive("bulletList") ? "bg-muted" : ""}
-                >
-                  <List size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                  className={editor?.isActive("orderedList") ? "bg-muted" : ""}
-                >
-                  <ListOrdered size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-                  className={editor?.isActive("blockquote") ? "bg-muted" : ""}
-                >
-                  <Quote size={16} />
-                </Button>
-                
-                <div className="w-px h-6 bg-border mx-1 self-center" />
-                
-                <Button type="button" variant="ghost" size="sm" onClick={addImage} title="Adicionar imagem">
-                  <ImageIcon size={16} />
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={addVideo} title="Adicionar vídeo">
-                  <Video size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={addLink}
-                  className={editor?.isActive("link") ? "bg-muted" : ""}
-                  title="Adicionar link"
-                >
-                  <LinkIcon size={16} />
-                </Button>
-              </div>
-
-              {/* Image resize controls */}
-              {selectedImage && (
-                <div className="flex items-center gap-2 p-2 border-b bg-accent/50">
-                  <span className="text-sm text-muted-foreground">Tamanho da imagem:</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => updateImageWidth(Math.max(10, imageWidth - 10))}
-                  >
-                    <Minus size={14} />
-                  </Button>
-                  <span className="text-sm font-medium w-12 text-center">{imageWidth}%</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => updateImageWidth(Math.min(100, imageWidth + 10))}
-                  >
-                    <Plus size={14} />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedImage(null)}
-                    className="ml-2 text-xs"
-                  >
-                    Fechar
-                  </Button>
+          {/* Basic Info */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Informações Básicas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="area">Setor *</Label>
+                  <Select value={area} onValueChange={setArea}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um setor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sectors && sectors.length > 0 ? (
+                        sectors.map((sector) => (
+                          <SelectItem key={sector.id} value={sector.name}>
+                            {sector.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                          Nenhum setor cadastrado
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label htmlFor="title">Título do POP *</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ex: Limpeza de Equipamentos"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="objective">Objetivo</Label>
+                <Textarea
+                  id="objective"
+                  value={objective}
+                  onChange={(e) => setObjective(e.target.value)}
+                  placeholder="Descreva brevemente o propósito deste procedimento"
+                  className="resize-none min-h-[80px]"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-              <EditorContent editor={editor} />
-            </div>
-          </div>
+          {/* Responsibles */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Responsáveis</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="responsible">Quem executa?</Label>
+                  <Input
+                    id="responsible"
+                    value={responsible}
+                    onChange={(e) => setResponsible(e.target.value)}
+                    placeholder="Ex: Equipe de limpeza"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="approver">Quem aprova?</Label>
+                  <Input
+                    id="approver"
+                    value={approver}
+                    onChange={(e) => setApprover(e.target.value)}
+                    placeholder="Ex: Supervisor da área"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
+          {/* Materials */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Materiais Necessários</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={materials}
+                onChange={(e) => setMaterials(e.target.value)}
+                placeholder="Liste os materiais/equipamentos necessários (um por linha)"
+                className="resize-none min-h-[100px]"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Digite um item por linha
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Steps */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Passo a Passo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext items={steps.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {steps.map((step, index) => (
+                    <SortableStepItem
+                      key={step.id}
+                      step={step}
+                      index={index}
+                      onContentChange={updateStepContent}
+                      onRemove={removeStep}
+                      onAddMedia={() => {}}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addStep}
+                className="w-full gap-2"
+              >
+                <Plus size={16} />
+                Adicionar Passo
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Frequency */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Frequência</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Input
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+                placeholder="Ex: Diariamente, Semanalmente, Sempre que necessário"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Observations */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Observações</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={observations}
+                onChange={(e) => setObservations(e.target.value)}
+                placeholder="Cuidados extras, exceções ou notas importantes"
+                className="resize-none min-h-[100px]"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end pt-4">
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto"
               onClick={() => navigate("/workspace/processes")}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
-              {createMutation.isPending ? "Salvando..." : isEditing ? "Atualizar Processo" : "Criar Processo"}
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? "Salvando..." : isEditing ? "Atualizar POP" : "Criar POP"}
             </Button>
           </div>
         </form>

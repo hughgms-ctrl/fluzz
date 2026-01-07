@@ -792,13 +792,17 @@ export type Database = {
       }
       process_documentation: {
         Row: {
+          approver: string | null
           area: string
           checklist: string | null
           content: string
           created_at: string | null
           created_by: string | null
+          frequency: string | null
           id: string
+          materials: string | null
           objective: string | null
+          observations: string | null
           responsible: string | null
           steps: string | null
           title: string
@@ -807,13 +811,17 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          approver?: string | null
           area: string
           checklist?: string | null
           content: string
           created_at?: string | null
           created_by?: string | null
+          frequency?: string | null
           id?: string
+          materials?: string | null
           objective?: string | null
+          observations?: string | null
           responsible?: string | null
           steps?: string | null
           title: string
@@ -822,13 +830,17 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          approver?: string | null
           area?: string
           checklist?: string | null
           content?: string
           created_at?: string | null
           created_by?: string | null
+          frequency?: string | null
           id?: string
+          materials?: string | null
           objective?: string | null
+          observations?: string | null
           responsible?: string | null
           steps?: string | null
           title?: string

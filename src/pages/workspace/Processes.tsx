@@ -9,17 +9,30 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Plus, FileText, Trash2, ChevronRight, Pencil } from "lucide-react";
+import { Plus, FileText, Trash2, ChevronRight, Pencil, Target, Users, Package, ListOrdered, Clock, AlertCircle } from "lucide-react";
 
 interface Process {
   id: string;
   area: string;
   title: string;
   content: string;
+  objective?: string | null;
+  responsible?: string | null;
+  approver?: string | null;
+  materials?: string | null;
+  steps?: string | null;
+  frequency?: string | null;
+  observations?: string | null;
   created_at: string;
   created_by: string | null;
   workspace_id: string | null;
+}
+
+interface Step {
+  id: string;
+  content: string;
 }
 
 export default function Processes() {
@@ -90,6 +103,25 @@ export default function Processes() {
       }
     }
   }, [processes, searchParams, setSearchParams]);
+
+  // Parse steps from JSON
+  const parseSteps = (stepsJson: string | null | undefined): Step[] => {
+    if (!stepsJson) return [];
+    try {
+      const parsed = JSON.parse(stepsJson);
+      if (Array.isArray(parsed)) return parsed;
+      return [];
+    } catch {
+      // If it's not JSON, treat as single step
+      return [{ id: '1', content: stepsJson }];
+    }
+  };
+
+  // Parse materials from newline-separated string
+  const parseMaterials = (materials: string | null | undefined): string[] => {
+    if (!materials) return [];
+    return materials.split('\n').filter(m => m.trim());
+  };
 
   if (isLoading) {
     return (
@@ -174,7 +206,7 @@ export default function Processes() {
         )}
       </div>
 
-      {/* Process Detail Sheet */}
+      {/* Process Detail Sheet - Document View */}
       <Sheet open={!!selectedProcess} onOpenChange={(open) => {
         if (!open) {
           setSelectedProcess(null);
@@ -218,11 +250,136 @@ export default function Processes() {
           </SheetHeader>
 
           <ScrollArea className="flex-1">
-            <div className="p-4 md:p-6">
-              <article
-                className="prose prose-sm md:prose max-w-none dark:prose-invert break-words"
-                dangerouslySetInnerHTML={{ __html: selectedProcess?.content || "" }}
-              />
+            <div className="p-4 md:p-6 space-y-6">
+              {/* Objective Section */}
+              {selectedProcess?.objective && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Target size={16} className="text-primary" />
+                    Objetivo
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-6">
+                    {selectedProcess.objective}
+                  </p>
+                </div>
+              )}
+
+              {/* Responsibles Section */}
+              {(selectedProcess?.responsible || selectedProcess?.approver) && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Users size={16} className="text-primary" />
+                    Responsáveis
+                  </div>
+                  <div className="pl-6 space-y-1">
+                    {selectedProcess?.responsible && (
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Executor:</span>{" "}
+                        <span className="text-foreground">{selectedProcess.responsible}</span>
+                      </p>
+                    )}
+                    {selectedProcess?.approver && (
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Aprovador:</span>{" "}
+                        <span className="text-foreground">{selectedProcess.approver}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Materials Section */}
+              {selectedProcess?.materials && parseMaterials(selectedProcess.materials).length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Package size={16} className="text-primary" />
+                    Materiais Necessários
+                  </div>
+                  <ul className="pl-6 space-y-1">
+                    {parseMaterials(selectedProcess.materials).map((material, index) => (
+                      <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
+                        <span className="text-primary mt-1.5">•</span>
+                        {material}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Steps Section */}
+              {selectedProcess?.steps && parseSteps(selectedProcess.steps).length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <ListOrdered size={16} className="text-primary" />
+                    Passo a Passo
+                  </div>
+                  <div className="pl-6 space-y-4">
+                    {parseSteps(selectedProcess.steps).map((step, index) => {
+                      const textContent = step.content.replace(/<[^>]*>/g, '').trim();
+                      const mediaContent = step.content.match(/(<img[^>]*>|<iframe[^>]*><\/iframe>|<a[^>]*>[^<]*<\/a>)/g)?.join('') || '';
+                      
+                      return (
+                        <div key={step.id} className="flex gap-3">
+                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm text-foreground">{textContent}</p>
+                            {mediaContent && (
+                              <div 
+                                className="prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: mediaContent }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Frequency Section */}
+              {selectedProcess?.frequency && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Clock size={16} className="text-primary" />
+                    Frequência
+                  </div>
+                  <p className="text-sm text-muted-foreground pl-6">
+                    {selectedProcess.frequency}
+                  </p>
+                </div>
+              )}
+
+              {/* Observations Section */}
+              {selectedProcess?.observations && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <AlertCircle size={16} className="text-primary" />
+                    Observações
+                  </div>
+                  <div className="pl-6 p-3 bg-muted/50 rounded-lg border">
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {selectedProcess.observations}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy content fallback - only show if no structured data */}
+              {!selectedProcess?.objective && 
+               !selectedProcess?.responsible && 
+               !selectedProcess?.materials && 
+               !selectedProcess?.steps &&
+               !selectedProcess?.frequency &&
+               !selectedProcess?.observations &&
+               selectedProcess?.content && (
+                <article
+                  className="prose prose-sm md:prose max-w-none dark:prose-invert break-words"
+                  dangerouslySetInnerHTML={{ __html: selectedProcess.content }}
+                />
+              )}
             </div>
           </ScrollArea>
         </SheetContent>
