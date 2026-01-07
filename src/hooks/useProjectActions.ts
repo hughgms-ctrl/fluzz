@@ -211,6 +211,7 @@ export function useProjectActions() {
       // Buscar task_processes
       const taskIds = tasks?.map(t => t.id) || [];
       let taskProcesses: any[] = [];
+      let taskAssignees: any[] = [];
       
       if (taskIds.length > 0) {
         const { data: tpData } = await supabase
@@ -219,6 +220,14 @@ export function useProjectActions() {
           .in("task_id", taskIds);
 
         taskProcesses = tpData || [];
+
+        // Buscar task_assignees para salvar no template
+        const { data: taData } = await supabase
+          .from("task_assignees")
+          .select("*")
+          .in("task_id", taskIds);
+
+        taskAssignees = taData || [];
       }
 
       if (tasks && tasks.length > 0) {
@@ -276,6 +285,20 @@ export function useProjectActions() {
 
             if (newTaskProcesses.length > 0) {
               await supabase.from("template_task_processes").insert(newTaskProcesses);
+            }
+          }
+
+          // Copy task_assignees to template_task_assignees
+          if (taskAssignees.length > 0) {
+            const newTaskAssignees = taskAssignees
+              .filter(ta => taskIdToIndex[ta.task_id] !== undefined)
+              .map(ta => ({
+                template_task_id: insertedTasks[taskIdToIndex[ta.task_id]].id,
+                user_id: ta.user_id,
+              }));
+
+            if (newTaskAssignees.length > 0) {
+              await supabase.from("template_task_assignees").insert(newTaskAssignees);
             }
           }
         }
