@@ -69,9 +69,9 @@ export default function Workspace() {
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
                   <FileText className="h-8 w-8 text-primary mb-2" />
-                  <CardTitle className="text-lg">Processos</CardTitle>
+                  <CardTitle className="text-lg">POPs</CardTitle>
                   <CardDescription className="text-sm">
-                    Documentação de processos organizados por área
+                    Procedimentos Operacionais Padrão organizados por área
                   </CardDescription>
                 </CardHeader>
               </Card>

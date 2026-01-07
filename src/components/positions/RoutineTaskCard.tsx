@@ -51,9 +51,9 @@ const priorityLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  todo: "A Fazer",
-  in_progress: "Em Progresso",
-  completed: "Concluído",
+  todo: "A fazer",
+  in_progress: "Fazendo",
+  completed: "Feito",
 };
 
 const statusColors: Record<string, string> = {

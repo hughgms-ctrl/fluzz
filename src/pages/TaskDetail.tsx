@@ -997,9 +997,9 @@ export default function TaskDetail() {
   };
 
   const statusLabels = {
-    todo: "A Fazer",
-    in_progress: "Em Progresso",
-    completed: "Concluído",
+    todo: "A fazer",
+    in_progress: "Fazendo",
+    completed: "Feito",
   };
 
   const isOverdue = isTaskOverdue(task.due_date, task.status);
@@ -1328,9 +1328,9 @@ export default function TaskDetail() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todo">A Fazer</SelectItem>
-                      <SelectItem value="in_progress">Em Progresso</SelectItem>
-                      <SelectItem value="completed">Concluído</SelectItem>
+                      <SelectItem value="todo">A fazer</SelectItem>
+                      <SelectItem value="in_progress">Fazendo</SelectItem>
+                      <SelectItem value="completed">Feito</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

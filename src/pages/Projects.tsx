@@ -166,9 +166,9 @@ export default function Projects() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "todo": return "A Fazer";
-      case "in_progress": return "Em Progresso";
-      case "completed": return "Concluído";
+      case "todo": return "A fazer";
+      case "in_progress": return "Fazendo";
+      case "completed": return "Feito";
       default: return status;
     }
   };

@@ -800,9 +800,9 @@ export default function RoutineTaskDetail() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="todo">A Fazer</SelectItem>
-                      <SelectItem value="in_progress">Em Progresso</SelectItem>
-                      <SelectItem value="completed">Concluído</SelectItem>
+                      <SelectItem value="todo">A fazer</SelectItem>
+                      <SelectItem value="in_progress">Fazendo</SelectItem>
+                      <SelectItem value="completed">Feito</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -302,9 +302,9 @@ export function CreateRoutineTaskDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">A Fazer</SelectItem>
-                <SelectItem value="in_progress">Em Progresso</SelectItem>
-                <SelectItem value="completed">Concluído</SelectItem>
+                <SelectItem value="todo">A fazer</SelectItem>
+                <SelectItem value="in_progress">Fazendo</SelectItem>
+                <SelectItem value="completed">Feito</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -361,7 +361,7 @@ export function CreateRoutineTaskDialog({
                     <Plus size={16} />
                     {selectedProcesses.length > 0 
                       ? `${selectedProcesses.length} POP(s) selecionado(s)`
-                      : "Vincular processos"}
+                      : "Vincular POPs"}
                   </span>
                   <ChevronRight size={16} />
                 </Button>

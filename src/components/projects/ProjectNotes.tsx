@@ -121,10 +121,10 @@ export function ProjectNotes({ projectId, tasks }: ProjectNotesProps) {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "todo": return "A Fazer";
-      case "in_progress": return "Em Progresso";
+      case "todo": return "A fazer";
+      case "in_progress": return "Fazendo";
       case "review": return "Em Revisão";
-      case "completed": return "Concluída";
+      case "completed": return "Feito";
       default: return status;
     }
   };

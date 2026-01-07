@@ -65,11 +65,11 @@ interface ProjectsTableViewProps {
 
 const statusConfig = {
   todo: { 
-    label: "Parado", 
+    label: "A fazer", 
     color: "hsl(0, 68%, 72%)",
   },
   in_progress: { 
-    label: "Em progresso", 
+    label: "Fazendo", 
     color: "hsl(30, 100%, 65%)",
   },
   completed: { 
