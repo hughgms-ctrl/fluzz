@@ -230,10 +230,12 @@ export default function MyTasks() {
   });
 
   // Helper function to determine task type
-  const getTaskType = (task: any): "project" | "standalone" | "routine" => {
+  const getTaskType = (task: any): "project" | "folder" | "personal" | "routine" => {
     if (task.routine_id || task.recurring_task_id) return "routine";
-    // "standalone" aqui significa tarefa PESSOAL (sem projeto)
-    if (!task.project_id) return "standalone";
+    // Tarefa pessoal = sem project_id
+    if (!task.project_id) return "personal";
+    // Pasta "Sem Projeto" = project com is_standalone_folder = true
+    if (task.projects?.is_standalone_folder) return "folder";
     return "project";
   };
 
@@ -292,8 +294,8 @@ export default function MyTasks() {
   const todoTasks = useMemo(() => filteredTasks.filter((t) => t.status === "todo"), [filteredTasks]);
   const inProgressTasks = useMemo(() => filteredTasks.filter((t) => t.status === "in_progress"), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.status === "completed"), [filteredTasks]);
-  const projectTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "project"), [filteredTasks]);
-  const standaloneTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "standalone"), [filteredTasks]);
+  const projectTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "project" || getTaskType(t) === "folder"), [filteredTasks]);
+  const personalTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "personal"), [filteredTasks]);
   const routineTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "routine"), [filteredTasks]);
 
   if (isLoading) {
@@ -339,7 +341,7 @@ export default function MyTasks() {
             <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
               <User className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               <div>
-                <p className="text-lg sm:text-2xl font-bold">{standaloneTasks.length}</p>
+                <p className="text-lg sm:text-2xl font-bold">{personalTasks.length}</p>
                 <p className="text-[10px] sm:text-sm text-muted-foreground">Pessoais</p>
               </div>
             </CardContent>

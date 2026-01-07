@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TaskCard } from "./TaskCard";
-import { FolderOpen, User, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
+import { FolderOpen, Folder, User, RefreshCw, ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -9,7 +9,7 @@ interface ProjectTaskGroupProps {
   projectName: string;
   projectId: string | null;
   tasks: any[];
-  type: "project" | "standalone" | "routine";
+  type: "project" | "folder" | "personal" | "routine";
   onDeleteTask: (taskId: string) => void;
 }
 
@@ -34,8 +34,10 @@ export function ProjectTaskGroup({
     switch (type) {
       case "project":
         return <FolderOpen className="h-4 w-4 text-blue-500" />;
-      case "standalone":
+      case "personal":
         return <User className="h-4 w-4 text-purple-500" />;
+      case "folder":
+        return <Folder className="h-4 w-4 text-cyan-500" />;
       case "routine":
         return <RefreshCw className="h-4 w-4 text-green-500" />;
     }
@@ -45,8 +47,10 @@ export function ProjectTaskGroup({
     switch (type) {
       case "project":
         return "border-l-blue-500";
-      case "standalone":
+      case "personal":
         return "border-l-purple-500";
+      case "folder":
+        return "border-l-cyan-500";
       case "routine":
         return "border-l-green-500";
     }
