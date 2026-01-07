@@ -91,6 +91,8 @@ function getProjectColor(projectId: string): string {
 function getTaskType(task: any): "project" | "standalone" | "routine" {
   if (task.routine_id || task.recurring_task_id) return "routine";
   if (!task.project_id) return "standalone";
+  // Check if the project is a standalone folder
+  if (task.projects?.is_standalone_folder) return "standalone";
   return "project";
 }
 

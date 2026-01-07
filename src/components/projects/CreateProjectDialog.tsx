@@ -64,7 +64,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
       if (!workspace?.id) return [];
       const { data, error } = await supabase
         .from("project_templates")
-        .select("id, name, description")
+        .select("id, name, description, color")
         .eq("workspace_id", workspace.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
