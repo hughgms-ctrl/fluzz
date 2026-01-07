@@ -80,7 +80,26 @@ const groupColors = {
   routine: "hsl(142, 71%, 45%)",
 };
 
-function getProjectColor(projectId: string): string {
+// Map color values from database to actual HSL colors
+const projectColorByValue: Record<string, string> = {
+  primary: "hsl(var(--primary))",
+  blue: "hsl(217, 91%, 60%)",
+  emerald: "hsl(142, 71%, 45%)",
+  amber: "hsl(43, 96%, 56%)",
+  purple: "hsl(271, 81%, 56%)",
+  pink: "hsl(330, 81%, 60%)",
+  cyan: "hsl(188, 94%, 42%)",
+  rose: "hsl(346, 77%, 49%)",
+  orange: "hsl(25, 95%, 53%)",
+  teal: "hsl(173, 80%, 40%)",
+};
+
+function getProjectColor(projectId: string, colorValue?: string | null): string {
+  // Use the actual project color if available
+  const mapped = colorValue ? projectColorByValue[colorValue] : undefined;
+  if (mapped) return mapped;
+
+  // Fallback: Use project ID to generate a consistent color (for legacy projects)
   let hash = 0;
   for (let i = 0; i < projectId.length; i++) {
     hash = projectId.charCodeAt(i) + ((hash << 5) - hash);
@@ -545,7 +564,7 @@ export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
             name: task.projects?.name || "Projeto", 
             tasks: [], 
             type: "project",
-            color: getProjectColor(projectKey),
+            color: getProjectColor(projectKey, task.projects?.color),
           };
         }
         groupMap[projectKey].tasks.push(task);
