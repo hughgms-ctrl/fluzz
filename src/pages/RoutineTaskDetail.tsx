@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { renderDocumentation } from "@/lib/linkify";
-import { ArrowLeft, Calendar, User, FileText, Edit2, Trash2, Plus, GripVertical } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Edit2, Trash2, Plus, GripVertical, Save, Paperclip, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { formatDateBR } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -32,9 +33,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { MemberDrawer } from "@/components/tasks/MemberDrawer";
-import { UserCircle, ChevronRight } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { SectorDrawer } from "@/components/tasks/SectorDrawer";
+import { UserCircle, ChevronRight, Briefcase } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DndContext,
   closestCenter,
@@ -157,6 +158,14 @@ export default function RoutineTaskDetail() {
   const [newSubtask, setNewSubtask] = useState("");
   const canEdit = isAdmin || isGestor;
 
+  // Inline editing states
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editDescription, setEditDescription] = useState("");
+  const [isEditingDocumentation, setIsEditingDocumentation] = useState(false);
+  const [editDocumentation, setEditDocumentation] = useState("");
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -173,6 +182,7 @@ export default function RoutineTaskDetail() {
     assigned_to: "",
     start_date: "",
     project_id: "",
+    setor: "",
   });
 
   const { data: task, isLoading } = useQuery({
@@ -217,6 +227,51 @@ export default function RoutineTaskDetail() {
     enabled: !!task?.setor,
   });
 
+  const { data: sectors } = useQuery({
+    queryKey: ["positions", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      const { data, error } = await supabase
+        .from("positions")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace,
+  });
+
+  const { data: workspaceMembers } = useQuery({
+    queryKey: ["workspace-members", workspace?.id],
+    queryFn: async () => {
+      if (!workspace) return [];
+      
+      const { data: members, error: membersError } = await supabase
+        .from("workspace_members")
+        .select("user_id, role")
+        .eq("workspace_id", workspace.id);
+      
+      if (membersError) throw membersError;
+      if (!members || members.length === 0) return [];
+
+      const userIds = members.map(m => m.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      if (profilesError) throw profilesError;
+
+      return members.map(member => ({
+        user_id: member.user_id,
+        role: member.role,
+        profiles: profiles?.find(p => p.id === member.user_id)
+      }));
+    },
+    enabled: !!workspace,
+  });
+
   const { data: assignee } = useQuery({
     queryKey: ["profile", task?.assigned_to],
     queryFn: async () => {
@@ -259,6 +314,7 @@ export default function RoutineTaskDetail() {
         assigned_to: task.assigned_to || "",
         start_date: task.start_date || "",
         project_id: task.project_id || "",
+        setor: task.setor || "",
       });
     }
   }, [task]);
@@ -280,6 +336,40 @@ export default function RoutineTaskDetail() {
     onError: () => {
       toast.error("Erro ao atualizar tarefa");
     },
+  });
+
+  const inlineUpdateMutation = useMutation({
+    mutationFn: async (updates: { title?: string; description?: string; documentation?: string }) => {
+      const { error } = await supabase
+        .from("routine_tasks")
+        .update(updates)
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task", id] });
+      toast.success("Atualizado!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar");
+    }
+  });
+
+  const quickStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      const { error } = await supabase
+        .from("routine_tasks")
+        .update({ status: newStatus })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task", id] });
+      toast.success("Status atualizado!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar status");
+    }
   });
 
   const deleteTaskMutation = useMutation({
@@ -410,6 +500,7 @@ export default function RoutineTaskDetail() {
       project_id: editedTask.project_id || null,
       assigned_to: editedTask.assigned_to || null,
       start_date: editedTask.start_date || null,
+      setor: editedTask.setor || null,
     });
   };
 
@@ -434,180 +525,400 @@ export default function RoutineTaskDetail() {
     );
   }
 
-  const priorityLabels: Record<string, string> = { low: "Baixa", medium: "Média", high: "Alta" };
-  const statusLabels: Record<string, string> = { todo: "A Fazer", in_progress: "Em Progresso", completed: "Concluído" };
+  const priorityColors = {
+    high: "destructive",
+    medium: "default",
+    low: "secondary",
+  };
 
   const completedSubtasks = subtasks?.filter(s => s.completed).length || 0;
   const totalSubtasks = subtasks?.length || 0;
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-4xl mx-auto">
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir a tarefa '{task?.title}'? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteTaskMutation.mutate()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-5 w-5" />
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0 mt-1">
+              <ArrowLeft size={20} />
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold">{task.title}</h1>
-              <p className="text-sm text-muted-foreground">
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <Input
+                  value={editedTask.title}
+                  onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
+                  className="text-xl sm:text-2xl md:text-3xl font-bold h-auto py-2"
+                />
+              ) : isEditingTitle ? (
+                <Input
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  onBlur={() => {
+                    if (editTitle.trim() && editTitle !== task.title) {
+                      inlineUpdateMutation.mutate({ title: editTitle.trim() });
+                    }
+                    setIsEditingTitle(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (editTitle.trim() && editTitle !== task.title) {
+                        inlineUpdateMutation.mutate({ title: editTitle.trim() });
+                      }
+                      setIsEditingTitle(false);
+                    } else if (e.key === "Escape") {
+                      setEditTitle(task.title);
+                      setIsEditingTitle(false);
+                    }
+                  }}
+                  autoFocus
+                  className="text-xl sm:text-2xl md:text-3xl font-bold h-auto py-2"
+                />
+              ) : (
+                <h1 
+                  className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 break-words"
+                  onDoubleClick={() => {
+                    setEditTitle(task.title);
+                    setIsEditingTitle(true);
+                  }}
+                >
+                  {task.title}
+                </h1>
+              )}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                 Rotina: {task.routines?.name}
               </p>
             </div>
           </div>
           {canEdit && (
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
-                <Edit2 className="h-4 w-4 mr-2" />
-                {isEditing ? "Cancelar" : "Editar"}
-              </Button>
-              <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Detalhes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+            <div className="flex gap-2 w-full sm:w-auto">
               {isEditing ? (
                 <>
-                  <div className="space-y-2">
-                    <Label>Título</Label>
-                    <Input
-                      value={editedTask.title}
-                      onChange={(e) => setEditedTask({ ...editedTask, title: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Textarea
-                      value={editedTask.description}
-                      onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Prioridade</Label>
-                      <Select value={editedTask.priority} onValueChange={(v) => setEditedTask({ ...editedTask, priority: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="low">Baixa</SelectItem>
-                          <SelectItem value="medium">Média</SelectItem>
-                          <SelectItem value="high">Alta</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <Select value={editedTask.status} onValueChange={(v) => setEditedTask({ ...editedTask, status: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="todo">A Fazer</SelectItem>
-                          <SelectItem value="in_progress">Em Progresso</SelectItem>
-                          <SelectItem value="completed">Concluído</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Documentação</Label>
-                    <Textarea
-                      value={editedTask.documentation}
-                      onChange={(e) => setEditedTask({ ...editedTask, documentation: e.target.value })}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                  <Button onClick={handleSave} disabled={updateTaskMutation.isPending}>
-                    {updateTaskMutation.isPending ? "Salvando..." : "Salvar Alterações"}
+                  <Button onClick={handleSave} disabled={updateTaskMutation.isPending} size="sm" className="flex-1 sm:flex-initial">
+                    <Save size={14} className="mr-1 sm:mr-2" />
+                    <span>Salvar</span>
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-initial" onClick={() => {
+                    setIsEditing(false);
+                    setEditedTask({
+                      title: task.title || "",
+                      description: task.description || "",
+                      priority: task.priority || "medium",
+                      status: task.status || "todo",
+                      documentation: task.documentation || "",
+                      assigned_to: task.assigned_to || "",
+                      start_date: task.start_date || "",
+                      project_id: task.project_id || "",
+                      setor: task.setor || "",
+                    });
+                  }}>
+                    Cancelar
                   </Button>
                 </>
               ) : (
                 <>
-                  <div>
-                    <Label className="text-muted-foreground">Descrição</Label>
-                    <p className="mt-1">{task.description || "Sem descrição"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Setor</Label>
-                    <p className="mt-1">{sectorData?.name || "Não definido"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Responsável</Label>
-                    <p className="mt-1">{assignee?.full_name || "Não definido"}</p>
-                  </div>
-                  <div className="flex gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Prioridade</Label>
-                      <div className="mt-1">
-                        <Badge variant={task.priority === "high" ? "destructive" : "secondary"}>
-                          {priorityLabels[task.priority || "medium"]}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Status</Label>
-                      <div className="mt-1">
-                        <Badge variant="outline">{statusLabels[task.status || "todo"]}</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  {task.documentation && (
-                    <div>
-                      <Label className="text-muted-foreground">Documentação</Label>
-                      <div className="mt-1 prose prose-sm dark:prose-invert max-w-none">
-                        {renderDocumentation(task.documentation)}
-                      </div>
-                    </div>
-                  )}
+                  <Button onClick={() => setIsEditing(true)} size="sm" className="flex-1 sm:flex-initial">
+                    <Edit2 size={14} className="mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Editar</span>
+                    <span className="sm:hidden">Editar</span>
+                  </Button>
+                  <Button variant="destructive" size="icon" onClick={() => setShowDeleteDialog(true)} className="h-8 w-8 sm:h-9 sm:w-9">
+                    <Trash2 size={14} />
+                  </Button>
                 </>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          )}
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            {/* Subtasks Card */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-6">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center justify-between">
-                  Subtarefas
-                  {totalSubtasks > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {completedSubtasks}/{totalSubtasks}
-                    </Badge>
-                  )}
-                </CardTitle>
+              <CardHeader>
+                <CardTitle>Detalhes</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Add subtask input */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nova subtarefa..."
-                    value={newSubtask}
-                    onChange={(e) => setNewSubtask(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleAddSubtask();
-                      }
-                    }}
-                  />
-                  <Button 
-                    size="icon" 
-                    onClick={handleAddSubtask}
-                    disabled={!newSubtask.trim() || addSubtaskMutation.isPending}
-                  >
-                    <Plus size={16} />
-                  </Button>
+              <CardContent className="space-y-4">
+                {/* Descrição */}
+                <div>
+                  <Label>Descrição</Label>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedTask.description}
+                      onChange={(e) => setEditedTask({ ...editedTask, description: e.target.value })}
+                      placeholder="Adicione uma descrição..."
+                      className="mt-2 min-h-[100px] resize-y"
+                    />
+                  ) : isEditingDescription ? (
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      onBlur={() => {
+                        if (editDescription !== task.description) {
+                          inlineUpdateMutation.mutate({ description: editDescription });
+                        }
+                        setIsEditingDescription(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setEditDescription(task.description || "");
+                          setIsEditingDescription(false);
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Adicione uma descrição..."
+                      className="mt-2 min-h-[100px] resize-y"
+                    />
+                  ) : (
+                    <p 
+                      className="text-muted-foreground mt-2 cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 py-1 whitespace-pre-wrap"
+                      onDoubleClick={() => {
+                        setEditDescription(task.description || "");
+                        setIsEditingDescription(true);
+                      }}
+                    >
+                      {task.description || "Sem descrição (duplo clique para editar)"}
+                    </p>
+                  )}
                 </div>
 
+                {/* Setor */}
+                <div>
+                  <Label>Setor</Label>
+                  {isEditing ? (
+                    <SectorDrawer 
+                      value={editedTask.setor} 
+                      onValueChange={(value) => setEditedTask({ ...editedTask, setor: value, assigned_to: "" })}
+                    >
+                      <Button variant="outline" className="w-full justify-between mt-2" type="button">
+                        <span className="flex items-center gap-2">
+                          <Briefcase size={16} />
+                          {editedTask.setor ? (sectors?.find(s => s.id === editedTask.setor)?.name || editedTask.setor) : "Selecione um setor"}
+                        </span>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </SectorDrawer>
+                  ) : (
+                    <p className="text-muted-foreground mt-2">
+                      {sectorData?.name || "Sem setor definido"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Responsável */}
+                <div>
+                  <Label>Responsável</Label>
+                  {isEditing ? (
+                    <MemberDrawer 
+                      value={editedTask.assigned_to} 
+                      onValueChange={(value) => setEditedTask({ ...editedTask, assigned_to: value })}
+                      positionId={editedTask.setor || undefined}
+                    >
+                      <Button variant="outline" className="w-full justify-between mt-2" type="button">
+                        <span className="flex items-center gap-2">
+                          <UserCircle size={16} />
+                          {editedTask.assigned_to && workspaceMembers?.find(m => m.user_id === editedTask.assigned_to)?.profiles?.full_name || "Selecione um responsável"}
+                        </span>
+                        <ChevronRight size={16} />
+                      </Button>
+                    </MemberDrawer>
+                  ) : (
+                    <div className="mt-2">
+                      {assignee ? (
+                        <div className="flex items-center gap-2 bg-muted/50 rounded-full pl-1 pr-2 py-1 w-fit">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                              {assignee.full_name?.charAt(0).toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">{assignee.full_name}</span>
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Sem responsável</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Prioridade */}
+                <div>
+                  <Label>Prioridade</Label>
+                  {isEditing ? (
+                    <Select
+                      value={editedTask.priority}
+                      onValueChange={(value) => setEditedTask({ ...editedTask, priority: value })}
+                    >
+                      <SelectTrigger className="mt-2">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Baixa</SelectItem>
+                        <SelectItem value="medium">Média</SelectItem>
+                        <SelectItem value="high">Alta</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-2">
+                      <Badge variant={priorityColors[task.priority as keyof typeof priorityColors] as any}>
+                        {task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div>
+                  <Label>Status</Label>
+                  <Select
+                    value={isEditing ? editedTask.status : task.status}
+                    onValueChange={(value) => {
+                      if (isEditing) {
+                        setEditedTask({ ...editedTask, status: value });
+                      } else {
+                        quickStatusMutation.mutate(value);
+                      }
+                    }}
+                    disabled={quickStatusMutation.isPending}
+                  >
+                    <SelectTrigger className="mt-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todo">A Fazer</SelectItem>
+                      <SelectItem value="in_progress">Em Progresso</SelectItem>
+                      <SelectItem value="completed">Concluído</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Aprovação (info only - routine tasks don't have approval) */}
+                <div className="border-t pt-4 mt-4">
+                  <Label className="flex items-center gap-2 mb-3">
+                    <Shield size={16} />
+                    Aprovação
+                  </Label>
+                  <p className="text-muted-foreground text-sm">Esta tarefa não requer aprovação</p>
+                </div>
+
+                {/* Data de Início */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Data de Início</Label>
+                    {isEditing ? (
+                      <Input
+                        type="date"
+                        value={editedTask.start_date}
+                        onChange={(e) => setEditedTask({ ...editedTask, start_date: e.target.value })}
+                        className="mt-2"
+                      />
+                    ) : (
+                      <div className="mt-2">
+                        {task.start_date ? (
+                          <Badge variant="secondary">
+                            <Calendar size={12} className="mr-1" />
+                            {formatDateBR(task.start_date)}
+                          </Badge>
+                        ) : (
+                          <p className="text-muted-foreground text-sm">Não definida</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <Label>Data de Fim (Prazo)</Label>
+                    <div className="mt-2">
+                      <p className="text-muted-foreground text-sm">Não aplicável</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Documentação */}
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <FileText size={16} />
+                    Documentação
+                  </Label>
+                  {isEditing ? (
+                    <Textarea
+                      value={editedTask.documentation}
+                      onChange={(e) => setEditedTask({ ...editedTask, documentation: e.target.value })}
+                      placeholder="Adicione documentação adicional..."
+                      className="mt-2 min-h-[120px] resize-y"
+                    />
+                  ) : isEditingDocumentation ? (
+                    <Textarea
+                      value={editDocumentation}
+                      onChange={(e) => setEditDocumentation(e.target.value)}
+                      onBlur={() => {
+                        if (editDocumentation !== task.documentation) {
+                          inlineUpdateMutation.mutate({ documentation: editDocumentation });
+                        }
+                        setIsEditingDocumentation(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setEditDocumentation(task.documentation || "");
+                          setIsEditingDocumentation(false);
+                        }
+                      }}
+                      autoFocus
+                      placeholder="Adicione documentação adicional..."
+                      className="mt-2 min-h-[120px] resize-y"
+                    />
+                  ) : (
+                    <div 
+                      className="text-sm text-foreground p-3 bg-muted/50 rounded mt-2 whitespace-pre-wrap cursor-pointer hover:bg-muted/70"
+                      onDoubleClick={() => {
+                        setEditDocumentation(task.documentation || "");
+                        setIsEditingDocumentation(true);
+                      }}
+                    >
+                      {task.documentation ? renderDocumentation(task.documentation) : <span className="text-muted-foreground">Sem documentação (duplo clique para editar)</span>}
+                    </div>
+                  )}
+                </div>
+
+                {/* Arquivos Anexados (info only) */}
+                <div>
+                  <Label className="flex items-center gap-2">
+                    <Paperclip size={16} />
+                    Arquivos Anexados
+                  </Label>
+                  <div className="mt-2">
+                    <p className="text-muted-foreground text-sm">Nenhum arquivo anexado.</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Subtarefas Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Subtarefas</CardTitle>
+                  <Badge variant="secondary">
+                    {completedSubtasks} de {totalSubtasks}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
                 {/* Subtasks list */}
                 {subtasksLoading ? (
                   <div className="text-center py-4">
@@ -623,32 +934,49 @@ export default function RoutineTaskDetail() {
                       items={subtasks.map(s => s.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-1">
-                        {subtasks.map((subtask) => (
-                          <SortableSubtask
-                            key={subtask.id}
-                            subtask={subtask}
-                            onToggle={(subtaskId, completed) => 
-                              toggleSubtaskMutation.mutate({ subtaskId, completed })
-                            }
-                            onDelete={(subtaskId) => deleteSubtaskMutation.mutate(subtaskId)}
-                            onUpdate={(subtaskId, title) => 
-                              updateSubtaskMutation.mutate({ subtaskId, title })
-                            }
-                            isPending={toggleSubtaskMutation.isPending}
-                          />
-                        ))}
-                      </div>
+                      {subtasks.map((subtask) => (
+                        <SortableSubtask
+                          key={subtask.id}
+                          subtask={subtask}
+                          onToggle={(subtaskId, completed) => 
+                            toggleSubtaskMutation.mutate({ subtaskId, completed })
+                          }
+                          onDelete={(subtaskId) => deleteSubtaskMutation.mutate(subtaskId)}
+                          onUpdate={(subtaskId, title) => 
+                            updateSubtaskMutation.mutate({ subtaskId, title })
+                          }
+                          isPending={toggleSubtaskMutation.isPending}
+                        />
+                      ))}
                     </SortableContext>
                   </DndContext>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-2">
-                    Nenhuma subtarefa
-                  </p>
-                )}
+                ) : null}
+
+                {/* Add subtask input */}
+                <div className="flex gap-2 pt-2">
+                  <Input
+                    placeholder="Nova subtarefa..."
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && newSubtask.trim()) {
+                        handleAddSubtask();
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleAddSubtask}
+                    disabled={!newSubtask.trim() || addSubtaskMutation.isPending}
+                  >
+                    <Plus size={16} />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
+          </div>
 
+          {/* Sidebar */}
+          <div className="space-y-6">
             {task.projects && (
               <Card>
                 <CardHeader>
@@ -675,21 +1003,6 @@ export default function RoutineTaskDetail() {
           </div>
         </div>
       </div>
-
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta tarefa da rotina?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteTaskMutation.mutate()}>Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </AppLayout>
   );
 }
