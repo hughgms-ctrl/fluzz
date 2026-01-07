@@ -4,10 +4,12 @@ import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
 import { Button } from "@/components/ui/button";
 import { 
   Bold, 
   Italic, 
+  Underline as UnderlineIcon,
   List, 
   ListOrdered, 
   Image as ImageIcon, 
@@ -45,6 +47,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         // Avoid duplicate extension name warning (StarterKit already includes Link)
         link: false,
       }),
+      Underline,
       Image.configure({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg my-4",
@@ -72,7 +75,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4",
+        class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4 resize-y overflow-auto",
       },
     },
   });
@@ -156,6 +159,15 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           type="button"
           variant="ghost"
           size="sm"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={editor.isActive("underline") ? "bg-muted" : ""}
+        >
+          <UnderlineIcon size={16} />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           className={editor.isActive("heading", { level: 1 }) ? "bg-muted" : ""}
         >
@@ -225,7 +237,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           <LinkIcon size={16} />
         </Button>
       </div>
-      <EditorContent editor={editor} />
+      <div className="min-h-[200px] max-h-[600px] overflow-auto resize-y">
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }
