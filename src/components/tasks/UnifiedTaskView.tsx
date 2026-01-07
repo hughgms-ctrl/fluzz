@@ -673,7 +673,7 @@ export function UnifiedTaskView({
       color = "hsl(142, 71%, 45%)";
     } else {
       groupId = "standalone";
-      groupName = "Sem Projeto";
+      groupName = "Tarefas Pessoais";
       color = "hsl(280, 65%, 60%)";
     }
 

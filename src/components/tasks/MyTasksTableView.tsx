@@ -540,7 +540,7 @@ export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
       if (taskType === "standalone") {
         if (!groupMap["standalone"]) {
           groupMap["standalone"] = { 
-            name: "Sem Projeto", 
+            name: "Tarefas Pessoais", 
             tasks: [], 
             type: "standalone",
             color: groupColors.standalone,

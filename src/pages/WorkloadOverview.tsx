@@ -564,7 +564,7 @@ export default function WorkloadOverview() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-muted-foreground">
-                                  {task.projects?.name || "Sem Projeto"}
+                                  {task.projects?.name || "Pessoal"}
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant={
