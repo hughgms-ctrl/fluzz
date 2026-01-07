@@ -256,6 +256,8 @@ export default function TeamMemberPermissions() {
   const isCurrentUser = user?.id === userId;
   const canModifyRole = !isCurrentUser && !isWorkspaceCreator;
   const canRemoveMember = !isCurrentUser && !isWorkspaceCreator;
+  // Admins can edit their own permissions (self-visibility settings)
+  const canEditOwnPermissions = isCurrentUser && member?.role === "admin";
 
   // Only admin and gestor can access this page
   if (!isAdmin && !isGestor) {
@@ -286,12 +288,22 @@ export default function TeamMemberPermissions() {
     .toUpperCase() || "?";
 
   const getViewValue = (config: PermissionConfig): boolean => {
+    // For admin viewing themselves, use stored permissions or default to true
+    if (member.role === "admin" && canEditOwnPermissions) {
+      if (!config.viewKey) return true;
+      return permissions?.[config.viewKey] ?? true;
+    }
     if (member.role === "admin") return true;
     if (!config.viewKey) return false;
     return Boolean(permissions?.[config.viewKey] ?? false);
   };
 
   const getEditValue = (config: PermissionConfig): boolean => {
+    // For admin viewing themselves, use stored permissions or default to true
+    if (member.role === "admin" && canEditOwnPermissions) {
+      if (!config.editKey) return true;
+      return permissions?.[config.editKey] ?? true;
+    }
     if (member.role === "admin") return true;
     if (!config.editKey) return false;
     return Boolean(permissions?.[config.editKey] ?? false);
@@ -383,9 +395,14 @@ export default function TeamMemberPermissions() {
             <div className="space-y-6">
               <div>
                 <h3 className="text-lg font-medium text-foreground mb-4">Permissões de Acesso</h3>
-                {member.role === "admin" && (
+                {member.role === "admin" && !isCurrentUser && (
                   <p className="text-sm text-muted-foreground mb-4">
                     Administradores têm acesso total a todas as áreas da plataforma.
+                  </p>
+                )}
+                {canEditOwnPermissions && (
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Como administrador, você pode personalizar quais áreas deseja visualizar.
                   </p>
                 )}
                 
@@ -402,12 +419,12 @@ export default function TeamMemberPermissions() {
                     <div key={config.key} className="grid grid-cols-[1fr_80px_80px] gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors items-center">
                       <div className="text-base font-normal">{config.label}</div>
                       <div className="flex justify-center">
-                        {config.viewKey && (
+                      {config.viewKey && (
                           <Checkbox
                             id={`view-${config.key}`}
                             checked={getViewValue(config)}
                             onCheckedChange={(checked) => handleViewChange(config, checked === true)}
-                            disabled={member.role === "admin"}
+                            disabled={member.role === "admin" && !canEditOwnPermissions}
                           />
                         )}
                       </div>
@@ -417,7 +434,7 @@ export default function TeamMemberPermissions() {
                             id={`edit-${config.key}`}
                             checked={getEditValue(config)}
                             onCheckedChange={(checked) => handleEditChange(config, checked === true)}
-                            disabled={member.role === "admin"}
+                            disabled={member.role === "admin" && !canEditOwnPermissions}
                           />
                         )}
                       </div>

@@ -226,8 +226,12 @@ export const ProjectsCalendarView = ({
                         )}
                         onClick={(e) => {
                           e.stopPropagation();
+                          e.preventDefault();
                           if (isClickable) {
-                            navigate(`/projects/${project.id}`);
+                            // Use setTimeout to avoid React Router state issues
+                            setTimeout(() => {
+                              navigate(`/projects/${project.id}`);
+                            }, 0);
                           }
                         }}
                       >
