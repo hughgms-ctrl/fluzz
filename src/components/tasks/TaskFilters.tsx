@@ -99,7 +99,7 @@ export const TaskFilters = ({
               <SelectContent>
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="project">Projeto</SelectItem>
-                <SelectItem value="standalone">Sem Projeto</SelectItem>
+                <SelectItem value="standalone">Pessoal</SelectItem>
                 <SelectItem value="routine">Rotina</SelectItem>
               </SelectContent>
             </Select>

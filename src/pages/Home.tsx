@@ -261,7 +261,7 @@ export default function Home() {
             {(isAdmin || isGestor) && (
               <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm sm:size-default">
                 <Plus className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline">Criar Tarefa Sem Projeto</span>
+                <span className="hidden sm:inline">Criar Tarefa Pessoal</span>
                 <span className="sm:hidden">Criar</span>
               </Button>
             )}

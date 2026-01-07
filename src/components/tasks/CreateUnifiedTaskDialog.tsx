@@ -320,7 +320,7 @@ export const CreateUnifiedTaskDialog = ({
             <Label>Tipo de Tarefa *</Label>
             <Tabs value={taskType} onValueChange={(v) => setTaskType(v as any)} className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="standalone">Sem Projeto</TabsTrigger>
+                <TabsTrigger value="standalone">Pessoal</TabsTrigger>
                 <TabsTrigger value="project">Projeto</TabsTrigger>
                 <TabsTrigger value="routine">Rotina</TabsTrigger>
               </TabsList>

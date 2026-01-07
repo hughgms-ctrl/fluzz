@@ -279,7 +279,7 @@ export function AnalyticsMobileTaskList({
 
       {/* Standalone Tasks */}
       <TaskGroupMobile
-        title="Sem Projeto"
+        title="Tarefas Pessoais"
         icon={User}
         iconColor="hsl(280, 65%, 60%)"
         borderColor="hsl(280, 65%, 60%)"

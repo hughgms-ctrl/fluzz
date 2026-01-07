@@ -159,7 +159,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
-      toast.success("Tarefa sem projeto criada com sucesso!");
+      toast.success("Tarefa pessoal criada com sucesso!");
       resetForm();
       onOpenChange(false);
     },
@@ -192,7 +192,7 @@ export const CreateStandaloneTaskDialog = ({ open, onOpenChange }: CreateStandal
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Nova Tarefa Sem Projeto</DialogTitle>
+          <DialogTitle>Nova Tarefa Pessoal</DialogTitle>
           <DialogDescription>
             Crie uma tarefa pessoal que não está vinculada a nenhum projeto
           </DialogDescription>
