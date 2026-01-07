@@ -4,20 +4,22 @@ import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
 import { Button } from "@/components/ui/button";
-import { 
-  Bold, 
-  Italic, 
-  List, 
-  ListOrdered, 
-  Image as ImageIcon, 
-  Video, 
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  List,
+  ListOrdered,
+  Image as ImageIcon,
+  Video,
   Link as LinkIcon,
   Heading1,
   Heading2,
-  Quote
+  Quote,
 } from "lucide-react";
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface RichTextEditorProps {
   content: string;
@@ -25,7 +27,11 @@ interface RichTextEditorProps {
   placeholder?: string;
 }
 
-export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui..." }: RichTextEditorProps) {
+export function RichTextEditor({
+  content,
+  onChange,
+  placeholder = "Escreva aqui...",
+}: RichTextEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -42,8 +48,10 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           keepMarks: true,
           keepAttributes: false,
         },
+        // Avoid duplicate extension name warning (StarterKit already includes Link)
         link: false,
       }),
+      Underline,
       Image.configure({
         HTMLAttributes: {
           class: "max-w-full h-auto rounded-lg my-4",
@@ -71,35 +79,42 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4",
+        class:
+          "prose prose-sm sm:prose-base dark:prose-invert max-w-none focus:outline-none min-h-[200px] p-4",
       },
     },
   });
 
   // Sync external content changes to editor
   useEffect(() => {
-    if (editor && content !== undefined) {
-      const currentContent = editor.getHTML();
-      if (content !== currentContent && content !== "<p></p>" || (content && currentContent === "<p></p>")) {
-        editor.commands.setContent(content);
-      }
+    if (!editor) return;
+
+    const currentContent = editor.getHTML();
+    if (
+      (content !== currentContent && content !== "<p></p>") ||
+      (content && currentContent === "<p></p>")
+    ) {
+      editor.commands.setContent(content);
     }
   }, [content, editor]);
 
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && editor) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const base64 = e.target?.result as string;
-        editor.chain().focus().setImage({ src: base64 }).run();
-      };
-      reader.readAsDataURL(file);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [editor]);
+  const handleFileChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file && editor) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64 = e.target?.result as string;
+          editor.chain().focus().setImage({ src: base64 }).run();
+        };
+        reader.readAsDataURL(file);
+      }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    },
+    [editor]
+  );
 
   const addImage = useCallback(() => {
     fileInputRef.current?.click();
@@ -130,6 +145,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         accept="image/*"
         className="hidden"
       />
+
       <div className="flex flex-wrap gap-1 p-2 border-b bg-muted/50">
         <Button
           type="button"
@@ -140,6 +156,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <Bold size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -149,6 +166,17 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <Italic size={16} />
         </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={editor.isActive("underline") ? "bg-muted" : ""}
+        >
+          <UnderlineIcon size={16} />
+        </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -158,6 +186,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <Heading1 size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -167,6 +196,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <Heading2 size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -176,6 +206,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <List size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -185,6 +216,7 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <ListOrdered size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -194,7 +226,9 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <Quote size={16} />
         </Button>
+
         <div className="w-px h-6 bg-border mx-1" />
+
         <Button
           type="button"
           variant="ghost"
@@ -204,14 +238,11 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
         >
           <ImageIcon size={16} />
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={addVideo}
-        >
+
+        <Button type="button" variant="ghost" size="sm" onClick={addVideo}>
           <Video size={16} />
         </Button>
+
         <Button
           type="button"
           variant="ghost"
@@ -222,6 +253,8 @@ export function RichTextEditor({ content, onChange, placeholder = "Escreva aqui.
           <LinkIcon size={16} />
         </Button>
       </div>
+
+      {/* resize handle: drag bottom-right corner */}
       <div className="min-h-[200px] max-h-[600px] overflow-auto resize-y">
         <EditorContent editor={editor} />
       </div>
