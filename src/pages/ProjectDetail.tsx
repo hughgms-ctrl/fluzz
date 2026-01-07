@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Plus, ArrowLeft, LayoutGrid, List, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ArrowLeft, LayoutGrid, List, BarChart3, FileText, GanttChartSquare, CalendarDays, Bell, FileEdit, ChevronDown, ChevronRight, Palette } from "lucide-react";
 import { CreateTaskDialog } from "@/components/tasks/CreateTaskDialog";
 import { DraggableTaskBoard } from "@/components/tasks/DraggableTaskBoard";
 import { MobileKanbanBoard } from "@/components/tasks/MobileKanbanBoard";
@@ -79,17 +79,19 @@ export default function ProjectDetail() {
   });
 
   const updateProjectMutation = useMutation({
-    mutationFn: async ({ name, description, start_date, end_date }: { 
+    mutationFn: async ({ name, description, start_date, end_date, color }: { 
       name?: string; 
       description?: string; 
       start_date?: string | null;
-      end_date?: string | null 
+      end_date?: string | null;
+      color?: string | null;
     }) => {
       const updates: any = {};
       if (name !== undefined) updates.name = name;
       if (description !== undefined) updates.description = description || null;
       if (start_date !== undefined) updates.start_date = start_date;
       if (end_date !== undefined) updates.end_date = end_date;
+      if (color !== undefined) updates.color = color;
       
       const { error } = await supabase
         .from("projects")
@@ -628,6 +630,64 @@ export default function ProjectDetail() {
                       locale={ptBR}
                       initialFocus
                     />
+                  </PopoverContent>
+                </Popover>
+
+                {/* Project Color Picker */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs h-7 px-2"
+                    >
+                      <div 
+                        className={cn(
+                          "w-3 h-3 rounded-full",
+                          project.color === "primary" && "bg-primary",
+                          project.color === "blue" && "bg-blue-500",
+                          project.color === "emerald" && "bg-emerald-500",
+                          project.color === "amber" && "bg-amber-500",
+                          project.color === "purple" && "bg-purple-500",
+                          project.color === "pink" && "bg-pink-500",
+                          project.color === "cyan" && "bg-cyan-500",
+                          project.color === "rose" && "bg-rose-500",
+                          project.color === "orange" && "bg-orange-500",
+                          project.color === "teal" && "bg-teal-500",
+                          !project.color && "bg-primary"
+                        )}
+                      />
+                      <Palette size={14} className="text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3" align="start">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Cor do Projeto</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: "primary", bg: "bg-primary" },
+                          { value: "blue", bg: "bg-blue-500" },
+                          { value: "emerald", bg: "bg-emerald-500" },
+                          { value: "amber", bg: "bg-amber-500" },
+                          { value: "purple", bg: "bg-purple-500" },
+                          { value: "pink", bg: "bg-pink-500" },
+                          { value: "cyan", bg: "bg-cyan-500" },
+                          { value: "rose", bg: "bg-rose-500" },
+                          { value: "orange", bg: "bg-orange-500" },
+                          { value: "teal", bg: "bg-teal-500" },
+                        ].map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={() => updateProjectMutation.mutate({ color: color.value })}
+                            className={cn(
+                              "w-6 h-6 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
+                              color.bg,
+                              (project.color === color.value || (!project.color && color.value === "primary")) && "ring-2 ring-offset-2 ring-foreground"
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>

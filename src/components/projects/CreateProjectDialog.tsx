@@ -137,7 +137,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
       if (templateError) throw templateError;
 
-      // Create new project based on template with is_draft = true
+      // Create new project based on template with is_draft = true and preserve color
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -149,6 +149,7 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
             workspace_id: workspace.id,
             is_draft: true, // Sempre começa como rascunho
             pending_notifications: true, // Notificações pendentes
+            color: template.color, // Manter a cor do template
           },
         ])
         .select()

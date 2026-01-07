@@ -17,6 +17,7 @@ interface Project {
   is_standalone_folder?: boolean;
   is_draft?: boolean;
   pending_notifications?: boolean;
+  color?: string | null;
 }
 
 interface ProjectsCalendarViewProps {
@@ -32,19 +33,30 @@ const parseDateOnly = (dateStr: string): Date => {
   return new Date(year, month - 1, day);
 };
 
-// Get project color based on index for variety
-const getProjectColor = (index: number) => {
-  const colors = [
-    { bg: "bg-primary/20", text: "text-primary", border: "border-primary/40" },
-    { bg: "bg-blue-500/20", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/40" },
-    { bg: "bg-emerald-500/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/40" },
-    { bg: "bg-amber-500/20", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/40" },
-    { bg: "bg-purple-500/20", text: "text-purple-600 dark:text-purple-400", border: "border-purple-500/40" },
-    { bg: "bg-pink-500/20", text: "text-pink-600 dark:text-pink-400", border: "border-pink-500/40" },
-    { bg: "bg-cyan-500/20", text: "text-cyan-600 dark:text-cyan-400", border: "border-cyan-500/40" },
-  ];
-  return colors[index % colors.length];
+// Project color options for user selection
+const projectColorOptions = [
+  { value: "primary", bg: "bg-primary/20", text: "text-primary", border: "border-primary/40" },
+  { value: "blue", bg: "bg-blue-500/20", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/40" },
+  { value: "emerald", bg: "bg-emerald-500/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/40" },
+  { value: "amber", bg: "bg-amber-500/20", text: "text-amber-600 dark:text-amber-400", border: "border-amber-500/40" },
+  { value: "purple", bg: "bg-purple-500/20", text: "text-purple-600 dark:text-purple-400", border: "border-purple-500/40" },
+  { value: "pink", bg: "bg-pink-500/20", text: "text-pink-600 dark:text-pink-400", border: "border-pink-500/40" },
+  { value: "cyan", bg: "bg-cyan-500/20", text: "text-cyan-600 dark:text-cyan-400", border: "border-cyan-500/40" },
+  { value: "rose", bg: "bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", border: "border-rose-500/40" },
+  { value: "orange", bg: "bg-orange-500/20", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/40" },
+  { value: "teal", bg: "bg-teal-500/20", text: "text-teal-600 dark:text-teal-400", border: "border-teal-500/40" },
+];
+
+// Get project color based on color value or fallback to index
+const getProjectColor = (colorValue?: string | null, index: number = 0) => {
+  if (colorValue) {
+    const found = projectColorOptions.find(c => c.value === colorValue);
+    if (found) return found;
+  }
+  return projectColorOptions[index % projectColorOptions.length];
 };
+
+export { projectColorOptions, getProjectColor };
 
 export const ProjectsCalendarView = ({ 
   projects, 
@@ -89,6 +101,7 @@ export const ProjectsCalendarView = ({
           isMultiDay,
           colorIndex: index,
           isDraft,
+          colors: getProjectColor(project.color, index),
         };
       });
   }, [projects, canSeeDrafts]);
@@ -187,11 +200,11 @@ export const ProjectsCalendarView = ({
                 {/* Projects */}
                 <div className="space-y-0.5 sm:space-y-1">
                   {dayProjects.slice(0, isMobile ? 2 : 3).map(project => {
-                    const colors = getProjectColor(project.colorIndex);
+                    const colors = project.colors;
                     const isStart = isProjectStart(project, day);
                     const isEnd = isProjectEnd(project, day);
                     const isSingleDay = !project.isMultiDay;
-                    // Draft projects are not clickable for users who can't see them fully
+                    // Draft projects are not clickable for members
                     const isClickable = !project.isDraft || canSeeDrafts;
                     
                     return (

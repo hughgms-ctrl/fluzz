@@ -100,10 +100,12 @@ export default function Projects() {
     // Archived projects
     const archived = sortByEventDate(allProjects.filter(p => p.archived && !p.is_standalone_folder));
     
-    // Standalone folders
-    const standalone = allProjects.filter(p => p.is_standalone_folder && !p.archived);
+    // Standalone folders (only visible to admin/gestor)
+    const standalone = canSeeDrafts 
+      ? allProjects.filter(p => p.is_standalone_folder && !p.archived)
+      : [];
     
-    // Calendar view: all active including drafts for admin/gestor
+    // Calendar view: all active including drafts for admin/gestor (NOT standalone folders)
     const calendarProjectsList = canSeeDrafts
       ? sortByEventDate(allProjects.filter(p => !p.archived && !p.is_standalone_folder))
       : active;
@@ -311,7 +313,7 @@ export default function Projects() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "active" | "drafts" | "standalone")}>
-          <TabsList className={`w-full h-auto p-1 ${(isAdmin || isGestor) ? 'grid grid-cols-3' : 'grid grid-cols-2'}`}>
+          <TabsList className={`w-full h-auto p-1 grid ${(isAdmin || isGestor) ? 'grid-cols-3' : 'grid-cols-1'}`}>
             <TabsTrigger value="active" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
               Ativos
               <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
@@ -326,12 +328,14 @@ export default function Projects() {
                 </Badge>
               </TabsTrigger>
             )}
-            <TabsTrigger value="standalone" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-              Avulsos
-              <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
-                {standaloneFolders.length}
-              </Badge>
-            </TabsTrigger>
+            {(isAdmin || isGestor) && (
+              <TabsTrigger value="standalone" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
+                Avulsos
+                <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
+                  {standaloneFolders.length}
+                </Badge>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="active" className="mt-4">
