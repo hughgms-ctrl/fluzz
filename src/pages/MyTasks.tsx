@@ -123,7 +123,6 @@ export default function MyTasks() {
           .select(selectFields)
           .eq("approval_reviewer_id", user.id)
           .eq("requires_approval", true)
-          .eq("approval_status", "pending")
           .in("project_id", projectIds)
           .order("created_at", { ascending: false });
         if (error) throw error;
@@ -136,7 +135,6 @@ export default function MyTasks() {
           .select(selectFields)
           .eq("approval_reviewer_id", user.id)
           .eq("requires_approval", true)
-          .eq("approval_status", "pending")
           .is("project_id", null)
           .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false });
@@ -322,7 +320,7 @@ export default function MyTasks() {
           </div>
           <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 w-full sm:w-auto">
             <Plus size={16} />
-            <span className="hidden sm:inline">Nova Tarefa Avulsa</span>
+            <span className="hidden sm:inline">Nova Tarefa Sem Projeto</span>
             <span className="sm:hidden">Nova Tarefa</span>
           </Button>
         </div>
@@ -343,7 +341,7 @@ export default function MyTasks() {
               <User className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               <div>
                 <p className="text-lg sm:text-2xl font-bold">{standaloneTasks.length}</p>
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Avulsas</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground">Sem Projeto</p>
               </div>
             </CardContent>
           </Card>

@@ -1,8 +1,11 @@
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Bold, Italic, List, ListOrdered, Image as ImageIcon, Video, Link as LinkIcon, Heading1, Heading2, Quote, Palette, Type, Minus, Plus } from "lucide-react";
-import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Bold, Italic, List, ListOrdered, Image as ImageIcon, Video, Link as LinkIcon, Heading1, Heading2, Quote, Palette, Type, Trash2, ZoomIn, ZoomOut } from "lucide-react";
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
@@ -36,28 +39,77 @@ const FontSize = TextStyle.extend({
   },
 });
 
-// Custom resizable image extension
+// Image component with resize/delete controls
+function ImageNodeView({ node, updateAttributes, deleteNode, selected }: NodeViewProps) {
+  const [width, setWidth] = useState<number>(node.attrs.width || 400);
+  
+  const handleResize = (delta: number) => {
+    const newWidth = Math.max(100, Math.min(1200, width + delta));
+    setWidth(newWidth);
+    updateAttributes({ width: newWidth });
+  };
+
+  return (
+    <NodeViewWrapper className="relative inline-block my-4 group">
+      <img 
+        src={node.attrs.src} 
+        alt={node.attrs.alt || ""} 
+        style={{ width: `${width}px`, maxWidth: '100%' }}
+        className={`rounded-lg ${selected ? 'ring-2 ring-primary' : ''}`}
+      />
+      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm rounded-md p-1">
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => handleResize(-50)}
+          className="h-7 w-7 p-0"
+        >
+          <ZoomOut className="h-4 w-4" />
+        </Button>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => handleResize(50)}
+          className="h-7 w-7 p-0"
+        >
+          <ZoomIn className="h-4 w-4" />
+        </Button>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => deleteNode()}
+          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+// Custom resizable image extension with React node view
 const ResizableImage = Image.extend({
   addAttributes() {
     return {
       ...this.parent?.(),
       width: {
-        default: null,
-        parseHTML: element => element.getAttribute('width') || element.style.width || null,
+        default: 400,
+        parseHTML: element => {
+          const width = element.getAttribute('width') || element.style.width;
+          return width ? parseInt(width) : 400;
+        },
         renderHTML: attributes => {
           if (!attributes.width) return {};
-          return { width: attributes.width, style: `width: ${attributes.width}` };
-        },
-      },
-      height: {
-        default: null,
-        parseHTML: element => element.getAttribute('height') || element.style.height || null,
-        renderHTML: attributes => {
-          if (!attributes.height) return {};
-          return { height: attributes.height };
+          return { width: attributes.width, style: `width: ${attributes.width}px` };
         },
       },
     };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ImageNodeView);
   },
 });
 
@@ -67,7 +119,7 @@ interface RichTextEditorFullProps {
   placeholder?: string;
 }
 
-export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o conteúdo... (Cole imagens com Ctrl+V)" }: RichTextEditorFullProps) {
+export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o conteúdo... (Cole imagens com Ctrl+V ou links de YouTube/Vimeo)" }: RichTextEditorFullProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -84,20 +136,21 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
           keepMarks: true,
           keepAttributes: false,
         },
-        // Avoid duplicate extension name warning (StarterKit already includes Link)
         link: false,
       }),
       FontSize,
       Color,
       ResizableImage.configure({
         HTMLAttributes: {
-          class: "rounded-lg my-4 cursor-pointer",
+          class: "rounded-lg my-4",
         },
       }),
       Youtube.configure({
         HTMLAttributes: {
           class: "w-full aspect-video rounded-lg my-4",
         },
+        width: 640,
+        height: 360,
       }),
       Link.configure({
         openOnClick: false,
@@ -122,6 +175,7 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
         const items = event.clipboardData?.items;
         if (!items) return false;
 
+        // Handle pasted images
         for (const item of Array.from(items)) {
           if (item.type.startsWith('image/')) {
             event.preventDefault();
@@ -131,7 +185,7 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
               reader.onload = (e) => {
                 const base64 = e.target?.result as string;
                 view.dispatch(view.state.tr.replaceSelectionWith(
-                  view.state.schema.nodes.image.create({ src: base64 })
+                  view.state.schema.nodes.image.create({ src: base64, width: 400 })
                 ));
               };
               reader.readAsDataURL(file);
@@ -140,6 +194,7 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
           }
         }
 
+        // Handle pasted video links
         const rawText =
           event.clipboardData?.getData("text/plain") ||
           event.clipboardData?.getData("text") ||
@@ -177,6 +232,30 @@ export function RichTextEditorFull({ content, onChange, placeholder = "Escreva o
           }
         }
 
+        return false;
+      },
+      handleDrop: (view, event) => {
+        const files = event.dataTransfer?.files;
+        if (!files || files.length === 0) return false;
+
+        for (const file of Array.from(files)) {
+          if (file.type.startsWith('image/')) {
+            event.preventDefault();
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const base64 = e.target?.result as string;
+              const pos = view.posAtCoords({ left: event.clientX, top: event.clientY });
+              if (pos) {
+                view.dispatch(view.state.tr.insert(
+                  pos.pos,
+                  view.state.schema.nodes.image.create({ src: base64, width: 400 })
+                ));
+              }
+            };
+            reader.readAsDataURL(file);
+            return true;
+          }
+        }
         return false;
       },
     },

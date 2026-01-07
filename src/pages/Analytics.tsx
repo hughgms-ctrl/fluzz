@@ -473,12 +473,12 @@ export default function Analytics() {
                   checked={includeStandaloneTasks}
                   onCheckedChange={setIncludeStandaloneTasks}
                 />
-                <span className="text-sm text-muted-foreground">Incluir tarefas avulsas</span>
+                <span className="text-sm text-muted-foreground">Incluir tarefas sem projeto</span>
               </div>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Tarefas avulsas não são vinculadas a um workspace (sem projeto) e podem aparecer em mais de um workspace.
+              Tarefas sem projeto não são vinculadas a um projeto e podem aparecer em mais de um workspace.
             </p>
           </div>
         </div>

@@ -166,9 +166,9 @@ export const CreateStandaloneTaskForMember = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nova Tarefa Avulsa para Colaborador</DialogTitle>
+          <DialogTitle>Nova Tarefa Sem Projeto para Colaborador</DialogTitle>
           <DialogDescription>
-            Crie uma tarefa avulsa e atribua a um membro do workspace
+            Crie uma tarefa sem projeto e atribua a um membro do workspace
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">

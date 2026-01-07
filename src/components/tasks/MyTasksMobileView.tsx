@@ -495,7 +495,7 @@ export function MyTasksMobileView({ tasks }: MyTasksMobileViewProps) {
       color = "hsl(142, 71%, 45%)";
     } else {
       groupId = "standalone";
-      groupName = "Tarefas Avulsas";
+      groupName = "Sem Projeto";
       color = "hsl(280, 65%, 60%)";
     }
 
