@@ -30,6 +30,7 @@ import {
   ChevronDown, 
   ChevronRight, 
   FolderOpen,
+  Folder,
   RefreshCw,
   User,
   CheckCircle2,
@@ -100,10 +101,12 @@ export function getProjectColor(projectId: string, colorValue?: string | null): 
   return groupColors[Math.abs(hash) % groupColors.length];
 }
 
-export function getTaskType(task: any): "project" | "standalone" | "routine" {
+export function getTaskType(task: any): "project" | "folder" | "personal" | "routine" {
   if (task.routine_id || task.recurring_task_id) return "routine";
-  // "standalone" here means PERSONAL tasks (no project)
-  if (!task.project_id) return "standalone";
+  // Tarefa pessoal = sem project_id
+  if (!task.project_id) return "personal";
+  // Pasta "Sem Projeto" = project com is_standalone_folder = true
+  if (task.projects?.is_standalone_folder) return "folder";
   return "project";
 }
 
@@ -485,7 +488,7 @@ function GroupRow({
     id: string;
     name: string;
     tasks: any[];
-    type: "project" | "standalone" | "routine";
+    type: "project" | "folder" | "personal" | "routine";
     color: string;
   };
   profiles: any[];
@@ -509,9 +512,11 @@ function GroupRow({
 
   const GroupIcon = group.type === "routine" 
     ? RefreshCw 
-    : group.type === "standalone" 
+    : group.type === "personal" 
       ? User 
-      : FolderOpen;
+      : group.type === "folder"
+        ? Folder
+        : FolderOpen;
 
   const handleNameClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -655,7 +660,7 @@ export function UnifiedTaskView({
     },
   });
 
-  // Group tasks by project/routine/standalone
+  // Group tasks by project/routine/folder/personal
   const groupedTasks = tasks.reduce((acc, task) => {
     const type = getTaskType(task);
     let groupId: string;
@@ -666,12 +671,17 @@ export function UnifiedTaskView({
       groupId = task.project_id;
       groupName = task.projects?.name || "Projeto sem nome";
       color = getProjectColor(task.project_id, task.projects?.color);
+    } else if (type === "folder" && task.project_id) {
+      // Pasta "Sem Projeto"
+      groupId = task.project_id;
+      groupName = task.projects?.name || "Sem Projeto";
+      color = "hsl(200, 70%, 50%)";
     } else if (type === "routine") {
       groupId = "routine";
       groupName = "Tarefas de Rotina";
       color = "hsl(142, 71%, 45%)";
     } else {
-      groupId = "standalone";
+      groupId = "personal";
       groupName = "Tarefas Pessoais";
       color = "hsl(280, 65%, 60%)";
     }
@@ -682,14 +692,14 @@ export function UnifiedTaskView({
     acc[groupId].tasks.push(task);
     
     return acc;
-  }, {} as Record<string, { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; }>);
+  }, {} as Record<string, { id: string; name: string; tasks: any[]; type: "project" | "folder" | "personal" | "routine"; color: string; }>);
 
-  type TaskGroup = { id: string; name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string; };
+  type TaskGroup = { id: string; name: string; tasks: any[]; type: "project" | "folder" | "personal" | "routine"; color: string; };
   const groups: TaskGroup[] = Object.values(groupedTasks);
   
-  // Sort groups: projects first, then routine, then standalone
+  // Sort groups: projects first, then folders, then routine, then personal
   groups.sort((a, b) => {
-    const typeOrder = { project: 0, routine: 1, standalone: 2 };
+    const typeOrder = { project: 0, folder: 1, routine: 2, personal: 3 };
     return typeOrder[a.type] - typeOrder[b.type];
   });
 

@@ -31,6 +31,7 @@ import {
   ChevronDown, 
   User, 
   FolderOpen,
+  Folder,
   RefreshCw,
 } from "lucide-react";
 import { formatDateBR, isTaskOverdue, isTaskDueSoon } from "@/lib/utils";
@@ -76,7 +77,8 @@ const groupColors = {
     "hsl(173, 80%, 40%)",
     "hsl(315, 70%, 50%)",
   ],
-  standalone: "hsl(280, 65%, 60%)",
+  personal: "hsl(280, 65%, 60%)",
+  folder: "hsl(200, 70%, 50%)",
   routine: "hsl(142, 71%, 45%)",
 };
 
@@ -107,10 +109,12 @@ function getProjectColor(projectId: string, colorValue?: string | null): string 
   return groupColors.project[Math.abs(hash) % groupColors.project.length];
 }
 
-function getTaskType(task: any): "project" | "standalone" | "routine" {
+function getTaskType(task: any): "project" | "folder" | "personal" | "routine" {
   if (task.routine_id || task.recurring_task_id) return "routine";
-  // "standalone" here means PERSONAL tasks (no project)
-  if (!task.project_id) return "standalone";
+  // Tarefa pessoal = sem project_id
+  if (!task.project_id) return "personal";
+  // Pasta "Sem Projeto" = project com is_standalone_folder = true
+  if (task.projects?.is_standalone_folder) return "folder";
   return "project";
 }
 
@@ -410,7 +414,7 @@ function TaskGroupRow({
     id: string;
     name: string;
     tasks: any[];
-    type: "project" | "standalone" | "routine";
+    type: "project" | "folder" | "personal" | "routine";
     color: string;
   };
   taskAssignees: Record<string, { user_id: string }[]>;
@@ -423,9 +427,11 @@ function TaskGroupRow({
 
   const GroupIcon = group.type === "routine" 
     ? RefreshCw 
-    : group.type === "standalone" 
+    : group.type === "personal" 
       ? User 
-      : FolderOpen;
+      : group.type === "folder"
+        ? Folder
+        : FolderOpen;
 
   return (
     <>
@@ -531,21 +537,33 @@ export function MyTasksTableView({ tasks }: MyTasksTableViewProps) {
 
   // Group tasks by project/type
   const groups = (() => {
-    const groupMap: { [key: string]: { name: string; tasks: any[]; type: "project" | "standalone" | "routine"; color: string } } = {};
+    const groupMap: { [key: string]: { name: string; tasks: any[]; type: "project" | "folder" | "personal" | "routine"; color: string } } = {};
     
     tasks.forEach((task) => {
       const taskType = getTaskType(task);
       
-      if (taskType === "standalone") {
-        if (!groupMap["standalone"]) {
-          groupMap["standalone"] = { 
+      if (taskType === "personal") {
+        if (!groupMap["personal"]) {
+          groupMap["personal"] = { 
             name: "Tarefas Pessoais", 
             tasks: [], 
-            type: "standalone",
-            color: groupColors.standalone,
+            type: "personal",
+            color: groupColors.personal,
           };
         }
-        groupMap["standalone"].tasks.push(task);
+        groupMap["personal"].tasks.push(task);
+      } else if (taskType === "folder") {
+        // Tarefas de pastas "Sem Projeto" - agrupa por pasta
+        const folderKey = task.project_id;
+        if (!groupMap[folderKey]) {
+          groupMap[folderKey] = { 
+            name: task.projects?.name || "Sem Projeto", 
+            tasks: [], 
+            type: "folder",
+            color: groupColors.folder,
+          };
+        }
+        groupMap[folderKey].tasks.push(task);
       } else if (taskType === "routine") {
         if (!groupMap["routine"]) {
           groupMap["routine"] = { 

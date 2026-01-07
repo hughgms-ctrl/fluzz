@@ -213,10 +213,12 @@ export default function Analytics() {
   };
 
   // Get task type helper
-  const getTaskType = (task: any): "project" | "standalone" | "routine" => {
+  const getTaskType = (task: any): "project" | "folder" | "personal" | "routine" => {
     if (task.routine_id || task.recurring_task_id) return "routine";
-    // "standalone" aqui significa tarefa PESSOAL (sem projeto)
-    if (!task.project_id) return "standalone";
+    // Tarefa pessoal = sem project_id
+    if (!task.project_id) return "personal";
+    // Pasta "Sem Projeto" = project com is_standalone_folder = true
+    if (task.projects?.is_standalone_folder) return "folder";
     return "project";
   };
 
@@ -240,22 +242,34 @@ export default function Analytics() {
   const filteredTasks = useMemo(() => getFilteredTasks(activeTab), [allTasks, activeTab]);
 
   // Group tasks by type and project
-  const groupedTasks = useMemo(() => {
+  const taskGroups = useMemo(() => {
     const groups: { 
       projects: { [key: string]: { name: string; tasks: any[] } };
-      standalone: any[];
+      folders: { [key: string]: { name: string; tasks: any[] } };
+      personal: any[];
       routine: any[];
     } = {
       projects: {},
-      standalone: [],
+      folders: {},
+      personal: [],
       routine: []
     };
 
     filteredTasks.forEach(task => {
       const type = getTaskType(task);
       
-      if (type === "standalone") {
-        groups.standalone.push(task);
+      if (type === "personal") {
+        groups.personal.push(task);
+      } else if (type === "folder") {
+        // Tarefas de pastas "Sem Projeto"
+        if (!groups.folders[task.project_id]) {
+          const projectTask = projectTasks?.find(pt => pt.project_id === task.project_id);
+          groups.folders[task.project_id] = {
+            name: (projectTask as any)?.projects?.name || "Sem Projeto",
+            tasks: []
+          };
+        }
+        groups.folders[task.project_id].tasks.push(task);
       } else if (type === "routine") {
         groups.routine.push(task);
       } else if (task.project_id) {
