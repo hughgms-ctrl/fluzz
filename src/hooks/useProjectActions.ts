@@ -12,7 +12,7 @@ export function useProjectActions() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Criar novo projeto com status ativo, SEM copiar a descrição e com is_draft = true
+      // Criar novo projeto com status ativo, mantendo a cor e com is_draft = true
       const { data: newProject, error: projectError } = await supabase
         .from("projects")
         .insert([
@@ -24,6 +24,7 @@ export function useProjectActions() {
             workspace_id: project.workspace_id,
             is_draft: true,
             pending_notifications: true,
+            color: project.color, // Manter a mesma cor
           },
         ])
         .select()
@@ -182,7 +183,7 @@ export function useProjectActions() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Create a template entry in project_templates table
+      // Create a template entry in project_templates table with color
       const { data: newTemplate, error: templateError } = await supabase
         .from("project_templates")
         .insert([
@@ -191,6 +192,7 @@ export function useProjectActions() {
             description: project.description,
             workspace_id: project.workspace_id,
             created_by: user.id,
+            color: project.color, // Manter a cor no template
           },
         ])
         .select()

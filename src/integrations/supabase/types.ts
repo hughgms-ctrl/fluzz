@@ -945,6 +945,7 @@ export type Database = {
       }
       project_templates: {
         Row: {
+          color: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -954,6 +955,7 @@ export type Database = {
           workspace_id: string | null
         }
         Insert: {
+          color?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -963,6 +965,7 @@ export type Database = {
           workspace_id?: string | null
         }
         Update: {
+          color?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -984,6 +987,7 @@ export type Database = {
       projects: {
         Row: {
           archived: boolean
+          color: string | null
           created_at: string | null
           description: string | null
           end_date: string | null
@@ -1001,6 +1005,7 @@ export type Database = {
         }
         Insert: {
           archived?: boolean
+          color?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
@@ -1018,6 +1023,7 @@ export type Database = {
         }
         Update: {
           archived?: boolean
+          color?: string | null
           created_at?: string | null
           description?: string | null
           end_date?: string | null
@@ -1179,6 +1185,44 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_task_subtasks: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          routine_task_id: string
+          subtask_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          routine_task_id: string
+          subtask_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          routine_task_id?: string
+          subtask_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_task_subtasks_routine_task_id_fkey"
+            columns: ["routine_task_id"]
+            isOneToOne: false
+            referencedRelation: "routine_tasks"
             referencedColumns: ["id"]
           },
         ]

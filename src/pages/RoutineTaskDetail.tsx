@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { renderDocumentation } from "@/lib/linkify";
-import { ArrowLeft, Calendar, User, FileText, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, FileText, Edit2, Trash2, Plus, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import {
   Select,
@@ -34,7 +35,117 @@ import { MemberDrawer } from "@/components/tasks/MemberDrawer";
 import { UserCircle, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+interface SortableSubtaskProps {
+  subtask: any;
+  onToggle: (subtaskId: string, completed: boolean) => void;
+  onDelete: (subtaskId: string) => void;
+  onUpdate: (subtaskId: string, title: string) => void;
+  isPending: boolean;
+}
+
+const SortableSubtask = ({ subtask, onToggle, onDelete, onUpdate, isPending }: SortableSubtaskProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(subtask.title);
+  
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: subtask.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const handleSave = () => {
+    if (editTitle.trim() && editTitle !== subtask.title) {
+      onUpdate(subtask.id, editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSave();
+    } else if (e.key === "Escape") {
+      setEditTitle(subtask.title);
+      setIsEditing(false);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-2 p-2 rounded hover:bg-muted/50 ${isDragging ? 'bg-muted/50' : ''}`}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing touch-none"
+      >
+        <GripVertical size={16} className="text-muted-foreground" />
+      </button>
+      <Checkbox
+        checked={subtask.completed}
+        onCheckedChange={(checked) => onToggle(subtask.id, !!checked)}
+        disabled={isPending}
+      />
+      {isEditing ? (
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className="flex-1 bg-transparent border-b border-primary outline-none px-1"
+        />
+      ) : (
+        <span 
+          className={`flex-1 cursor-pointer ${subtask.completed ? "line-through text-muted-foreground" : ""}`}
+          onDoubleClick={() => {
+            setEditTitle(subtask.title);
+            setIsEditing(true);
+          }}
+        >
+          {subtask.title}
+        </span>
+      )}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onDelete(subtask.id)}
+      >
+        <Trash2 size={14} />
+      </Button>
+    </div>
+  );
+};
 
 export default function RoutineTaskDetail() {
   const { id } = useParams();
@@ -43,7 +154,15 @@ export default function RoutineTaskDetail() {
   const { workspace, isAdmin, isGestor } = useWorkspace();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [newSubtask, setNewSubtask] = useState("");
   const canEdit = isAdmin || isGestor;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const [editedTask, setEditedTask] = useState({
     title: "",
@@ -67,6 +186,20 @@ export default function RoutineTaskDetail() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: subtasks, isLoading: subtasksLoading } = useQuery({
+    queryKey: ["routine-task-subtasks", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("routine_task_subtasks")
+        .select("*")
+        .eq("routine_task_id", id!)
+        .order("subtask_order");
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
   });
 
   const { data: sectorData } = useQuery({
@@ -166,6 +299,111 @@ export default function RoutineTaskDetail() {
     },
   });
 
+  // Subtask mutations
+  const addSubtaskMutation = useMutation({
+    mutationFn: async (title: string) => {
+      const maxOrder = subtasks?.length || 0;
+      const { error } = await supabase
+        .from("routine_task_subtasks")
+        .insert({
+          routine_task_id: id!,
+          title,
+          subtask_order: maxOrder,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task-subtasks", id] });
+      setNewSubtask("");
+    },
+    onError: () => {
+      toast.error("Erro ao adicionar subtarefa");
+    },
+  });
+
+  const toggleSubtaskMutation = useMutation({
+    mutationFn: async ({ subtaskId, completed }: { subtaskId: string; completed: boolean }) => {
+      const { error } = await supabase
+        .from("routine_task_subtasks")
+        .update({ completed })
+        .eq("id", subtaskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task-subtasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar subtarefa");
+    },
+  });
+
+  const updateSubtaskMutation = useMutation({
+    mutationFn: async ({ subtaskId, title }: { subtaskId: string; title: string }) => {
+      const { error } = await supabase
+        .from("routine_task_subtasks")
+        .update({ title })
+        .eq("id", subtaskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task-subtasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar subtarefa");
+    },
+  });
+
+  const deleteSubtaskMutation = useMutation({
+    mutationFn: async (subtaskId: string) => {
+      const { error } = await supabase
+        .from("routine_task_subtasks")
+        .delete()
+        .eq("id", subtaskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task-subtasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao excluir subtarefa");
+    },
+  });
+
+  const reorderSubtasksMutation = useMutation({
+    mutationFn: async (reorderedSubtasks: any[]) => {
+      for (let i = 0; i < reorderedSubtasks.length; i++) {
+        const { error } = await supabase
+          .from("routine_task_subtasks")
+          .update({ subtask_order: i })
+          .eq("id", reorderedSubtasks[i].id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["routine-task-subtasks", id] });
+    },
+    onError: () => {
+      toast.error("Erro ao reordenar subtarefas");
+    },
+  });
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !subtasks) return;
+
+    const oldIndex = subtasks.findIndex((s) => s.id === active.id);
+    const newIndex = subtasks.findIndex((s) => s.id === over.id);
+    
+    const reordered = arrayMove(subtasks, oldIndex, newIndex);
+    reorderSubtasksMutation.mutate(reordered);
+  };
+
+  const handleAddSubtask = () => {
+    if (newSubtask.trim()) {
+      addSubtaskMutation.mutate(newSubtask.trim());
+    }
+  };
+
   const handleSave = () => {
     updateTaskMutation.mutate({
       ...editedTask,
@@ -198,6 +436,9 @@ export default function RoutineTaskDetail() {
 
   const priorityLabels: Record<string, string> = { low: "Baixa", medium: "Média", high: "Alta" };
   const statusLabels: Record<string, string> = { todo: "A Fazer", in_progress: "Em Progresso", completed: "Concluído" };
+
+  const completedSubtasks = subtasks?.filter(s => s.completed).length || 0;
+  const totalSubtasks = subtasks?.length || 0;
 
   return (
     <AppLayout>
@@ -333,6 +574,81 @@ export default function RoutineTaskDetail() {
 
           {/* Sidebar */}
           <div className="space-y-4">
+            {/* Subtasks Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  Subtarefas
+                  {totalSubtasks > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {completedSubtasks}/{totalSubtasks}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Add subtask input */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Nova subtarefa..."
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        handleAddSubtask();
+                      }
+                    }}
+                  />
+                  <Button 
+                    size="icon" 
+                    onClick={handleAddSubtask}
+                    disabled={!newSubtask.trim() || addSubtaskMutation.isPending}
+                  >
+                    <Plus size={16} />
+                  </Button>
+                </div>
+
+                {/* Subtasks list */}
+                {subtasksLoading ? (
+                  <div className="text-center py-4">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+                  </div>
+                ) : subtasks && subtasks.length > 0 ? (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext
+                      items={subtasks.map(s => s.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <div className="space-y-1">
+                        {subtasks.map((subtask) => (
+                          <SortableSubtask
+                            key={subtask.id}
+                            subtask={subtask}
+                            onToggle={(subtaskId, completed) => 
+                              toggleSubtaskMutation.mutate({ subtaskId, completed })
+                            }
+                            onDelete={(subtaskId) => deleteSubtaskMutation.mutate(subtaskId)}
+                            onUpdate={(subtaskId, title) => 
+                              updateSubtaskMutation.mutate({ subtaskId, title })
+                            }
+                            isPending={toggleSubtaskMutation.isPending}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-2">
+                    Nenhuma subtarefa
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
             {task.projects && (
               <Card>
                 <CardHeader>
