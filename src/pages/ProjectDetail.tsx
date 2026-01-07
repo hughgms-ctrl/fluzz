@@ -536,7 +536,19 @@ export default function ProjectDetail() {
               ) : (
                 <div className="flex items-center gap-2 flex-wrap">
                   <h1 
-                    className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground hover:text-primary transition-colors cursor-pointer break-words"
+                    className={cn(
+                      "text-xl sm:text-2xl md:text-3xl font-bold transition-colors cursor-pointer break-words",
+                      project.color === "blue" && "text-blue-500",
+                      project.color === "emerald" && "text-emerald-500",
+                      project.color === "amber" && "text-amber-500",
+                      project.color === "purple" && "text-purple-500",
+                      project.color === "pink" && "text-pink-500",
+                      project.color === "cyan" && "text-cyan-500",
+                      project.color === "rose" && "text-rose-500",
+                      project.color === "orange" && "text-orange-500",
+                      project.color === "teal" && "text-teal-500",
+                      (project.color === "primary" || !project.color) && "text-primary"
+                    )}
                     onClick={() => setIsEditingName(true)}
                   >
                     {project.name}
