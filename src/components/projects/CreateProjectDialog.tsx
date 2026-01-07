@@ -178,6 +178,12 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
         .select("*")
         .in("template_task_id", templateTasks?.map(t => t.id) || []);
 
+      // Fetch template task assignees
+      const { data: templateTaskAssignees } = await supabase
+        .from("template_task_assignees")
+        .select("*")
+        .in("template_task_id", templateTasks?.map(t => t.id) || []);
+
       if (templateTasks && templateTasks.length > 0) {
         const taskIdToIndex: Record<string, number> = {};
         templateTasks.forEach((task, index) => {
@@ -238,6 +244,20 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
 
             if (newTaskProcesses.length > 0) {
               await supabase.from("task_processes").insert(newTaskProcesses);
+            }
+          }
+
+          // Copy task_assignees from template
+          if (templateTaskAssignees && templateTaskAssignees.length > 0) {
+            const newTaskAssignees = templateTaskAssignees
+              .filter(ta => taskIdToIndex[ta.template_task_id] !== undefined)
+              .map(ta => ({
+                task_id: insertedTasks[taskIdToIndex[ta.template_task_id]].id,
+                user_id: ta.user_id,
+              }));
+
+            if (newTaskAssignees.length > 0) {
+              await supabase.from("task_assignees").insert(newTaskAssignees);
             }
           }
         }

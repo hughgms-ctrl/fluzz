@@ -1783,6 +1783,35 @@ export type Database = {
           },
         ]
       }
+      template_task_assignees: {
+        Row: {
+          created_at: string
+          id: string
+          template_task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          template_task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          template_task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_task_assignees_template_task_id_fkey"
+            columns: ["template_task_id"]
+            isOneToOne: false
+            referencedRelation: "template_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_task_processes: {
         Row: {
           created_at: string
