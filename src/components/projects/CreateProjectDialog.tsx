@@ -379,9 +379,9 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
                 <CardContent className="p-4 sm:p-6 flex flex-col items-center gap-3 text-center">
                   <Folder className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
                   <div>
-                    <h3 className="font-semibold text-sm sm:text-base">Pasta Avulsa</h3>
+                    <h3 className="font-semibold text-sm sm:text-base">Sem Projeto</h3>
                     <p className="text-xs sm:text-sm text-muted-foreground">
-                      Para tarefas avulsas
+                      Para tarefas sem projeto
                     </p>
                   </div>
                 </CardContent>
@@ -507,9 +507,9 @@ export const CreateProjectDialog = ({ open, onOpenChange, defaultDate }: CreateP
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
-                  <DialogTitle>Nova Pasta de Tarefas Avulsas</DialogTitle>
+                  <DialogTitle>Nova Pasta Sem Projeto</DialogTitle>
                   <DialogDescription>
-                    Crie uma pasta para organizar tarefas avulsas (não será contada como projeto)
+                    Crie uma pasta para organizar tarefas sem projeto (não será contada como projeto)
                   </DialogDescription>
                 </div>
               </div>

@@ -770,7 +770,7 @@ export function ProjectsTableView({
           {isArchived 
             ? "Você não tem projetos arquivados." 
             : isStandaloneFolder 
-              ? "Você não tem pastas de tarefas avulsas."
+              ? "Você não tem pastas sem projeto."
               : "Nenhum projeto encontrado."
           }
         </p>

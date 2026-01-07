@@ -331,7 +331,7 @@ export default function Projects() {
             )}
             {(isAdmin || isGestor) && (
               <TabsTrigger value="standalone" className="text-xs sm:text-sm py-2 px-2 sm:px-4">
-                Avulsos
+                Sem Projetos
                 <Badge variant="secondary" className="ml-1.5 h-5 min-w-5 px-1.5 text-xs">
                   {standaloneFolders.length}
                 </Badge>
@@ -384,12 +384,12 @@ export default function Projects() {
               <div className="text-center py-12">
                 <Folder className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground mb-4 text-sm">
-                  Você não tem pastas de tarefas avulsas.
+                  Você não tem pastas sem projeto.
                 </p>
                 {(isAdmin || isGestor) && (
                   <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
                     <Plus size={18} />
-                    Criar Pasta Avulsa
+                    Criar Pasta Sem Projeto
                   </Button>
                 )}
               </div>

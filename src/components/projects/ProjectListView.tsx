@@ -153,7 +153,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                     
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {isStandaloneFolder && (
-                        <Badge variant="outline" className="text-xs">Avulso</Badge>
+                        <Badge variant="outline" className="text-xs">Sem Projeto</Badge>
                       )}
                       {project.is_draft && (
                         <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
@@ -246,7 +246,7 @@ export function ProjectListView({ projects, onDelete, onArchive, navigate, isArc
                   <div className="flex items-center gap-2">
                     {isStandaloneFolder && <Folder className="h-4 w-4 text-primary" />}
                     <span className="truncate">{project.name}</span>
-                    {isStandaloneFolder && <Badge variant="outline" className="text-xs">Avulso</Badge>}
+                    {isStandaloneFolder && <Badge variant="outline" className="text-xs">Sem Projeto</Badge>}
                     {project.is_draft && (
                       <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600 border-amber-500/30">
                         <FileEdit className="h-3 w-3 mr-1" />
