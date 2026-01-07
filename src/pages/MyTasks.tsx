@@ -90,7 +90,7 @@ export default function MyTasks() {
 
       const projectIds = (wsProjects || []).map((p) => p.id);
       const selectFields =
-        "*, projects(id, name, archived, pending_notifications, workspace_id, is_standalone_folder), task_assignees(user_id)";
+        "*, projects(id, name, color, archived, pending_notifications, workspace_id, is_standalone_folder), task_assignees(user_id)";
 
       const fetchAssignedProjectTasks = async () => {
         if (projectIds.length === 0) return [];

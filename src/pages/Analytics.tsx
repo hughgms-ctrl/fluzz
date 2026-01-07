@@ -77,7 +77,7 @@ export default function Analytics() {
         .from("tasks")
         .select(`
           *,
-          projects!inner(id, name, workspace_id, archived, is_standalone_folder, pending_notifications),
+          projects!inner(id, name, color, workspace_id, archived, is_standalone_folder, pending_notifications),
           task_assignees(user_id)
         `)
         .eq("projects.workspace_id", workspace.id)
