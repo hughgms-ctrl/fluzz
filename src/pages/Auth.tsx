@@ -259,6 +259,10 @@ export default function Auth() {
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            // Evita "grudar" em uma conta Google (ex.: corporativa) e cair em 403.
+            prompt: "select_account",
+          },
         },
       });
       if (error) throw error;
