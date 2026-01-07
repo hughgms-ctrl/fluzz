@@ -86,18 +86,34 @@ const priorityConfig = {
 
 // Colors for project accent bars (Monday.com style)
 const projectColors = [
-  "hsl(217, 91%, 60%)",  // Blue
-  "hsl(142, 71%, 45%)",  // Green
-  "hsl(280, 65%, 60%)",  // Purple
-  "hsl(25, 95%, 53%)",   // Orange
-  "hsl(340, 82%, 52%)",  // Pink/Red
-  "hsl(47, 95%, 50%)",   // Yellow
-  "hsl(173, 80%, 40%)",  // Teal
-  "hsl(315, 70%, 50%)",  // Magenta
+  "hsl(217 91% 60%)",  // Blue
+  "hsl(142 71% 45%)",  // Green
+  "hsl(280 65% 60%)",  // Purple
+  "hsl(25 95% 53%)",   // Orange
+  "hsl(340 82% 52%)",  // Pink/Red
+  "hsl(47 95% 50%)",   // Yellow
+  "hsl(173 80% 40%)",  // Teal
+  "hsl(315 70% 50%)",  // Magenta
 ];
 
-function getProjectColor(projectId: string): string {
-  // Use project ID to generate consistent color
+const projectColorByValue: Record<string, string> = {
+  primary: "hsl(var(--primary))",
+  blue: "hsl(217 91% 60%)",
+  emerald: "hsl(142 71% 45%)",
+  amber: "hsl(43 96% 56%)",
+  purple: "hsl(271 81% 56%)",
+  pink: "hsl(330 81% 60%)",
+  cyan: "hsl(188 94% 42%)",
+  rose: "hsl(346 77% 49%)",
+  orange: "hsl(25 95% 53%)",
+  teal: "hsl(173 80% 40%)",
+};
+
+function getProjectColor(projectId: string, colorValue?: string | null): string {
+  const mapped = colorValue ? projectColorByValue[colorValue] : undefined;
+  if (mapped) return mapped;
+
+  // Fallback: Use project ID to generate a consistent color (for legacy projects)
   let hash = 0;
   for (let i = 0; i < projectId.length; i++) {
     hash = projectId.charCodeAt(i) + ((hash << 5) - hash);
@@ -453,7 +469,7 @@ function ProjectRow({
   isStandaloneFolder?: boolean;
   profiles: any[];
 }) {
-  const projectColor = getProjectColor(project.id);
+  const projectColor = getProjectColor(project.id, project.color);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(project.name);
