@@ -56,18 +56,22 @@ export function AppSidebar() {
   };
 
   const canViewItem = (item: MenuItem) => {
-    // Special handling for Fluzz AI - admin always, gestor/membro need permission
+    // Special handling for Fluzz AI - respect user's preference (even for admins)
     if (item.url === "/ai-assistant") {
-      if (isAdmin) return true;
-      if (isGestor) return permissions?.can_view_ai === true;
-      return permissions?.can_view_ai === true;
+      // If permission is explicitly set to false, hide it
+      if (permissions?.can_view_ai === false) return false;
+      // For gestors/membros, require explicit permission
+      if (!isAdmin && !isGestor) return permissions?.can_view_ai === true;
+      return true;
     }
     
-    // Special handling for Workload View - admin always, gestor/membro need permission
+    // Special handling for Workload View - respect user's preference (even for admins)
     if (item.url === "/workload") {
-      if (isAdmin) return true;
-      if (isGestor) return permissions?.can_view_workload === true;
-      return permissions?.can_view_workload === true;
+      // If permission is explicitly set to false, hide it
+      if (permissions?.can_view_workload === false) return false;
+      // For gestors/membros, require explicit permission
+      if (!isAdmin && !isGestor) return permissions?.can_view_workload === true;
+      return true;
     }
     
     if (item.adminOnly && !isAdmin && !isGestor) return false;
