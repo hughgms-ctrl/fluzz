@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "./AIChatPanel";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 
 interface AIFloatingButtonProps {
   className?: string;
@@ -11,6 +12,12 @@ interface AIFloatingButtonProps {
 
 export function AIFloatingButton({ className }: AIFloatingButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { permissions } = useWorkspace();
+
+  // Respect user's AI visibility preference (even for admins)
+  if (permissions?.can_view_ai === false) {
+    return null;
+  }
 
   return (
     <>
