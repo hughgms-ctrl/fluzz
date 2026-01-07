@@ -81,34 +81,35 @@ export default function Projects() {
   };
 
   const { activeProjects, draftProjects, archivedProjects, standaloneFolders, calendarProjects } = useMemo(() => {
-    // Members (non-admin/gestor) should not see draft projects
+    // Members (non-admin/gestor) should not see draft projects in list/table views,
+    // but they MUST see them in the calendar (without being able to open them).
     const canSeeDrafts = isAdmin || isGestor;
-    
+
     // All projects for different categories
     const allProjects = projects || [];
-    
+
     // Active projects: not archived, not draft, not standalone folder
     const active = sortByEventDate(allProjects.filter(p => 
       !p.archived && !p.is_standalone_folder && !p.is_draft
     ));
-    
+
     // Draft projects: is_draft = true, not archived (only visible to admin/gestor)
     const drafts = canSeeDrafts 
       ? sortByEventDate(allProjects.filter(p => p.is_draft && !p.archived && !p.is_standalone_folder))
       : [];
-    
+
     // Archived projects
     const archived = sortByEventDate(allProjects.filter(p => p.archived && !p.is_standalone_folder));
-    
+
     // Standalone folders (only visible to admin/gestor)
     const standalone = canSeeDrafts 
       ? allProjects.filter(p => p.is_standalone_folder && !p.archived)
       : [];
-    
-    // Calendar view: all active including drafts for admin/gestor (NOT standalone folders)
-    const calendarProjectsList = canSeeDrafts
-      ? sortByEventDate(allProjects.filter(p => !p.archived && !p.is_standalone_folder))
-      : active;
+
+    // Calendar view: always include drafts for everyone (draft click/open is handled inside ProjectsCalendarView)
+    const calendarProjectsList = sortByEventDate(
+      allProjects.filter(p => !p.archived && !p.is_standalone_folder)
+    );
     
     return { 
       activeProjects: active, 
