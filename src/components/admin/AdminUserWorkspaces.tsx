@@ -321,7 +321,7 @@ export const AdminUserWorkspaces = ({
     can_view_briefings: "Ver briefings",
     can_view_culture: "Ver cultura",
     can_view_vision: "Ver visão",
-    can_view_processes: "Ver processos",
+    can_view_processes: "Ver POPs",
     can_view_inventory: "Ver inventário",
     can_view_ai: "Ver IA",
     can_view_workload: "Ver carga de trabalho",
@@ -332,7 +332,7 @@ export const AdminUserWorkspaces = ({
     can_edit_briefings: "Editar briefings",
     can_edit_culture: "Editar cultura",
     can_edit_vision: "Editar visão",
-    can_edit_processes: "Editar processos",
+    can_edit_processes: "Editar POPs",
     can_edit_inventory: "Editar inventário",
   };
 

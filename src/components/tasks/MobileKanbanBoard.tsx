@@ -14,9 +14,9 @@ interface MobileKanbanBoardProps {
 }
 
 const columns = [
-  { id: "todo", title: "A Fazer", color: "border-l-4 border-l-status-todo" },
-  { id: "in_progress", title: "Em Progresso", color: "border-l-4 border-l-status-in-progress" },
-  { id: "completed", title: "Concluído", color: "border-l-4 border-l-status-completed" },
+  { id: "todo", title: "A fazer", color: "border-l-4 border-l-status-todo" },
+  { id: "in_progress", title: "Fazendo", color: "border-l-4 border-l-status-in-progress" },
+  { id: "completed", title: "Feito", color: "border-l-4 border-l-status-completed" },
 ];
 
 export const MobileKanbanBoard = ({

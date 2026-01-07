@@ -287,17 +287,17 @@ export default function Analytics() {
 
   const statusData = [
     {
-      name: "A Fazer",
+      name: "A fazer",
       value: allTasks?.filter((t) => t.status === "todo").length || 0,
       color: COLORS.todo,
     },
     {
-      name: "Em Progresso",
+      name: "Fazendo",
       value: allTasks?.filter((t) => t.status === "in_progress").length || 0,
       color: COLORS.in_progress,
     },
     {
-      name: "Concluído",
+      name: "Feito",
       value: allTasks?.filter((t) => t.status === "completed").length || 0,
       color: COLORS.completed,
     },
@@ -350,9 +350,9 @@ export default function Analytics() {
     };
     
     const statusLabels = {
-      todo: "A Fazer",
+      todo: "A fazer",
       in_progress: "Fazendo",
-      completed: "Concluído"
+      completed: "Feito"
     };
     
     const statusColors = {
@@ -528,7 +528,7 @@ export default function Analytics() {
             <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
               <div className="text-xl sm:text-2xl font-bold">{pendingCount}</div>
               <p className="text-xs text-muted-foreground">
-                A fazer + em progresso
+                A fazer + fazendo
               </p>
             </CardContent>
           </Card>
@@ -614,9 +614,9 @@ export default function Analytics() {
                   <thead className="sticky top-0 bg-background border-b">
                     <tr>
                       <th className="text-left py-2 px-2">Responsável</th>
-                      <th className="text-center py-2 px-2">A Fazer</th>
+                      <th className="text-center py-2 px-2">A fazer</th>
                       <th className="text-center py-2 px-2">Fazendo</th>
-                      <th className="text-center py-2 px-2">Concluído</th>
+                      <th className="text-center py-2 px-2">Feito</th>
                     </tr>
                   </thead>
                   <tbody>

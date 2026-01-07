@@ -515,7 +515,7 @@ export const InviteMemberDialog = ({
                     }
                   />
                   <Label htmlFor="can_view_processes" className="text-sm font-normal cursor-pointer">
-                    Processos
+                    POPs
                   </Label>
                 </div>
 

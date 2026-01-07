@@ -239,7 +239,7 @@ export function CreateRecurringTaskDialog({ positionId, open, onOpenChange }: Cr
                     <Plus size={16} />
                     {selectedProcesses.length > 0 
                       ? `${selectedProcesses.length} POP(s) selecionado(s)`
-                      : "Vincular processos"}
+                      : "Vincular POPs"}
                   </span>
                   <ChevronRight size={16} />
                 </Button>

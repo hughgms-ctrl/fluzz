@@ -436,20 +436,20 @@ export default function MyTasks() {
             </TabsTrigger>
             <TabsTrigger value="todo" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">A Fazer</span>
+              <span className="hidden sm:inline">A fazer</span>
               <span className="sm:hidden">Fazer</span>
               <span className="hidden sm:inline">({todoTasks.length})</span>
             </TabsTrigger>
             <TabsTrigger value="in_progress" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Em Progresso</span>
-              <span className="sm:hidden">Progresso</span>
+              <span className="hidden sm:inline">Fazendo</span>
+              <span className="sm:hidden">Fazendo</span>
               <span className="hidden sm:inline">({inProgressTasks.length})</span>
             </TabsTrigger>
             <TabsTrigger value="completed" className="gap-1 sm:gap-2 text-xs sm:text-sm">
               <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Concluídas</span>
-              <span className="sm:hidden">Feitas</span>
+              <span className="hidden sm:inline">Feito</span>
+              <span className="sm:hidden">Feito</span>
               <span className="hidden sm:inline">({completedTasks.length})</span>
             </TabsTrigger>
           </TabsList>

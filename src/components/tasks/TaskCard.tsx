@@ -92,9 +92,9 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   };
 
   const statusLabels = {
-    todo: "A Fazer",
+    todo: "A fazer",
     in_progress: "Fazendo",
-    completed: "Concluído",
+    completed: "Feito",
   };
 
   const statusColors = {
@@ -334,13 +334,13 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
               onCloseAutoFocus={(e) => e.preventDefault()}
             >
               <DropdownMenuItem onSelect={() => handleStatusChange("todo")}>
-                A Fazer
+                A fazer
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => handleStatusChange("in_progress")}>
                 Fazendo
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => handleStatusChange("completed")}>
-                Concluído
+                Feito
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

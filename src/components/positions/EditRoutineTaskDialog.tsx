@@ -246,9 +246,9 @@ export function EditRoutineTaskDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="todo">A fazer</SelectItem>
+                  <SelectItem value="in_progress">Fazendo</SelectItem>
+                  <SelectItem value="completed">Feito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -305,7 +305,7 @@ export function EditRoutineTaskDialog({
           </div>
 
           <div>
-            <Label>Processos Vinculados (Opcional)</Label>
+            <Label>POPs Vinculados (Opcional)</Label>
             <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3">
               {processes && processes.length > 0 ? (
                 processes.map((process) => (

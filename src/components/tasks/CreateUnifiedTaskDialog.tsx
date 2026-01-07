@@ -460,9 +460,9 @@ export const CreateUnifiedTaskDialog = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="todo">A fazer</SelectItem>
+                  <SelectItem value="in_progress">Fazendo</SelectItem>
+                  <SelectItem value="completed">Feito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -491,7 +491,7 @@ export const CreateUnifiedTaskDialog = ({
 
           {processes && processes.length > 0 && (
             <div className="space-y-2">
-              <Label>Processos Vinculados</Label>
+              <Label>POPs Vinculados</Label>
               <ScrollArea className="h-32 border rounded-md p-2">
                 <div className="space-y-2">
                   {processes.map((process) => (

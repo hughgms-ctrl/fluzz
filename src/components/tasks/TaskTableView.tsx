@@ -60,11 +60,11 @@ interface TaskTableViewProps {
 
 const statusConfig = {
   todo: { 
-    label: "Parado", 
+    label: "A fazer", 
     className: "bg-status-todo text-status-todo-foreground hover:bg-status-todo/90" 
   },
   in_progress: { 
-    label: "Em progresso", 
+    label: "Fazendo", 
     className: "bg-status-in-progress text-status-in-progress-foreground hover:bg-status-in-progress/90" 
   },
   completed: { 

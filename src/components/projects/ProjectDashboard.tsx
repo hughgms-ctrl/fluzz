@@ -220,7 +220,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                     <td className="py-3 px-2 font-medium">
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-yellow-500" />
-                        Em Progresso
+                        Fazendo
                       </div>
                     </td>
                     <td className="text-center py-3 px-2">
@@ -237,7 +237,7 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                     <td className="py-3 px-2 font-medium">
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-green-500" />
-                        Concluído
+                        Feito
                       </div>
                     </td>
                     <td className="text-center py-3 px-2">
@@ -285,9 +285,9 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                 <thead className="sticky top-0 bg-background border-b">
                   <tr>
                     <th className="text-left py-2 px-2">Responsável</th>
-                    <th className="text-center py-2 px-2">A Fazer</th>
+                    <th className="text-center py-2 px-2">A fazer</th>
                     <th className="text-center py-2 px-2">Fazendo</th>
-                    <th className="text-center py-2 px-2">Concluído</th>
+                    <th className="text-center py-2 px-2">Feito</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -405,13 +405,13 @@ export function ProjectDashboard({ tasks, onFilterClick }: ProjectDashboardProps
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-muted-foreground">Em Progresso</div>
+                <div className="text-sm text-muted-foreground">Fazendo</div>
                 <div className="text-lg font-semibold">
                   {metrics.inProgressCount}
                 </div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-muted-foreground">Concluído</div>
+                <div className="text-sm text-muted-foreground">Feito</div>
                 <div className="text-lg font-semibold text-green-600">
                   {metrics.completed.length}
                 </div>

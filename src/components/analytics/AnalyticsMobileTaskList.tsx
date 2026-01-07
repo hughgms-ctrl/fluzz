@@ -33,7 +33,7 @@ const statusConfig = {
     color: "hsl(30, 100%, 65%)",
   },
   completed: { 
-    label: "Concluído", 
+    label: "Feito", 
     color: "hsl(152, 69%, 53%)",
   },
 };

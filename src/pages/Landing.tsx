@@ -31,8 +31,8 @@ const features = [
   },
   {
     icon: FileText,
-    title: "Processos Documentados",
-    description: "Documente todos os processos da empresa com editor rico, imagens e vídeos integrados."
+    title: "POPs Documentados",
+    description: "Documente todos os procedimentos da empresa com editor rico, imagens e vídeos integrados."
   },
   {
     icon: Calendar,
@@ -129,7 +129,7 @@ export default function Landing() {
           </h1>
           
           <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-10">
-            Fluzz é a plataforma completa para gerenciar equipes, projetos e processos. 
+            Fluzz é a plataforma completa para gerenciar equipes, projetos e POPs. 
             Tenha visibilidade total do seu negócio e libere o potencial da sua equipe.
           </p>
           
@@ -226,7 +226,7 @@ export default function Landing() {
                   {[
                     "Gestão completa de projetos",
                     "Tarefas e rotinas recorrentes",
-                    "Documentação de processos",
+                    "Documentação de POPs",
                     "Controle de permissões",
                     "Analytics e relatórios",
                     "Briefings de eventos",

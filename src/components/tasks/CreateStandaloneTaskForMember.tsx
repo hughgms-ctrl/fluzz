@@ -228,9 +228,9 @@ export const CreateStandaloneTaskForMember = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">A Fazer</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="todo">A fazer</SelectItem>
+                  <SelectItem value="in_progress">Fazendo</SelectItem>
+                  <SelectItem value="completed">Feito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -264,7 +264,7 @@ export const CreateStandaloneTaskForMember = ({
             />
           </div>
           <div className="space-y-2">
-            <Label>Processos Vinculados</Label>
+            <Label>POPs Vinculados</Label>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {processes?.map((process) => (
                 <div key={process.id} className="flex items-center gap-2">
