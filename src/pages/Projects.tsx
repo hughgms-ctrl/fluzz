@@ -342,6 +342,7 @@ export default function Projects() {
           <TabsContent value="active" className="mt-4">
             {viewMode === "calendar" ? (
               <ProjectsCalendarView
+                key={`calendar-${viewMode}`}
                 projects={calendarProjects}
                 onCreateProject={(date) => {
                   setDefaultProjectDate(date);

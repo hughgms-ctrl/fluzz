@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -372,6 +373,9 @@ function TaskGroupCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
+
+  const canClickGroup = group.type === "project" || (group.type === "folder" && (isAdmin || isGestor));
 
   // Sort tasks based on mode
   const sortedTasks = [...(group.tasks || [])].sort((a, b) => {
@@ -403,10 +407,10 @@ function TaskGroupCard({
         )}
         <GroupIcon className="h-4 w-4 shrink-0" style={{ color: group.color }} />
         <h3 
-          className="font-semibold text-sm flex-1 line-clamp-1"
+          className={`font-semibold text-sm flex-1 line-clamp-1 ${canClickGroup ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
           style={{ color: group.color }}
           onClick={(e) => {
-            if (group.type === "project") {
+            if (canClickGroup) {
               e.stopPropagation();
               navigate(`/projects/${group.id}`);
             }
