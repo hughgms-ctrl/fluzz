@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -421,6 +422,9 @@ function TaskGroupRow({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
+
+  const canClickGroup = group.type === "project" || (group.type === "folder" && (isAdmin || isGestor));
 
   const tasks = group.tasks || [];
   const taskCount = tasks.length;
@@ -460,8 +464,8 @@ function TaskGroupRow({
         </TableCell>
 
         <TableCell
-          className="font-semibold cursor-pointer hover:opacity-80 transition-opacity py-4"
-          onClick={() => group.type === "project" ? navigate(`/projects/${group.id}`) : setIsExpanded((v) => !v)}
+          className={`font-semibold py-4 ${canClickGroup ? "cursor-pointer hover:opacity-80" : ""} transition-opacity`}
+          onClick={() => canClickGroup ? navigate(`/projects/${group.id}`) : setIsExpanded((v) => !v)}
         >
           <div className="flex items-center gap-2 flex-wrap">
             <GroupIcon className="h-4 w-4" style={{ color: group.color }} />

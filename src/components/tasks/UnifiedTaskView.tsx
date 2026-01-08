@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
+import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -496,6 +497,7 @@ function GroupRow({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const navigate = useNavigate();
+  const { isAdmin, isGestor } = useWorkspace();
 
   const tasks = group.tasks || [];
   const taskCount = tasks.length;
@@ -520,10 +522,15 @@ function GroupRow({
 
   const handleNameClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Project types can navigate, folder types only for admin/gestor
     if (group.type === "project") {
+      navigate(`/projects/${group.id}`);
+    } else if (group.type === "folder" && (isAdmin || isGestor)) {
       navigate(`/projects/${group.id}`);
     }
   };
+
+  const canClickGroup = group.type === "project" || (group.type === "folder" && (isAdmin || isGestor));
 
   return (
     <>
@@ -555,7 +562,7 @@ function GroupRow({
           <div className="flex items-center gap-2">
             <GroupIcon className="h-4 w-4 flex-shrink-0" style={{ color: group.color }} />
             <span 
-              className={`text-base font-semibold whitespace-nowrap ${group.type === "project" ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+              className={`text-base font-semibold whitespace-nowrap ${canClickGroup ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
               style={{ color: group.color }}
               onClick={handleNameClick}
             >

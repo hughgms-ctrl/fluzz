@@ -31,7 +31,7 @@ import { cn, parseDateOnly, isTaskOverdue } from "@/lib/utils";
 export default function ProjectDetail() {
   const { id } = useParams();
   const { user } = useAuth();
-  const { permissions } = useWorkspace();
+  const { permissions, isAdmin, isGestor } = useWorkspace();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
@@ -645,7 +645,8 @@ export default function ProjectDetail() {
                   </PopoverContent>
                 </Popover>
 
-                {/* Project Color Picker */}
+                {/* Project Color Picker - only for admin/gestor */}
+                {(isAdmin || isGestor) && (
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -702,6 +703,7 @@ export default function ProjectDetail() {
                     </div>
                   </PopoverContent>
                 </Popover>
+                )}
               </div>
             </div>
           </div>
