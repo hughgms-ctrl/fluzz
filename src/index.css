@@ -86,64 +86,70 @@ body {
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 24 95% 53%;
+    /* Discord-style dark mode */
+    /* FUNDOS */
+    --background: 220 18% 10%;           /* Área principal: #141920 */
+    --foreground: 220 10% 95%;           /* Texto principal: #f0f1f3 */
+    --card: 220 18% 14%;                 /* Cards/popover: #1e242d */
+    --card-foreground: 220 10% 95%;
+    --popover: 220 18% 14%;
+    --popover-foreground: 220 10% 95%;
+    
+    /* CORES DE DESTAQUE */
+    --primary: 230 80% 65%;              /* Azul: #5c7cfa */
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 32% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 32% 14%;
-    --muted-foreground: 215 20% 60%;
-    --accent: 24 60% 15%;
-    --accent-foreground: 24 95% 70%;
-    --destructive: 0 72% 51%;
+    --secondary: 220 18% 18%;            /* Input/muted bg: #252b35 */
+    --secondary-foreground: 220 10% 95%;
+    --muted: 220 18% 18%;
+    --muted-foreground: 220 10% 55%;     /* Texto secundário: #848a94 */
+    --accent: 260 70% 65%;               /* Roxo: #9d6ef5 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;            /* Vermelho: #d93636 */
     --destructive-foreground: 0 0% 100%;
-    --border: 217 32% 18%;
-    --input: 217 32% 18%;
-    --ring: 24 95% 53%;
+    
+    /* BORDAS */
+    --border: 220 18% 20%;               /* Border: #2a3140 */
+    --input: 220 18% 18%;
+    --ring: 230 80% 65%;
     
     /* Sidebar */
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 24 95% 53%;
+    --sidebar-background: 220 18% 8%;    /* Sidebar: #0f1318 */
+    --sidebar-foreground: 220 10% 95%;
+    --sidebar-primary: 230 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 60% 15%;
-    --sidebar-accent-foreground: 24 95% 70%;
-    --sidebar-border: 217 32% 18%;
-    --sidebar-ring: 24 95% 53%;
+    --sidebar-accent: 220 18% 15%;       /* Hover/accent: #1f252e */
+    --sidebar-accent-foreground: 220 10% 95%;
+    --sidebar-border: 220 18% 20%;
+    --sidebar-ring: 230 80% 65%;
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
-    --shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.25), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.2);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.35), 0 4px 6px -4px hsl(0 0% 0% / 0.2);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4), 0 8px 10px -6px hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.35), 0 1px 2px -1px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.45), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5), 0 8px 10px -6px hsl(0 0% 0% / 0.3);
     
-    /* Status colors - Monday-style */
-    --status-todo: 0 68% 72%;
+    /* Status colors */
+    --status-todo: 0 68% 60%;
     --status-todo-foreground: 0 0% 100%;
-    --status-in-progress: 30 100% 65%;
+    --status-in-progress: 30 100% 55%;
     --status-in-progress-foreground: 0 0% 100%;
-    --status-completed: 152 69% 53%;
+    --status-completed: 142 70% 50%;     /* Success verde: #22c55e */
     --status-completed-foreground: 0 0% 100%;
     
     /* Chart colors */
-    --chart-1: 217 91% 65%;
-    --chart-2: 24 95% 53%;
-    --chart-3: 142 71% 50%;
+    --chart-1: 230 80% 65%;
+    --chart-2: 260 70% 65%;
+    --chart-3: 142 70% 50%;
     --chart-4: 280 65% 65%;
     --chart-5: 340 75% 60%;
     
     /* Success/Warning/Info */
-    --success: 142 71% 50%;
+    --success: 142 70% 50%;              /* Verde: #22c55e */
     --success-foreground: 0 0% 100%;
     --warning: 43 96% 56%;
     --warning-foreground: 20 14% 4%;
-    --info: 217 91% 65%;
+    --info: 230 80% 65%;
     --info-foreground: 0 0% 100%;
   }
 }
