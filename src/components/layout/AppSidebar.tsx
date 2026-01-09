@@ -1,4 +1,4 @@
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +36,8 @@ const menuItems: MenuItem[] = [
 
 const workspaceItems: MenuItem[] = [
   { title: "POP's", url: "/workspace/processes", icon: BookOpen, permission: "can_view_processes" },
+  { title: "Fluxos", url: "/workspace/flows", icon: GitBranch, permission: "can_view_flows" },
+  { title: "Notas", url: "/workspace/notes", icon: StickyNote, permission: "can_view_notes" },
   { title: "Equipe", url: "/team", icon: Users, adminOnly: true },
   { title: "Setores", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
   { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },

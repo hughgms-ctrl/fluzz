@@ -25,6 +25,11 @@ import Vision from "./pages/workspace/Vision";
 import VisionForm from "./pages/workspace/VisionForm";
 import Processes from "./pages/workspace/Processes";
 import ProcessForm from "./pages/workspace/ProcessForm";
+import Notes from "./pages/workspace/Notes";
+import NoteForm from "./pages/workspace/NoteForm";
+import NoteDetail from "./pages/workspace/NoteDetail";
+import Flows from "./pages/workspace/Flows";
+import FlowEditor from "./pages/workspace/FlowEditor";
 import GettingStarted from "./pages/workspace/GettingStarted";
 import GettingStartedForm from "./pages/workspace/GettingStartedForm";
 import GettingStartedDetail from "./pages/workspace/GettingStartedDetail";
@@ -84,6 +89,12 @@ const App = () => (
                   <Route path="/workspace/processes" element={<Processes />} />
                   <Route path="/workspace/processes/new" element={<ProcessForm />} />
                   <Route path="/workspace/processes/:id/edit" element={<ProcessForm />} />
+                  <Route path="/workspace/notes" element={<Notes />} />
+                  <Route path="/workspace/notes/new" element={<NoteForm />} />
+                  <Route path="/workspace/notes/:id" element={<NoteDetail />} />
+                  <Route path="/workspace/notes/:id/edit" element={<NoteForm />} />
+                  <Route path="/workspace/flows" element={<Flows />} />
+                  <Route path="/workspace/flows/:id" element={<FlowEditor />} />
                   <Route path="/workspace/getting-started" element={<GettingStarted />} />
                   <Route path="/workspace/getting-started/new" element={<GettingStartedForm />} />
                   <Route path="/workspace/getting-started/:id" element={<GettingStartedDetail />} />

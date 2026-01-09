@@ -483,6 +483,53 @@ export type Database = {
           },
         ]
       }
+      flows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          edges: Json | null
+          id: string
+          name: string
+          nodes: Json | null
+          updated_at: string
+          viewport: Json | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          name: string
+          nodes?: Json | null
+          updated_at?: string
+          viewport?: Json | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          name?: string
+          nodes?: Json | null
+          updated_at?: string
+          viewport?: Json | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flows_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       getting_started_sections: {
         Row: {
           content: string | null
@@ -665,6 +712,95 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      note_folders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          folder_order: number | null
+          id: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          folder_order?: number | null
+          id?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          folder_order?: number | null
+          id?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_folders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          content: string | null
+          created_at: string
+          created_by: string | null
+          folder_id: string | null
+          id: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          folder_id?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          folder_id?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "note_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notes_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -1973,7 +2109,9 @@ export type Database = {
           can_edit_analytics: boolean | null
           can_edit_briefings: boolean | null
           can_edit_culture: boolean | null
+          can_edit_flows: boolean | null
           can_edit_inventory: boolean | null
+          can_edit_notes: boolean | null
           can_edit_positions: boolean | null
           can_edit_processes: boolean | null
           can_edit_projects: boolean | null
@@ -1983,7 +2121,9 @@ export type Database = {
           can_view_analytics: boolean
           can_view_briefings: boolean
           can_view_culture: boolean
+          can_view_flows: boolean | null
           can_view_inventory: boolean | null
+          can_view_notes: boolean | null
           can_view_positions: boolean
           can_view_processes: boolean
           can_view_projects: boolean
@@ -2000,7 +2140,9 @@ export type Database = {
           can_edit_analytics?: boolean | null
           can_edit_briefings?: boolean | null
           can_edit_culture?: boolean | null
+          can_edit_flows?: boolean | null
           can_edit_inventory?: boolean | null
+          can_edit_notes?: boolean | null
           can_edit_positions?: boolean | null
           can_edit_processes?: boolean | null
           can_edit_projects?: boolean | null
@@ -2010,7 +2152,9 @@ export type Database = {
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
+          can_view_flows?: boolean | null
           can_view_inventory?: boolean | null
+          can_view_notes?: boolean | null
           can_view_positions?: boolean
           can_view_processes?: boolean
           can_view_projects?: boolean
@@ -2027,7 +2171,9 @@ export type Database = {
           can_edit_analytics?: boolean | null
           can_edit_briefings?: boolean | null
           can_edit_culture?: boolean | null
+          can_edit_flows?: boolean | null
           can_edit_inventory?: boolean | null
+          can_edit_notes?: boolean | null
           can_edit_positions?: boolean | null
           can_edit_processes?: boolean | null
           can_edit_projects?: boolean | null
@@ -2037,7 +2183,9 @@ export type Database = {
           can_view_analytics?: boolean
           can_view_briefings?: boolean
           can_view_culture?: boolean
+          can_view_flows?: boolean | null
           can_view_inventory?: boolean | null
+          can_view_notes?: boolean | null
           can_view_positions?: boolean
           can_view_processes?: boolean
           can_view_projects?: boolean

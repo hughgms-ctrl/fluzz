@@ -53,6 +53,8 @@ interface UserPermissions {
   can_view_inventory: boolean;
   can_view_ai: boolean;
   can_view_workload: boolean;
+  can_view_flows: boolean;
+  can_view_notes: boolean;
   can_edit_projects: boolean;
   can_edit_tasks: boolean;
   can_edit_positions: boolean;
@@ -62,6 +64,8 @@ interface UserPermissions {
   can_edit_vision: boolean;
   can_edit_processes: boolean;
   can_edit_inventory: boolean;
+  can_edit_flows: boolean;
+  can_edit_notes: boolean;
 }
 
 type PermissionKey = keyof Omit<UserPermissions, "id" | "user_id" | "workspace_id" | "created_at" | "updated_at">;
@@ -83,6 +87,8 @@ const permissionConfigs: PermissionConfig[] = [
   { key: "culture", label: "Cultura", viewKey: "can_view_culture", editKey: "can_edit_culture" },
   { key: "vision", label: "Visão", viewKey: "can_view_vision", editKey: "can_edit_vision" },
   { key: "processes", label: "POP's", viewKey: "can_view_processes", editKey: "can_edit_processes" },
+  { key: "flows", label: "Fluxos", viewKey: "can_view_flows", editKey: "can_edit_flows" },
+  { key: "notes", label: "Notas", viewKey: "can_view_notes", editKey: "can_edit_notes" },
   { key: "inventory", label: "Inventário", viewKey: "can_view_inventory", editKey: "can_edit_inventory" },
   { key: "ai", label: "Fluzz AI", viewKey: "can_view_ai", viewOnly: true },
   { key: "workload", label: "Workload View", viewKey: "can_view_workload", viewOnly: true },
