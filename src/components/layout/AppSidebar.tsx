@@ -78,9 +78,21 @@ export function AppSidebar() {
     
     if (item.adminOnly && !isAdmin && !isGestor) return false;
     if (!item.permission) return true;
-    // Admins and gestors always have full access
-    if (isAdmin || isGestor) return true;
-    return permissions[item.permission as keyof typeof permissions];
+    
+    // Check if permission is explicitly set in the database
+    const permissionKey = item.permission as keyof typeof permissions;
+    if (permissions && permissionKey in permissions) {
+      // Respect stored permission for everyone (including admins editing their own visibility)
+      if (permissions[permissionKey] === false) return false;
+    }
+    
+    // For members without explicit permissions, deny access
+    if (!isAdmin && !isGestor) {
+      return permissions?.[permissionKey] === true;
+    }
+    
+    // Default to true for admin/gestor if no explicit permission set
+    return true;
   };
 
   return (
