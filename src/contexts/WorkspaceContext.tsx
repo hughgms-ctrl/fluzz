@@ -22,6 +22,7 @@ interface Workspace {
 }
 
 interface UserPermissions {
+  // View permissions
   can_view_projects: boolean;
   can_view_tasks: boolean;
   can_view_positions: boolean;
@@ -33,6 +34,24 @@ interface UserPermissions {
   can_view_inventory: boolean;
   can_view_ai: boolean;
   can_view_workload: boolean;
+  can_view_flows: boolean;
+  can_view_notes: boolean;
+
+  // Edit permissions
+  can_edit_projects: boolean;
+  can_edit_tasks: boolean;
+  can_edit_positions: boolean;
+  can_edit_analytics: boolean;
+  can_edit_briefings: boolean;
+  can_edit_culture: boolean;
+  can_edit_vision: boolean;
+  can_edit_processes: boolean;
+  can_edit_inventory: boolean;
+  can_edit_flows: boolean;
+  can_edit_notes: boolean;
+
+  // Extra flags
+  projects_only_assigned: boolean;
 }
 
 interface AdminViewSession {
@@ -81,6 +100,20 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     can_view_inventory: false,
     can_view_ai: false,
     can_view_workload: false,
+    can_view_flows: false,
+    can_view_notes: false,
+    can_edit_projects: false,
+    can_edit_tasks: false,
+    can_edit_positions: false,
+    can_edit_analytics: false,
+    can_edit_briefings: false,
+    can_edit_culture: false,
+    can_edit_vision: false,
+    can_edit_processes: false,
+    can_edit_inventory: false,
+    can_edit_flows: false,
+    can_edit_notes: false,
+    projects_only_assigned: false,
   });
 
   // Check for active admin view sessions (can be multiple)
