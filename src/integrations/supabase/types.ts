@@ -2132,6 +2132,7 @@ export type Database = {
           can_view_workload: boolean | null
           created_at: string
           id: string
+          projects_only_assigned: boolean | null
           updated_at: string
           user_id: string
           workspace_id: string
@@ -2163,6 +2164,7 @@ export type Database = {
           can_view_workload?: boolean | null
           created_at?: string
           id?: string
+          projects_only_assigned?: boolean | null
           updated_at?: string
           user_id: string
           workspace_id: string
@@ -2194,6 +2196,7 @@ export type Database = {
           can_view_workload?: boolean | null
           created_at?: string
           id?: string
+          projects_only_assigned?: boolean | null
           updated_at?: string
           user_id?: string
           workspace_id?: string
