@@ -81,7 +81,6 @@ interface PermissionConfig {
 
 const permissionConfigs: PermissionConfig[] = [
   { key: "projects", label: "Projetos", viewKey: "can_view_projects", editKey: "can_edit_projects" },
-  { key: "projects_only_assigned", label: "Projetos (ver apenas os que participa)", viewKey: "projects_only_assigned", viewOnly: true },
   { key: "tasks", label: "Tarefas", viewKey: "can_view_tasks", editKey: "can_edit_tasks" },
   { key: "positions", label: "Setores", viewKey: "can_view_positions", editKey: "can_edit_positions" },
   { key: "analytics", label: "Analytics", viewKey: "can_view_analytics", editKey: "can_edit_analytics" },
@@ -424,28 +423,51 @@ export default function TeamMemberPermissions() {
                 {/* Permission rows */}
                 <div className="space-y-2">
                   {permissionConfigs.map((config) => (
-                    <div key={config.key} className="grid grid-cols-[1fr_80px_80px] gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors items-center">
-                      <div className="text-base font-normal">{config.label}</div>
-                      <div className="flex justify-center">
-                      {config.viewKey && (
-                          <Checkbox
-                            id={`view-${config.key}`}
-                            checked={getViewValue(config)}
-                            onCheckedChange={(checked) => handleViewChange(config, checked === true)}
-                            disabled={member.role === "admin" && !canEditOwnPermissions}
-                          />
-                        )}
+                    <div key={config.key}>
+                      <div className="grid grid-cols-[1fr_80px_80px] gap-4 p-4 border rounded-lg hover:bg-accent/50 transition-colors items-center">
+                        <div className="text-base font-normal">{config.label}</div>
+                        <div className="flex justify-center">
+                        {config.viewKey && (
+                            <Checkbox
+                              id={`view-${config.key}`}
+                              checked={getViewValue(config)}
+                              onCheckedChange={(checked) => handleViewChange(config, checked === true)}
+                              disabled={member.role === "admin" && !canEditOwnPermissions}
+                            />
+                          )}
+                        </div>
+                        <div className="flex justify-center">
+                          {!config.viewOnly && config.editKey && (
+                            <Checkbox
+                              id={`edit-${config.key}`}
+                              checked={getEditValue(config)}
+                              onCheckedChange={(checked) => handleEditChange(config, checked === true)}
+                              disabled={member.role === "admin" && !canEditOwnPermissions}
+                            />
+                          )}
+                        </div>
                       </div>
-                      <div className="flex justify-center">
-                        {!config.viewOnly && config.editKey && (
-                          <Checkbox
-                            id={`edit-${config.key}`}
-                            checked={getEditValue(config)}
-                            onCheckedChange={(checked) => handleEditChange(config, checked === true)}
-                            disabled={member.role === "admin" && !canEditOwnPermissions}
-                          />
-                        )}
-                      </div>
+                      {/* Sub-option for projects: only see assigned projects */}
+                      {config.key === "projects" && getViewValue(config) && (
+                        <div className="ml-6 mt-1 mb-1 pl-4 border-l-2 border-muted">
+                          <label className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-accent/30 transition-colors cursor-pointer">
+                            <Checkbox
+                              id="projects_only_assigned"
+                              checked={Boolean(permissions?.projects_only_assigned)}
+                              onCheckedChange={(checked) => 
+                                updatePermissionMutation.mutate({ 
+                                  permission: "projects_only_assigned" as PermissionKey, 
+                                  value: checked === true 
+                                })
+                              }
+                              disabled={member.role === "admin" && !canEditOwnPermissions}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              Ver apenas projetos em que participa
+                            </span>
+                          </label>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
