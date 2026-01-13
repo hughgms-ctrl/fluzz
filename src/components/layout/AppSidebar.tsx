@@ -58,41 +58,23 @@ export function AppSidebar() {
   };
 
   const canViewItem = (item: MenuItem) => {
-    // Special handling for Fluzz AI - respect user's preference (even for admins)
-    if (item.url === "/ai-assistant") {
-      // If permission is explicitly set to false, hide it
-      if (permissions?.can_view_ai === false) return false;
-      // For gestors/membros, require explicit permission
-      if (!isAdmin && !isGestor) return permissions?.can_view_ai === true;
-      return true;
-    }
-    
-    // Special handling for Workload View - respect user's preference (even for admins)
-    if (item.url === "/workload") {
-      // If permission is explicitly set to false, hide it
-      if (permissions?.can_view_workload === false) return false;
-      // For gestors/membros, require explicit permission
-      if (!isAdmin && !isGestor) return permissions?.can_view_workload === true;
-      return true;
-    }
-    
+    // Items that require admin/gestor role (like Team management)
     if (item.adminOnly && !isAdmin && !isGestor) return false;
+    
+    // Items without permission requirement are always visible
     if (!item.permission) return true;
     
-    // Check if permission is explicitly set in the database
+    // ALL users (admin, gestor, membro) must respect explicit permissions
     const permissionKey = item.permission as keyof typeof permissions;
+    
+    // If permission exists and is explicitly false, hide the item
     if (permissions && permissionKey in permissions) {
-      // Respect stored permission for everyone (including admins editing their own visibility)
-      if (permissions[permissionKey] === false) return false;
+      return permissions[permissionKey] === true;
     }
     
-    // For members without explicit permissions, deny access
-    if (!isAdmin && !isGestor) {
-      return permissions?.[permissionKey] === true;
-    }
-    
-    // Default to true for admin/gestor if no explicit permission set
-    return true;
+    // Default: admins/gestors see items if no explicit permission set
+    // Members don't see items without explicit permission
+    return isAdmin || isGestor;
   };
 
   return (
