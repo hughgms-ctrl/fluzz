@@ -116,6 +116,63 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     projects_only_assigned: false,
   });
 
+  // Helper constants to avoid repeating permission objects
+  const ALL_PERMISSIONS_TRUE: UserPermissions = {
+    can_view_projects: true,
+    can_view_tasks: true,
+    can_view_positions: true,
+    can_view_analytics: true,
+    can_view_briefings: true,
+    can_view_culture: true,
+    can_view_vision: true,
+    can_view_processes: true,
+    can_view_inventory: true,
+    can_view_ai: true,
+    can_view_workload: true,
+    can_view_flows: true,
+    can_view_notes: true,
+    can_edit_projects: true,
+    can_edit_tasks: true,
+    can_edit_positions: true,
+    can_edit_analytics: true,
+    can_edit_briefings: true,
+    can_edit_culture: true,
+    can_edit_vision: true,
+    can_edit_processes: true,
+    can_edit_inventory: true,
+    can_edit_flows: true,
+    can_edit_notes: true,
+    projects_only_assigned: false,
+  };
+
+  const ALL_PERMISSIONS_FALSE: UserPermissions = {
+    can_view_projects: false,
+    can_view_tasks: false,
+    can_view_positions: false,
+    can_view_analytics: false,
+    can_view_briefings: false,
+    can_view_culture: false,
+    can_view_vision: false,
+    can_view_processes: false,
+    can_view_inventory: false,
+    can_view_ai: false,
+    can_view_workload: false,
+    can_view_flows: false,
+    can_view_notes: false,
+    can_edit_projects: false,
+    can_edit_tasks: false,
+    can_edit_positions: false,
+    can_edit_analytics: false,
+    can_edit_briefings: false,
+    can_edit_culture: false,
+    can_edit_vision: false,
+    can_edit_processes: false,
+    can_edit_inventory: false,
+    can_edit_flows: false,
+    can_edit_notes: false,
+    projects_only_assigned: false,
+  };
+
   // Check for active admin view sessions (can be multiple)
   const fetchAdminViewSessions = useCallback(async (): Promise<{ sessions: AdminViewSession[], workspaces: Workspace[] }> => {
     if (!user) return { sessions: [], workspaces: [] };
@@ -216,19 +273,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               created_at: new Date().toISOString(),
             });
             setIsAdminViewMode(true);
-            setPermissions({
-              can_view_projects: true,
-              can_view_tasks: true,
-              can_view_positions: true,
-              can_view_analytics: true,
-              can_view_briefings: true,
-              can_view_culture: true,
-              can_view_vision: true,
-              can_view_processes: true,
-              can_view_inventory: true,
-              can_view_ai: true,
-              can_view_workload: true,
-            });
+            setPermissions(ALL_PERMISSIONS_TRUE);
             setLoading(false);
             return;
           }
@@ -258,19 +303,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
             created_at: new Date().toISOString(),
           });
           setIsAdminViewMode(true);
-          setPermissions({
-            can_view_projects: true,
-            can_view_tasks: true,
-            can_view_positions: true,
-            can_view_analytics: true,
-            can_view_briefings: true,
-            can_view_culture: true,
-            can_view_vision: true,
-            can_view_processes: true,
-            can_view_inventory: true,
-            can_view_ai: true,
-            can_view_workload: true,
-          });
+          setPermissions(ALL_PERMISSIONS_TRUE);
           setLoading(false);
           return;
         }
@@ -356,19 +389,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           created_at: new Date().toISOString(),
         });
         setIsAdminViewMode(true);
-        setPermissions({
-          can_view_projects: true,
-          can_view_tasks: true,
-          can_view_positions: true,
-          can_view_analytics: true,
-          can_view_briefings: true,
-          can_view_culture: true,
-          can_view_vision: true,
-          can_view_processes: true,
-          can_view_inventory: true,
-          can_view_ai: true,
-          can_view_workload: true,
-        });
+        setPermissions(ALL_PERMISSIONS_TRUE);
         setLoading(false);
         return;
       }
@@ -416,53 +437,57 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
               can_view_inventory: permissionsData.can_view_inventory !== false,
               can_view_ai: permissionsData.can_view_ai !== false,
               can_view_workload: permissionsData.can_view_workload !== false,
+              can_view_flows: permissionsData.can_view_flows !== false,
+              can_view_notes: permissionsData.can_view_notes !== false,
+              can_edit_projects: permissionsData.can_edit_projects !== false,
+              can_edit_tasks: permissionsData.can_edit_tasks !== false,
+              can_edit_positions: permissionsData.can_edit_positions !== false,
+              can_edit_analytics: permissionsData.can_edit_analytics !== false,
+              can_edit_briefings: permissionsData.can_edit_briefings !== false,
+              can_edit_culture: permissionsData.can_edit_culture !== false,
+              can_edit_vision: permissionsData.can_edit_vision !== false,
+              can_edit_processes: permissionsData.can_edit_processes !== false,
+              can_edit_inventory: permissionsData.can_edit_inventory !== false,
+              can_edit_flows: permissionsData.can_edit_flows !== false,
+              can_edit_notes: permissionsData.can_edit_notes !== false,
+              projects_only_assigned: permissionsData.projects_only_assigned ?? false,
             });
           } else {
             // For regular members: require explicit true
             setPermissions({
-              can_view_projects: permissionsData.can_view_projects,
-              can_view_tasks: permissionsData.can_view_tasks,
-              can_view_positions: permissionsData.can_view_positions,
-              can_view_analytics: permissionsData.can_view_analytics,
-              can_view_briefings: permissionsData.can_view_briefings,
-              can_view_culture: permissionsData.can_view_culture,
-              can_view_vision: permissionsData.can_view_vision,
-              can_view_processes: permissionsData.can_view_processes,
+              can_view_projects: permissionsData.can_view_projects ?? false,
+              can_view_tasks: permissionsData.can_view_tasks ?? false,
+              can_view_positions: permissionsData.can_view_positions ?? false,
+              can_view_analytics: permissionsData.can_view_analytics ?? false,
+              can_view_briefings: permissionsData.can_view_briefings ?? false,
+              can_view_culture: permissionsData.can_view_culture ?? false,
+              can_view_vision: permissionsData.can_view_vision ?? false,
+              can_view_processes: permissionsData.can_view_processes ?? false,
               can_view_inventory: permissionsData.can_view_inventory ?? false,
               can_view_ai: permissionsData.can_view_ai ?? false,
               can_view_workload: permissionsData.can_view_workload ?? false,
+              can_view_flows: permissionsData.can_view_flows ?? false,
+              can_view_notes: permissionsData.can_view_notes ?? false,
+              can_edit_projects: permissionsData.can_edit_projects ?? false,
+              can_edit_tasks: permissionsData.can_edit_tasks ?? false,
+              can_edit_positions: permissionsData.can_edit_positions ?? false,
+              can_edit_analytics: permissionsData.can_edit_analytics ?? false,
+              can_edit_briefings: permissionsData.can_edit_briefings ?? false,
+              can_edit_culture: permissionsData.can_edit_culture ?? false,
+              can_edit_vision: permissionsData.can_edit_vision ?? false,
+              can_edit_processes: permissionsData.can_edit_processes ?? false,
+              can_edit_inventory: permissionsData.can_edit_inventory ?? false,
+              can_edit_flows: permissionsData.can_edit_flows ?? false,
+              can_edit_notes: permissionsData.can_edit_notes ?? false,
+              projects_only_assigned: permissionsData.projects_only_assigned ?? false,
             });
           }
         } else {
           // No permissions record - admins/gestors get full access, members get none
           if (isAdminOrGestor) {
-            setPermissions({
-              can_view_projects: true,
-              can_view_tasks: true,
-              can_view_positions: true,
-              can_view_analytics: true,
-              can_view_briefings: true,
-              can_view_culture: true,
-              can_view_vision: true,
-              can_view_processes: true,
-              can_view_inventory: true,
-              can_view_ai: true,
-              can_view_workload: true,
-            });
+            setPermissions(ALL_PERMISSIONS_TRUE);
           } else {
-            setPermissions({
-              can_view_projects: false,
-              can_view_tasks: false,
-              can_view_positions: false,
-              can_view_analytics: false,
-              can_view_briefings: false,
-              can_view_culture: false,
-              can_view_vision: false,
-              can_view_processes: false,
-              can_view_inventory: false,
-              can_view_ai: false,
-              can_view_workload: false,
-            });
+            setPermissions(ALL_PERMISSIONS_FALSE);
           }
         }
       }
