@@ -27,10 +27,10 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   { title: "Home", url: "/home", icon: Home },
   { title: "Workspace", url: "/workspace", icon: Briefcase },
-  { title: "Fluzz AI", url: "/ai-assistant", icon: Bot, adminOnly: true }, // Admin only, or gestor/membro with permission
+  { title: "Fluzz AI", url: "/ai-assistant", icon: Bot, permission: "can_view_ai" },
   { title: "Projetos", url: "/projects", icon: FolderKanban, permission: "can_view_projects" },
   { title: "Minhas Tarefas", url: "/my-tasks", icon: CheckSquare, permission: "can_view_tasks" },
-  { title: "Workload View", url: "/workload", icon: Layers, adminOnly: true }, // Admin/gestor with team permission only
+  { title: "Workload View", url: "/workload", icon: Layers, permission: "can_view_workload" },
   { title: "Analytics", url: "/analytics", icon: BarChart3, permission: "can_view_analytics" },
 ];
 
@@ -64,17 +64,9 @@ export function AppSidebar() {
     // Items without permission requirement are always visible
     if (!item.permission) return true;
     
-    // ALL users (admin, gestor, membro) must respect explicit permissions
+    // ALL users must check the explicit permission value from DB
     const permissionKey = item.permission as keyof typeof permissions;
-    
-    // If permission exists and is explicitly false, hide the item
-    if (permissions && permissionKey in permissions) {
-      return permissions[permissionKey] === true;
-    }
-    
-    // Default: admins/gestors see items if no explicit permission set
-    // Members don't see items without explicit permission
-    return isAdmin || isGestor;
+    return permissions[permissionKey] === true;
   };
 
   return (

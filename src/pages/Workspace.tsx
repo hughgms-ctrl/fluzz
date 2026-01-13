@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Target, Heart, FileText, Briefcase, Clipboard, Users, GraduationCap } from "lucide-react";
+import { BookOpen, Target, Heart, FileText, Briefcase, Clipboard, Users, GraduationCap, GitBranch, StickyNote, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 
@@ -11,13 +11,9 @@ export default function Workspace() {
     permissions
   } = useWorkspace();
 
-  // Helper function to check permission - respects explicit permissions for ALL users
+  // ALL users must check explicit permission value
   const canView = (permissionKey: keyof typeof permissions): boolean => {
-    if (permissions && permissionKey in permissions) {
-      return permissions[permissionKey] === true;
-    }
-    // Default for admin/gestor if no explicit permission set
-    return isAdmin || isGestor;
+    return permissions[permissionKey] === true;
   };
 
   return (
@@ -85,6 +81,34 @@ export default function Workspace() {
             </Link>
           )}
 
+          {canView('can_view_flows') && (
+            <Link to="/workspace/flows">
+              <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+                <CardHeader className="p-4">
+                  <GitBranch className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">Fluxos</CardTitle>
+                  <CardDescription className="text-sm">
+                    Desenhe processos e workflows visuais
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+
+          {canView('can_view_notes') && (
+            <Link to="/workspace/notes">
+              <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+                <CardHeader className="p-4">
+                  <StickyNote className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">Notas</CardTitle>
+                  <CardDescription className="text-sm">
+                    Gerencie notas e documentos do workspace
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+
           {(isAdmin || isGestor) && (
             <Link to="/team">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
@@ -120,6 +144,20 @@ export default function Workspace() {
                   <Briefcase className="h-8 w-8 text-primary mb-2" />
                   <CardTitle className="text-lg">Setores</CardTitle>
                   <CardDescription className="text-sm">Gerencie setores e tarefas recorrentes</CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
+
+          {canView('can_view_inventory') && (
+            <Link to="/inventory">
+              <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
+                <CardHeader className="p-4">
+                  <Package className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle className="text-lg">Inventário</CardTitle>
+                  <CardDescription className="text-sm">
+                    Gerencie itens e movimentações do estoque
+                  </CardDescription>
                 </CardHeader>
               </Card>
             </Link>
