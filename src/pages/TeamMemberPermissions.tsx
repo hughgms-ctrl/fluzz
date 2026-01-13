@@ -66,6 +66,7 @@ interface UserPermissions {
   can_edit_inventory: boolean;
   can_edit_flows: boolean;
   can_edit_notes: boolean;
+  projects_only_assigned: boolean;
 }
 
 type PermissionKey = keyof Omit<UserPermissions, "id" | "user_id" | "workspace_id" | "created_at" | "updated_at">;
@@ -80,6 +81,7 @@ interface PermissionConfig {
 
 const permissionConfigs: PermissionConfig[] = [
   { key: "projects", label: "Projetos", viewKey: "can_view_projects", editKey: "can_edit_projects" },
+  { key: "projects_only_assigned", label: "Projetos (ver apenas os que participa)", viewKey: "projects_only_assigned", viewOnly: true },
   { key: "tasks", label: "Tarefas", viewKey: "can_view_tasks", editKey: "can_edit_tasks" },
   { key: "positions", label: "Setores", viewKey: "can_view_positions", editKey: "can_edit_positions" },
   { key: "analytics", label: "Analytics", viewKey: "can_view_analytics", editKey: "can_edit_analytics" },

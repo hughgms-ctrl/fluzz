@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,8 +7,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Building2, Crown, Trash2, Archive, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Building2, Crown, Trash2, Archive, Users, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
 interface WorkspaceWithDetails {
@@ -24,6 +27,8 @@ export default function WorkspaceManagement() {
   const { user } = useAuth();
   const { workspace: currentWorkspace, refetchWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
+  const [editingWorkspace, setEditingWorkspace] = useState<WorkspaceWithDetails | null>(null);
+  const [newWorkspaceName, setNewWorkspaceName] = useState("");
 
   const { data: workspaces, isLoading } = useQuery({
     queryKey: ["workspace-management", user?.id],
@@ -124,6 +129,40 @@ export default function WorkspaceManagement() {
     },
   });
 
+  const renameWorkspaceMutation = useMutation({
+    mutationFn: async ({ workspaceId, name }: { workspaceId: string; name: string }) => {
+      const { error } = await supabase
+        .from("workspaces")
+        .update({ name })
+        .eq("id", workspaceId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["workspace-management"] });
+      refetchWorkspace();
+      setEditingWorkspace(null);
+      setNewWorkspaceName("");
+      toast.success("Nome do workspace atualizado!");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao renomear workspace");
+    },
+  });
+
+  const handleEditClick = (workspace: WorkspaceWithDetails) => {
+    setEditingWorkspace(workspace);
+    setNewWorkspaceName(workspace.name);
+  };
+
+  const handleSaveRename = () => {
+    if (!editingWorkspace || !newWorkspaceName.trim()) return;
+    renameWorkspaceMutation.mutate({
+      workspaceId: editingWorkspace.id,
+      name: newWorkspaceName.trim(),
+    });
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -179,6 +218,16 @@ export default function WorkspaceManagement() {
                       <Badge variant="outline">
                         {workspace.role === "admin" ? "Administrador" : workspace.role === "gestor" ? "Gestor" : "Membro"}
                       </Badge>
+                      {(workspace.is_owner || workspace.role === "admin") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => handleEditClick(workspace)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
                     <CardDescription className="mt-2 flex items-center gap-4">
                       <span className="flex items-center gap-1">
@@ -253,6 +302,33 @@ export default function WorkspaceManagement() {
             </Card>
           ))}
         </div>
+
+        {/* Rename Dialog */}
+        <Dialog open={!!editingWorkspace} onOpenChange={(open) => !open && setEditingWorkspace(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Renomear Workspace</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Input
+                value={newWorkspaceName}
+                onChange={(e) => setNewWorkspaceName(e.target.value)}
+                placeholder="Nome do workspace"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditingWorkspace(null)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveRename}
+                disabled={!newWorkspaceName.trim() || renameWorkspaceMutation.isPending}
+              >
+                {renameWorkspaceMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

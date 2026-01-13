@@ -35,6 +35,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { formatDateBR, cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -46,6 +47,39 @@ export default function Projects() {
   const navigate = useNavigate();
   const { workspace, isAdmin, isGestor } = useWorkspace();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+
+  // Fetch user permissions to check projects_only_assigned
+  const { data: userPermissions } = useQuery({
+    queryKey: ["user-permissions-projects", workspace?.id, user?.id],
+    queryFn: async () => {
+      if (!workspace?.id || !user?.id) return null;
+      const { data, error } = await supabase
+        .from("user_permissions")
+        .select("projects_only_assigned")
+        .eq("workspace_id", workspace.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!workspace?.id && !!user?.id,
+  });
+
+  // If user has projects_only_assigned permission, fetch their project memberships
+  const { data: userProjectMemberships } = useQuery({
+    queryKey: ["user-project-memberships", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data?.map(m => m.project_id) || [];
+    },
+    enabled: !!user?.id && !isAdmin && !isGestor && !!userPermissions?.projects_only_assigned,
+  });
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ["projects", workspace?.id],
@@ -86,7 +120,13 @@ export default function Projects() {
     const canSeeDrafts = isAdmin || isGestor;
 
     // All projects for different categories
-    const allProjects = projects || [];
+    let allProjects = projects || [];
+
+    // If user has projects_only_assigned permission, filter to only their projects
+    const shouldFilterByMembership = !isAdmin && !isGestor && userPermissions?.projects_only_assigned && userProjectMemberships;
+    if (shouldFilterByMembership) {
+      allProjects = allProjects.filter(p => userProjectMemberships.includes(p.id));
+    }
 
     // Active projects: not archived, not draft, not standalone folder
     const active = sortByEventDate(allProjects.filter(p => 
@@ -118,7 +158,7 @@ export default function Projects() {
       standaloneFolders: standalone, 
       calendarProjects: calendarProjectsList 
     };
-  }, [projects, isAdmin, isGestor]);
+  }, [projects, isAdmin, isGestor, userPermissions, userProjectMemberships]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
