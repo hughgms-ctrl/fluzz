@@ -11,7 +11,14 @@ export default function Workspace() {
     permissions
   } = useWorkspace();
 
-  const canViewAll = isAdmin || isGestor;
+  // Helper function to check permission - respects explicit permissions for ALL users
+  const canView = (permissionKey: keyof typeof permissions): boolean => {
+    if (permissions && permissionKey in permissions) {
+      return permissions[permissionKey] === true;
+    }
+    // Default for admin/gestor if no explicit permission set
+    return isAdmin || isGestor;
+  };
 
   return (
     <AppLayout>
@@ -36,7 +43,7 @@ export default function Workspace() {
             </Card>
           </Link>
 
-          {(canViewAll || permissions.can_view_culture) && (
+          {canView('can_view_culture') && (
             <Link to="/workspace/culture">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
@@ -50,7 +57,7 @@ export default function Workspace() {
             </Link>
           )}
 
-          {(canViewAll || permissions.can_view_vision) && (
+          {canView('can_view_vision') && (
             <Link to="/workspace/vision">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
@@ -64,7 +71,7 @@ export default function Workspace() {
             </Link>
           )}
 
-          {(canViewAll || permissions.can_view_processes) && (
+          {canView('can_view_processes') && (
             <Link to="/workspace/processes">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
@@ -92,7 +99,7 @@ export default function Workspace() {
             </Link>
           )}
 
-          {(canViewAll || permissions.can_view_projects) && (
+          {canView('can_view_projects') && (
             <Link to="/projects">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
@@ -106,7 +113,7 @@ export default function Workspace() {
             </Link>
           )}
 
-          {(canViewAll || permissions.can_view_positions) && (
+          {canView('can_view_positions') && (
             <Link to="/positions">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
@@ -118,7 +125,7 @@ export default function Workspace() {
             </Link>
           )}
 
-          {(canViewAll || permissions.can_view_briefings) && (
+          {canView('can_view_briefings') && (
             <Link to="/briefings">
               <Card className="hover:shadow-lg transition-all hover:scale-[1.02] cursor-pointer h-full border-l-4 border-l-primary">
                 <CardHeader className="p-4">
