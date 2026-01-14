@@ -92,6 +92,48 @@ export default function MyTasks() {
       const selectFields =
         "*, projects(id, name, color, archived, pending_notifications, workspace_id, is_standalone_folder), task_assignees(user_id)";
 
+      // Fetch tasks where user is in task_assignees (multi-assign)
+      const fetchMultiAssignedProjectTasks = async () => {
+        if (projectIds.length === 0) return [];
+        const { data, error } = await supabase
+          .from("task_assignees")
+          .select("task_id")
+          .eq("user_id", user.id);
+        if (error) throw error;
+        if (!data || data.length === 0) return [];
+        
+        const taskIds = data.map((t) => t.task_id);
+        const { data: tasks, error: tasksError } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .in("id", taskIds)
+          .in("project_id", projectIds)
+          .order("created_at", { ascending: false });
+        if (tasksError) throw tasksError;
+        return tasks || [];
+      };
+
+      const fetchMultiAssignedStandaloneTasks = async () => {
+        const { data, error } = await supabase
+          .from("task_assignees")
+          .select("task_id")
+          .eq("user_id", user.id);
+        if (error) throw error;
+        if (!data || data.length === 0) return [];
+        
+        const taskIds = data.map((t) => t.task_id);
+        const { data: tasks, error: tasksError } = await supabase
+          .from("tasks")
+          .select(selectFields)
+          .in("id", taskIds)
+          .is("project_id", null)
+          .eq("workspace_id", workspace.id)
+          .order("created_at", { ascending: false });
+        if (tasksError) throw tasksError;
+        return tasks || [];
+      };
+
+      // Fetch tasks where user is in legacy assigned_to field
       const fetchAssignedProjectTasks = async () => {
         if (projectIds.length === 0) return [];
         const { data, error } = await supabase
@@ -142,16 +184,32 @@ export default function MyTasks() {
         return data || [];
       };
 
-      const [assignedProject, assignedStandalone, reviewProject, reviewStandalone] = await Promise.all([
+      const [
+        assignedProject, 
+        assignedStandalone, 
+        multiAssignedProject,
+        multiAssignedStandalone,
+        reviewProject, 
+        reviewStandalone
+      ] = await Promise.all([
         fetchAssignedProjectTasks(),
         fetchAssignedStandaloneTasks(),
+        fetchMultiAssignedProjectTasks(),
+        fetchMultiAssignedStandaloneTasks(),
         fetchReviewProjectTasks(),
         fetchReviewStandaloneTasks(),
       ]);
 
       // Combine and deduplicate
       const byId = new Map<string, any>();
-      [...assignedProject, ...assignedStandalone, ...reviewProject, ...reviewStandalone].forEach((t) => {
+      [
+        ...assignedProject, 
+        ...assignedStandalone, 
+        ...multiAssignedProject,
+        ...multiAssignedStandalone,
+        ...reviewProject, 
+        ...reviewStandalone
+      ].forEach((t) => {
         byId.set(t.id, t);
       });
 
