@@ -93,20 +93,21 @@ export default function MyTasks() {
         "*, projects(id, name, color, archived, pending_notifications, workspace_id, is_standalone_folder), task_assignees(user_id)";
 
       // Fetch tasks where user is in task_assignees (multi-assign)
+      // Get all task IDs that user is assigned to via task_assignees
+      const { data: userAssignedTaskIds, error: userAssignedError } = await supabase
+        .from("task_assignees")
+        .select("task_id")
+        .eq("user_id", user.id);
+      if (userAssignedError) throw userAssignedError;
+      
+      const multiAssignTaskIds = (userAssignedTaskIds || []).map((t) => t.task_id);
+
       const fetchMultiAssignedProjectTasks = async () => {
-        if (projectIds.length === 0) return [];
-        const { data, error } = await supabase
-          .from("task_assignees")
-          .select("task_id")
-          .eq("user_id", user.id);
-        if (error) throw error;
-        if (!data || data.length === 0) return [];
-        
-        const taskIds = data.map((t) => t.task_id);
+        if (projectIds.length === 0 || multiAssignTaskIds.length === 0) return [];
         const { data: tasks, error: tasksError } = await supabase
           .from("tasks")
           .select(selectFields)
-          .in("id", taskIds)
+          .in("id", multiAssignTaskIds)
           .in("project_id", projectIds)
           .order("created_at", { ascending: false });
         if (tasksError) throw tasksError;
@@ -114,18 +115,11 @@ export default function MyTasks() {
       };
 
       const fetchMultiAssignedStandaloneTasks = async () => {
-        const { data, error } = await supabase
-          .from("task_assignees")
-          .select("task_id")
-          .eq("user_id", user.id);
-        if (error) throw error;
-        if (!data || data.length === 0) return [];
-        
-        const taskIds = data.map((t) => t.task_id);
+        if (multiAssignTaskIds.length === 0) return [];
         const { data: tasks, error: tasksError } = await supabase
           .from("tasks")
           .select(selectFields)
-          .in("id", taskIds)
+          .in("id", multiAssignTaskIds)
           .is("project_id", null)
           .eq("workspace_id", workspace.id)
           .order("created_at", { ascending: false });
@@ -133,31 +127,7 @@ export default function MyTasks() {
         return tasks || [];
       };
 
-      // Fetch tasks where user is in legacy assigned_to field
-      const fetchAssignedProjectTasks = async () => {
-        if (projectIds.length === 0) return [];
-        const { data, error } = await supabase
-          .from("tasks")
-          .select(selectFields)
-          .eq("assigned_to", user.id)
-          .in("project_id", projectIds)
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        return data || [];
-      };
-
-      const fetchAssignedStandaloneTasks = async () => {
-        const { data, error } = await supabase
-          .from("tasks")
-          .select(selectFields)
-          .eq("assigned_to", user.id)
-          .is("project_id", null)
-          .eq("workspace_id", workspace.id)
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        return data || [];
-      };
-
+      // Fetch tasks where user is reviewer (approval_reviewer_id)
       const fetchReviewProjectTasks = async () => {
         if (projectIds.length === 0) return [];
         const { data, error } = await supabase
@@ -185,26 +155,20 @@ export default function MyTasks() {
       };
 
       const [
-        assignedProject, 
-        assignedStandalone, 
         multiAssignedProject,
         multiAssignedStandalone,
         reviewProject, 
         reviewStandalone
       ] = await Promise.all([
-        fetchAssignedProjectTasks(),
-        fetchAssignedStandaloneTasks(),
         fetchMultiAssignedProjectTasks(),
         fetchMultiAssignedStandaloneTasks(),
         fetchReviewProjectTasks(),
         fetchReviewStandaloneTasks(),
       ]);
 
-      // Combine and deduplicate
+      // Combine and deduplicate - only use task_assignees as source of truth
       const byId = new Map<string, any>();
       [
-        ...assignedProject, 
-        ...assignedStandalone, 
         ...multiAssignedProject,
         ...multiAssignedStandalone,
         ...reviewProject, 
