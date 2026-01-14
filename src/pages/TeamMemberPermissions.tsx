@@ -203,8 +203,9 @@ export default function TeamMemberPermissions() {
 
       if (error) throw error;
 
-      // When changing role to admin or gestor, set all permissions to true in the database
-      if (newRole === "admin" || newRole === "gestor") {
+      // Only when changing role to admin, set all permissions to true in the database
+      // Gestor keeps whatever permissions were set by the admin
+      if (newRole === "admin") {
         const allPermissionsTrue = {
           can_view_projects: true,
           can_view_tasks: true,
