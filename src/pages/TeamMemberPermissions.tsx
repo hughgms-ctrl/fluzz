@@ -202,10 +202,48 @@ export default function TeamMemberPermissions() {
         .eq("workspace_id", workspace!.id);
 
       if (error) throw error;
+
+      // When changing role to admin or gestor, set all permissions to true in the database
+      if (newRole === "admin" || newRole === "gestor") {
+        const allPermissionsTrue = {
+          can_view_projects: true,
+          can_view_tasks: true,
+          can_view_positions: true,
+          can_view_analytics: true,
+          can_view_briefings: true,
+          can_view_culture: true,
+          can_view_vision: true,
+          can_view_processes: true,
+          can_view_inventory: true,
+          can_view_ai: true,
+          can_view_workload: true,
+          can_view_flows: true,
+          can_view_notes: true,
+          can_edit_projects: true,
+          can_edit_tasks: true,
+          can_edit_positions: true,
+          can_edit_analytics: true,
+          can_edit_briefings: true,
+          can_edit_culture: true,
+          can_edit_vision: true,
+          can_edit_processes: true,
+          can_edit_inventory: true,
+          can_edit_flows: true,
+          can_edit_notes: true,
+          projects_only_assigned: false,
+        };
+
+        await supabase
+          .from("user_permissions")
+          .update(allPermissionsTrue)
+          .eq("user_id", userId!)
+          .eq("workspace_id", workspace!.id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["team-member"] });
       queryClient.invalidateQueries({ queryKey: ["team-members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-permissions"] });
       toast.success("Função atualizada com sucesso");
     },
     onError: (error: Error) => {
