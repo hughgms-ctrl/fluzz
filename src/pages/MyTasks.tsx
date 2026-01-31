@@ -8,6 +8,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
 import { UnifiedTaskView } from "@/components/tasks/UnifiedTaskView";
+import { FocusModeView } from "@/components/focus-mode/FocusModeView";
+import { ViewModeToggle } from "@/components/view-mode/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -36,6 +39,7 @@ export default function MyTasks() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(true);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const { viewMode, setViewMode } = useViewMode();
   
   // Apply URL filter on mount
   useEffect(() => {
@@ -338,175 +342,206 @@ export default function MyTasks() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">Minhas Tarefas</h1>
             <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Visualize e gerencie todas as tarefas atribuídas a você
+              {viewMode === "focus" 
+                ? "Foco total nas suas tarefas"
+                : "Visualize e gerencie todas as tarefas atribuídas a você"}
             </p>
           </div>
-          <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 w-full sm:w-auto">
-            <Plus size={16} />
-            <span className="hidden sm:inline">Nova Tarefa Pessoal</span>
-            <span className="sm:hidden">Nova Tarefa</span>
-          </Button>
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid gap-3 grid-cols-3">
-          <Card className="border-l-4 border-l-blue-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <FolderOpen className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{projectTasks.length}</p>
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Projeto</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-purple-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <User className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{personalTasks.length}</p>
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Pessoais</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
-              <RefreshCw className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
-              <div>
-                <p className="text-lg sm:text-2xl font-bold">{routineTasks.length}</p>
-                <p className="text-[10px] sm:text-sm text-muted-foreground">Rotina</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Mobile Filter Drawer */}
-        <MobileFilterDrawer
-          title="Filtrar Tarefas"
-          description="Aplique filtros para encontrar tarefas específicas"
-          activeFiltersCount={activeFiltersCount}
-          open={filterDrawerOpen}
-          onOpenChange={setFilterDrawerOpen}
-        >
-          <TaskFilters
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            priorityFilter={priorityFilter}
-            onPriorityChange={setPriorityFilter}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            dueDateFilter={dueDateFilter}
-            onDueDateChange={setDueDateFilter}
-            projectFilter={projectFilter}
-            onProjectChange={setProjectFilter}
-            projects={projects}
-            typeFilter={typeFilter}
-            onTypeChange={setTypeFilter}
-            onClearAll={clearAllFilters}
-          />
-        </MobileFilterDrawer>
-
-        {/* Desktop Filters - Collapsible */}
-        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="hidden md:block">
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium text-sm hover:bg-transparent">
-              {isFiltersOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              Filtros
-              {activeFiltersCount > 0 && (
-                <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
-                  {activeFiltersCount}
-                </span>
-              )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <ViewModeToggle 
+              viewMode={viewMode} 
+              onViewModeChange={setViewMode}
+            />
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 flex-1 sm:flex-none" size="sm">
+              <Plus size={16} />
+              <span className="hidden sm:inline">Nova Tarefa</span>
+              <span className="sm:hidden">Nova</span>
             </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <TaskFilters
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              priorityFilter={priorityFilter}
-              onPriorityChange={setPriorityFilter}
-              statusFilter={statusFilter}
-              onStatusChange={setStatusFilter}
-              dueDateFilter={dueDateFilter}
-              onDueDateChange={setDueDateFilter}
-              projectFilter={projectFilter}
-              onProjectChange={setProjectFilter}
-              projects={projects}
-              typeFilter={typeFilter}
-              onTypeChange={setTypeFilter}
-              onClearAll={clearAllFilters}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Toggle show completed */}
-        <div className="flex items-center justify-end gap-2">
-          <Switch
-            id="show-completed"
-            checked={showCompleted}
-            onCheckedChange={setShowCompleted}
-          />
-          <Label htmlFor="show-completed" className="text-xs sm:text-sm text-muted-foreground cursor-pointer">
-            Exibir concluídas
-          </Label>
+          </div>
         </div>
 
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">
-              Todas <span className="hidden sm:inline">({filteredTasks.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="todo" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">A fazer</span>
-              <span className="sm:hidden">Fazer</span>
-              <span className="hidden sm:inline">({todoTasks.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="in_progress" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Fazendo</span>
-              <span className="sm:hidden">Fazendo</span>
-              <span className="hidden sm:inline">({inProgressTasks.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="completed" className="gap-1 sm:gap-2 text-xs sm:text-sm">
-              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Feito</span>
-              <span className="sm:hidden">Feito</span>
-              <span className="hidden sm:inline">({completedTasks.length})</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all" className="mt-4 md:mt-6">
-            <UnifiedTaskView 
+        {/* Focus Mode View */}
+        {viewMode === "focus" ? (
+          <>
+            {/* Toggle show completed for focus mode */}
+            <div className="flex items-center justify-end gap-2">
+              <Switch
+                id="show-completed-focus"
+                checked={showCompleted}
+                onCheckedChange={setShowCompleted}
+              />
+              <Label htmlFor="show-completed-focus" className="text-xs sm:text-sm text-muted-foreground cursor-pointer">
+                Exibir concluídas
+              </Label>
+            </div>
+            <FocusModeView 
               tasks={filteredTasks} 
-              showGrouping={true}
               queryKeyToInvalidate={["my-tasks", "tasks"]}
             />
-          </TabsContent>
+          </>
+        ) : (
+          <>
+            {/* Summary Cards - Management Mode */}
+            <div className="grid gap-3 grid-cols-3">
+              <Card className="border-l-4 border-l-chart-1">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <FolderOpen className="h-5 w-5 sm:h-8 sm:w-8 text-chart-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-lg sm:text-2xl font-bold">{projectTasks.length}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Projeto</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-chart-4">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <User className="h-5 w-5 sm:h-8 sm:w-8 text-chart-4 flex-shrink-0" />
+                  <div>
+                    <p className="text-lg sm:text-2xl font-bold">{personalTasks.length}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Pessoais</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-l-4 border-l-chart-3">
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <RefreshCw className="h-5 w-5 sm:h-8 sm:w-8 text-chart-3 flex-shrink-0" />
+                  <div>
+                    <p className="text-lg sm:text-2xl font-bold">{routineTasks.length}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Rotina</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-          <TabsContent value="todo" className="mt-4 md:mt-6">
-            <UnifiedTaskView 
-              tasks={todoTasks} 
-              showGrouping={true}
-              queryKeyToInvalidate={["my-tasks", "tasks"]}
-            />
-          </TabsContent>
+            {/* Mobile Filter Drawer */}
+            <MobileFilterDrawer
+              title="Filtrar Tarefas"
+              description="Aplique filtros para encontrar tarefas específicas"
+              activeFiltersCount={activeFiltersCount}
+              open={filterDrawerOpen}
+              onOpenChange={setFilterDrawerOpen}
+            >
+              <TaskFilters
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                priorityFilter={priorityFilter}
+                onPriorityChange={setPriorityFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                dueDateFilter={dueDateFilter}
+                onDueDateChange={setDueDateFilter}
+                projectFilter={projectFilter}
+                onProjectChange={setProjectFilter}
+                projects={projects}
+                typeFilter={typeFilter}
+                onTypeChange={setTypeFilter}
+                onClearAll={clearAllFilters}
+              />
+            </MobileFilterDrawer>
 
-          <TabsContent value="in_progress" className="mt-4 md:mt-6">
-            <UnifiedTaskView 
-              tasks={inProgressTasks} 
-              showGrouping={true}
-              queryKeyToInvalidate={["my-tasks", "tasks"]}
-            />
-          </TabsContent>
+            {/* Desktop Filters - Collapsible */}
+            <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="hidden md:block">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 p-0 h-auto font-medium text-sm hover:bg-transparent">
+                  {isFiltersOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  Filtros
+                  {activeFiltersCount > 0 && (
+                    <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3">
+                <TaskFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  priorityFilter={priorityFilter}
+                  onPriorityChange={setPriorityFilter}
+                  statusFilter={statusFilter}
+                  onStatusChange={setStatusFilter}
+                  dueDateFilter={dueDateFilter}
+                  onDueDateChange={setDueDateFilter}
+                  projectFilter={projectFilter}
+                  onProjectChange={setProjectFilter}
+                  projects={projects}
+                  typeFilter={typeFilter}
+                  onTypeChange={setTypeFilter}
+                  onClearAll={clearAllFilters}
+                />
+              </CollapsibleContent>
+            </Collapsible>
 
-          <TabsContent value="completed" className="mt-4 md:mt-6">
-            <UnifiedTaskView 
-              tasks={completedTasks} 
-              showGrouping={true}
-              queryKeyToInvalidate={["my-tasks", "tasks"]}
-            />
-          </TabsContent>
-        </Tabs>
+            {/* Toggle show completed */}
+            <div className="flex items-center justify-end gap-2">
+              <Switch
+                id="show-completed"
+                checked={showCompleted}
+                onCheckedChange={setShowCompleted}
+              />
+              <Label htmlFor="show-completed" className="text-xs sm:text-sm text-muted-foreground cursor-pointer">
+                Exibir concluídas
+              </Label>
+            </div>
+
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">
+                  Todas <span className="hidden sm:inline">({filteredTasks.length})</span>
+                </TabsTrigger>
+                <TabsTrigger value="todo" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">A fazer</span>
+                  <span className="sm:hidden">Fazer</span>
+                  <span className="hidden sm:inline">({todoTasks.length})</span>
+                </TabsTrigger>
+                <TabsTrigger value="in_progress" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <PlayCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Fazendo</span>
+                  <span className="sm:hidden">Fazendo</span>
+                  <span className="hidden sm:inline">({inProgressTasks.length})</span>
+                </TabsTrigger>
+                <TabsTrigger value="completed" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Feito</span>
+                  <span className="sm:hidden">Feito</span>
+                  <span className="hidden sm:inline">({completedTasks.length})</span>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="all" className="mt-4 md:mt-6">
+                <UnifiedTaskView 
+                  tasks={filteredTasks} 
+                  showGrouping={true}
+                  queryKeyToInvalidate={["my-tasks", "tasks"]}
+                />
+              </TabsContent>
+
+              <TabsContent value="todo" className="mt-4 md:mt-6">
+                <UnifiedTaskView 
+                  tasks={todoTasks} 
+                  showGrouping={true}
+                  queryKeyToInvalidate={["my-tasks", "tasks"]}
+                />
+              </TabsContent>
+
+              <TabsContent value="in_progress" className="mt-4 md:mt-6">
+                <UnifiedTaskView 
+                  tasks={inProgressTasks} 
+                  showGrouping={true}
+                  queryKeyToInvalidate={["my-tasks", "tasks"]}
+                />
+              </TabsContent>
+
+              <TabsContent value="completed" className="mt-4 md:mt-6">
+                <UnifiedTaskView 
+                  tasks={completedTasks} 
+                  showGrouping={true}
+                  queryKeyToInvalidate={["my-tasks", "tasks"]}
+                />
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
       </div>
 
       <CreateMyTaskDialog
