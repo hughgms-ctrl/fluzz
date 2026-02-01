@@ -12,7 +12,6 @@ import { useState, useMemo } from "react";
 import { CreateStandaloneTaskDialog } from "@/components/tasks/CreateStandaloneTaskDialog";
 import { toast } from "sonner";
 import { isTaskOverdue } from "@/lib/utils";
-import { ViewModeToggle } from "@/components/view-mode/ViewModeToggle";
 import { useViewMode } from "@/hooks/useViewMode";
 
 export default function Home() {
@@ -28,7 +27,7 @@ export default function Home() {
     user
   } = useAuth();
   const [showCreateTask, setShowCreateTask] = useState(false);
-  const { viewMode, setViewMode } = useViewMode();
+  const { viewMode } = useViewMode();
 
   const {
     data: projects,
@@ -234,10 +233,6 @@ export default function Home() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <ViewModeToggle 
-              viewMode={viewMode} 
-              onViewModeChange={setViewMode}
-            />
             {(isAdmin || isGestor) && (
               <Button onClick={() => setShowCreateTask(true)} size="sm" className="flex-1 sm:flex-none text-xs sm:text-sm">
                 <Plus className="mr-1 sm:mr-2 h-4 w-4" />

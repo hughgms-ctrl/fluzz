@@ -14,6 +14,8 @@ import { AdminViewBanner } from "@/components/admin/AdminViewBanner";
 import { SetupPopup } from "@/components/onboarding/SetupPopup";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { ViewModeToggle } from "@/components/view-mode/ViewModeToggle";
+import { useViewMode } from "@/hooks/useViewMode";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -35,6 +37,7 @@ export const AppLayout = ({
   } = useWorkspace();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { viewMode, setViewMode } = useViewMode();
 
   // Evita "desmontar" a tela inteira depois que já carregou uma vez.
   // Isso previne perda de texto em formulários quando o workspace faz refetch em background.
@@ -113,6 +116,11 @@ export const AppLayout = ({
                 </Select>}
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
+              <ViewModeToggle 
+                viewMode={viewMode} 
+                onViewModeChange={setViewMode}
+                className="hidden sm:flex"
+              />
               <ThemeToggle />
               <NotificationBell />
               <Button
