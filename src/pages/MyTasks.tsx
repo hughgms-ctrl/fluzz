@@ -37,9 +37,10 @@ export default function MyTasks() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-  const [showCompleted, setShowCompleted] = useState(true);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-  const { viewMode, setViewMode } = useViewMode();
+  const { viewMode, setViewMode, hideCompleted, setHideCompleted } = useViewMode();
+  const showCompleted = !hideCompleted;
+  const setShowCompleted = (show: boolean) => setHideCompleted(!show);
   
   // Apply URL filter on mount
   useEffect(() => {

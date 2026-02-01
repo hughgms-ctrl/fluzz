@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -11,6 +12,8 @@ import { User, Shield } from "lucide-react";
 import { AIFloatingButton } from "@/components/ai/AIFloatingButton";
 import { AdminViewBanner } from "@/components/admin/AdminViewBanner";
 import { SetupPopup } from "@/components/onboarding/SetupPopup";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -31,6 +34,7 @@ export const AppLayout = ({
     isAdminViewMode
   } = useWorkspace();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   // Evita "desmontar" a tela inteira depois que já carregou uma vez.
   // Isso previne perda de texto em formulários quando o workspace faz refetch em background.
@@ -124,12 +128,17 @@ export const AppLayout = ({
           </header>
           {/* Spacer para compensar o header fixo */}
           <div className="h-14 shrink-0" />
-          <main className="flex-1 p-3 sm:p-6 animate-fade-in min-w-0">
+          <main className={cn(
+            "flex-1 p-3 sm:p-6 animate-fade-in min-w-0",
+            isMobile && "pb-20" // Extra padding for mobile bottom nav
+          )}>
             {children}
             </main>
           </div>
           <AIFloatingButton />
           <SetupPopup />
+          {/* Mobile Bottom Navigation */}
+          {isMobile && <MobileBottomNav />}
         </div>
       </div>
     </SidebarProvider>;
