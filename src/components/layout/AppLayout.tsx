@@ -1,9 +1,10 @@
+import { useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -36,8 +37,25 @@ export const AppLayout = ({
     isAdminViewMode
   } = useWorkspace();
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode();
+
+  // Focus Mode: keep the user in the "Todoist" surface (tasks).
+  useEffect(() => {
+    if (viewMode !== "focus") return;
+
+    const path = location.pathname;
+    const isAllowed =
+      path === "/my-tasks" ||
+      path.startsWith("/tasks/") ||
+      path === "/profile" ||
+      path.startsWith("/workspace/setup");
+
+    if (!isAllowed) {
+      navigate("/my-tasks", { replace: true });
+    }
+  }, [location.pathname, navigate, viewMode]);
 
   // Evita "desmontar" a tela inteira depois que já carregou uma vez.
   // Isso previne perda de texto em formulários quando o workspace faz refetch em background.
@@ -119,7 +137,7 @@ export const AppLayout = ({
               <ViewModeToggle 
                 viewMode={viewMode} 
                 onViewModeChange={setViewMode}
-                className="hidden sm:flex"
+                className="flex shrink-0"
               />
               <ThemeToggle />
               <NotificationBell />
@@ -146,7 +164,7 @@ export const AppLayout = ({
           <AIFloatingButton />
           <SetupPopup />
           {/* Mobile Bottom Navigation */}
-          {isMobile && <MobileBottomNav />}
+          {isMobile && viewMode !== "focus" && <MobileBottomNav />}
         </div>
       </div>
     </SidebarProvider>;

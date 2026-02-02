@@ -56,6 +56,7 @@ import AdminPlans from "./pages/admin/AdminPlans";
 import AdminTeam from "./pages/admin/AdminTeam";
 import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import { ViewModeProvider } from "@/contexts/ViewModeContext";
 
 const queryClient = new QueryClient();
 
@@ -65,11 +66,12 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
-          <WorkspaceProvider>
-            <AdminProvider>
-              <AdminViewProvider>
-                <Routes>
+        <ViewModeProvider>
+          <AuthProvider>
+            <WorkspaceProvider>
+              <AdminProvider>
+                <AdminViewProvider>
+                  <Routes>
                   <Route path="/" element={<Landing />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -123,11 +125,12 @@ const App = () => (
                   <Route path="/admin/subscriptions" element={<AdminSubscriptions />} />
                   <Route path="/admin/audit" element={<AdminAuditLogs />} />
                   <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AdminViewProvider>
-            </AdminProvider>
-          </WorkspaceProvider>
-        </AuthProvider>
+                  </Routes>
+                </AdminViewProvider>
+              </AdminProvider>
+            </WorkspaceProvider>
+          </AuthProvider>
+        </ViewModeProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
