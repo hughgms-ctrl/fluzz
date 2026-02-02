@@ -41,9 +41,16 @@ export default function MyTasks() {
   const showCompleted = !hideCompleted;
   const setShowCompleted = (show: boolean) => setHideCompleted(!show);
   
-  // Apply URL filter on mount
+  // Apply URL filter (and Focus Mode project selection) on mount / URL change
   useEffect(() => {
     const urlFilter = searchParams.get("filter");
+    const urlProjectId = searchParams.get("projectId");
+
+    // In Focus Mode, project selection comes from URL (Todoist-like sidebar behavior)
+    if (viewMode === "focus") {
+      setProjectFilter(urlProjectId ?? "all");
+    }
+
     if (urlFilter) {
       if (urlFilter === "completed") {
         setStatusFilter("completed");
@@ -56,10 +63,13 @@ export default function MyTasks() {
         setDueDateFilter("overdue");
         setShowCompleted(false);
       }
-      // Clear the URL param after applying
-      setSearchParams({}, { replace: true });
+
+      // Clear only the applied filter param, keep others (ex: projectId)
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("filter");
+      setSearchParams(nextParams, { replace: true });
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, viewMode]);
 
   const clearAllFilters = () => {
     setSearchTerm("");
