@@ -163,8 +163,8 @@ export const AppLayout = ({
           </div>
           <AIFloatingButton />
           <SetupPopup />
-          {/* Mobile Bottom Navigation */}
-          {isMobile && viewMode !== "focus" && <MobileBottomNav />}
+          {/* Mobile Bottom Navigation - Show in both modes */}
+          {isMobile && <MobileBottomNav />}
         </div>
       </div>
     </SidebarProvider>;

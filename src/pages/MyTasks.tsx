@@ -9,6 +9,7 @@ import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { CreateMyTaskDialog } from "@/components/tasks/CreateMyTaskDialog";
 import { UnifiedTaskView } from "@/components/tasks/UnifiedTaskView";
 import { FocusModeView } from "@/components/focus-mode/FocusModeView";
+import { FocusModeHeader } from "@/components/focus-mode/FocusModeHeader";
 import { useViewMode } from "@/hooks/useViewMode";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -220,15 +221,52 @@ export default function MyTasks() {
       if (!workspace) return [];
       const { data, error } = await supabase
         .from("projects")
-        .select("id, name, archived, pending_notifications")
+        .select("id, name, color, archived, pending_notifications")
         .eq("workspace_id", workspace.id)
         .eq("archived", false)
         .neq("pending_notifications", true)
         .order("name");
       if (error) throw error;
-      return (data || []).map((p) => ({ id: p.id, name: p.name }));
+      return (data || []).map((p) => ({ id: p.id, name: p.name, color: p.color }));
     },
     enabled: !!workspace,
+  });
+
+  // Get current project ID from URL (for Focus Mode)
+  const urlProjectId = searchParams.get("projectId");
+
+  // Fetch selected project info for Focus Mode header
+  const { data: selectedProjectData } = useQuery({
+    queryKey: ["project-for-focus", urlProjectId],
+    queryFn: async () => {
+      if (!urlProjectId) return null;
+      const { data, error } = await supabase
+        .from("projects")
+        .select("id, name, color")
+        .eq("id", urlProjectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!urlProjectId && viewMode === "focus",
+  });
+
+  // Fetch ALL tasks for a project (when viewing a project in Focus Mode)
+  const { data: allProjectTasks } = useQuery({
+    queryKey: ["project-all-tasks", urlProjectId, workspace?.id],
+    queryFn: async () => {
+      if (!urlProjectId || !workspace) return [];
+      const selectFields =
+        "*, projects(id, name, color, archived, pending_notifications, workspace_id, is_standalone_folder), task_assignees(user_id)";
+      const { data, error } = await supabase
+        .from("tasks")
+        .select(selectFields)
+        .eq("project_id", urlProjectId)
+        .order("task_order", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!urlProjectId && viewMode === "focus" && !!workspace,
   });
 
   const deleteTaskMutation = useMutation({
@@ -330,9 +368,26 @@ export default function MyTasks() {
   const todoTasks = useMemo(() => filteredTasks.filter((t) => t.status === "todo"), [filteredTasks]);
   const inProgressTasks = useMemo(() => filteredTasks.filter((t) => t.status === "in_progress"), [filteredTasks]);
   const completedTasks = useMemo(() => filteredTasks.filter((t) => t.status === "completed"), [filteredTasks]);
-  const projectTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "project" || getTaskType(t) === "folder"), [filteredTasks]);
+  const projectTypeTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "project" || getTaskType(t) === "folder"), [filteredTasks]);
   const personalTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "personal"), [filteredTasks]);
-  const routineTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "routine"), [filteredTasks]);
+  const routineTypeTasks = useMemo(() => filteredTasks.filter((t) => getTaskType(t) === "routine"), [filteredTasks]);
+
+  // Determine which tasks to show in Focus Mode:
+  // - If a project is selected: show ALL project tasks (not just user's)
+  // - If no project selected: show user's tasks (filtered)
+  const focusModeTasks = useMemo(() => {
+    if (viewMode !== "focus") return filteredTasks;
+    
+    if (urlProjectId && allProjectTasks) {
+      // Show all project tasks, apply completed filter
+      return showCompleted 
+        ? allProjectTasks 
+        : allProjectTasks.filter(t => t.status !== "completed");
+    }
+    
+    // No project selected - show user's filtered tasks
+    return filteredTasks;
+  }, [viewMode, urlProjectId, allProjectTasks, filteredTasks, showCompleted]);
 
   if (isLoading) {
     return (
@@ -344,27 +399,32 @@ export default function MyTasks() {
     );
   }
 
-
   return (
     <AppLayout>
       <div className="space-y-4 md:space-y-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Minhas Tarefas</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              {viewMode === "focus" 
-                ? "Foco total nas suas tarefas"
-                : "Visualize e gerencie todas as tarefas atribuídas a você"}
-            </p>
+        {/* Focus Mode Header */}
+        {viewMode === "focus" ? (
+          <FocusModeHeader 
+            selectedProject={selectedProjectData || null}
+            onCreateTask={() => setCreateDialogOpen(true)}
+          />
+        ) : (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Minhas Tarefas</h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">
+                Visualize e gerencie todas as tarefas atribuídas a você
+              </p>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 flex-1 sm:flex-none" size="sm">
+                <Plus size={16} />
+                <span className="hidden sm:inline">Nova Tarefa</span>
+                <span className="sm:hidden">Nova</span>
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 flex-1 sm:flex-none" size="sm">
-              <Plus size={16} />
-              <span className="hidden sm:inline">Nova Tarefa</span>
-              <span className="sm:hidden">Nova</span>
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* Focus Mode View */}
         {viewMode === "focus" ? (
@@ -381,8 +441,8 @@ export default function MyTasks() {
               </Label>
             </div>
             <FocusModeView 
-              tasks={filteredTasks} 
-              queryKeyToInvalidate={["my-tasks", "tasks"]}
+              tasks={focusModeTasks} 
+              queryKeyToInvalidate={["my-tasks", "tasks", "project-all-tasks"]}
             />
           </>
         ) : (
@@ -393,7 +453,7 @@ export default function MyTasks() {
                 <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
                   <FolderOpen className="h-5 w-5 sm:h-8 sm:w-8 text-chart-1 flex-shrink-0" />
                   <div>
-                    <p className="text-lg sm:text-2xl font-bold">{projectTasks.length}</p>
+                    <p className="text-lg sm:text-2xl font-bold">{projectTypeTasks.length}</p>
                     <p className="text-[10px] sm:text-sm text-muted-foreground">Projeto</p>
                   </div>
                 </CardContent>
@@ -411,7 +471,7 @@ export default function MyTasks() {
                 <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
                   <RefreshCw className="h-5 w-5 sm:h-8 sm:w-8 text-chart-3 flex-shrink-0" />
                   <div>
-                    <p className="text-lg sm:text-2xl font-bold">{routineTasks.length}</p>
+                    <p className="text-lg sm:text-2xl font-bold">{routineTypeTasks.length}</p>
                     <p className="text-[10px] sm:text-sm text-muted-foreground">Rotina</p>
                   </div>
                 </CardContent>

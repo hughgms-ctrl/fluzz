@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch, Plus, Palette } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch, Plus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { cn } from "@/lib/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -70,28 +68,9 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { permissions, isAdmin, isGestor, workspace } = useWorkspace();
   const { viewMode } = useViewMode();
-  const queryClient = useQueryClient();
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   const isCollapsed = state === "collapsed";
-
-  const handleColorChange = async (projectId: string, color: string) => {
-    try {
-      const { error } = await supabase
-        .from("projects")
-        .update({ color })
-        .eq("id", projectId);
-      
-      if (error) throw error;
-      
-      queryClient.invalidateQueries({ queryKey: ["focus-projects"] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Cor atualizada!");
-    } catch (error) {
-      toast.error("Erro ao atualizar cor");
-    }
-  };
-
   const isActive = (path: string) => {
     if (path === "/home") return location.pathname === "/home";
     if (path === "/workspace") return location.pathname === "/workspace";
@@ -218,58 +197,25 @@ export function AppSidebar() {
                       : projectColors[0].value;
                     
                     return (
-                      <SidebarMenuItem key={project.id} className="group">
-                        <div className="flex items-center w-full">
-                          <SidebarMenuButton asChild className="flex-1">
-                            <NavLink
-                              to={`/my-tasks?projectId=${project.id}`}
-                              className={cn(
-                                "hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg",
-                                isActiveProject && "bg-primary/15 text-primary font-medium",
-                              )}
-                            >
-                              <span 
-                                className={cn("h-2 w-2 rounded-full flex-shrink-0", isCollapsed ? "mx-auto" : "mr-3")} 
-                                style={{ backgroundColor: projectColor }}
-                              />
-                              {!isCollapsed && (
-                                <span className="text-sm truncate flex-1">{project.name}</span>
-                              )}
-                              {isCollapsed && <span className="sr-only">{project.name}</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                          {!isCollapsed && (isAdmin || isGestor) && (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Palette className="h-3 w-3" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-2" align="end">
-                                <div className="grid grid-cols-5 gap-1">
-                                  {projectColors.map((color) => (
-                                    <button
-                                      key={color.name}
-                                      className={cn(
-                                        "w-6 h-6 rounded-full border-2 transition-all hover:scale-110",
-                                        project.color === color.name 
-                                          ? "border-foreground" 
-                                          : "border-transparent"
-                                      )}
-                                      style={{ backgroundColor: color.value }}
-                                      onClick={() => handleColorChange(project.id, color.name)}
-                                    />
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          )}
-                        </div>
+                      <SidebarMenuItem key={project.id}>
+                        <SidebarMenuButton asChild>
+                          <NavLink
+                            to={`/my-tasks?projectId=${project.id}`}
+                            className={cn(
+                              "hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg",
+                              isActiveProject && "bg-primary/15 text-primary font-medium",
+                            )}
+                          >
+                            <span 
+                              className={cn("h-2 w-2 rounded-full flex-shrink-0", isCollapsed ? "mx-auto" : "mr-3")} 
+                              style={{ backgroundColor: projectColor }}
+                            />
+                            {!isCollapsed && (
+                              <span className="text-sm truncate flex-1">{project.name}</span>
+                            )}
+                            {isCollapsed && <span className="sr-only">{project.name}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
                   })}

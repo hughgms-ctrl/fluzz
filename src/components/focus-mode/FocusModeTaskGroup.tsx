@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, FolderOpen, Folder, User, RefreshCw, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { FocusModeTaskItem } from "./FocusModeTaskItem";
+import { FocusModeTaskItemWithActions } from "./FocusModeTaskItemWithActions";
 
 interface FocusModeTaskGroupProps {
   title: string;
@@ -61,12 +61,13 @@ export function FocusModeTaskGroup({
       {isExpanded && (
         <div className="space-y-2 pl-2 sm:pl-4 animate-fade-in">
           {tasks.map((task) => (
-            <FocusModeTaskItem
+            <FocusModeTaskItemWithActions
               key={task.id}
               task={task}
               profiles={profiles}
               onClick={() => onTaskClick(task)}
               queryKeyToInvalidate={queryKeyToInvalidate}
+              isDraggable
             />
           ))}
         </div>
