@@ -290,12 +290,22 @@ export const TimelineView = ({
       }
     }
 
+    // Check if task is completely outside the visible range
+    if (endDate < viewStart || startDate > viewEnd) {
+      return null;
+    }
+
     const clampedStart = startDate < viewStart ? viewStart : startDate;
     const clampedEnd = endDate > viewEnd ? viewEnd : endDate;
 
+    // Ensure valid bar (clampedEnd must be >= clampedStart)
+    if (clampedEnd < clampedStart) {
+      return null;
+    }
+
     const left = differenceInDays(clampedStart, viewStart) * dayWidth;
     const duration = differenceInDays(clampedEnd, clampedStart) + 1;
-    const width = duration * dayWidth;
+    const width = Math.max(duration * dayWidth, dayWidth); // Minimum 1 day width
 
     return { left, width };
   };

@@ -1,17 +1,45 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { FolderKanban, CheckSquare, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { icon: FolderKanban, path: "/projects", label: "Projetos" },
-  { icon: CheckSquare, path: "/my-tasks", label: "Tarefas", isMain: true },
-  { icon: Home, path: "/home", label: "Home" },
-];
+import { useViewMode } from "@/hooks/useViewMode";
 
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const currentPath = location.pathname;
+  const { viewMode } = useViewMode();
+
+  // In focus mode, clicking Home goes to /my-tasks, and Projects also goes to /my-tasks
+  const handleNavigation = (path: string) => {
+    if (viewMode === "focus") {
+      // In focus mode, all navigation leads to /my-tasks (possibly with projectId)
+      if (path === "/projects" || path === "/home") {
+        navigate("/my-tasks");
+      } else {
+        navigate(path);
+      }
+    } else {
+      navigate(path);
+    }
+  };
+
+  // Determine active state
+  const isActive = (path: string) => {
+    if (path === "/my-tasks") {
+      return currentPath === "/my-tasks" || currentPath.startsWith("/tasks/");
+    }
+    if (path === "/projects") {
+      return currentPath === "/projects" || currentPath.startsWith("/projects/");
+    }
+    return currentPath === path;
+  };
+
+  const navItems = [
+    { icon: FolderKanban, path: "/projects", label: "Projetos" },
+    { icon: CheckSquare, path: "/my-tasks", label: "Tarefas", isMain: true },
+    { icon: Home, path: "/home", label: "Home" },
+  ];
 
   return (
     <nav 
@@ -24,16 +52,15 @@ export function MobileBottomNav() {
     >
       <div className="flex items-center justify-around h-14">
         {navItems.map((item) => {
-          const isActive = currentPath === item.path || 
-            (item.path === "/projects" && currentPath.startsWith("/projects"));
+          const active = isActive(item.path);
           
           return (
             <button
               key={item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => handleNavigation(item.path)}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 px-4 py-2 min-w-[72px] transition-colors",
-                isActive 
+                active 
                   ? "text-primary" 
                   : "text-muted-foreground hover:text-foreground",
                 item.isMain && "relative"
@@ -41,16 +68,16 @@ export function MobileBottomNav() {
             >
               <div className={cn(
                 "flex items-center justify-center",
-                item.isMain && isActive && "bg-primary/10 rounded-full p-1.5 -mt-1"
+                item.isMain && active && "bg-primary/10 rounded-full p-1.5 -mt-1"
               )}>
                 <item.icon className={cn(
                   "h-5 w-5",
-                  item.isMain && isActive && "h-6 w-6"
+                  item.isMain && active && "h-6 w-6"
                 )} />
               </div>
               <span className={cn(
                 "text-[10px] font-medium",
-                item.isMain && isActive && "text-primary"
+                item.isMain && active && "text-primary"
               )}>
                 {item.label}
               </span>

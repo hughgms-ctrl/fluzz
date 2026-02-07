@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch, Plus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useViewMode } from "@/hooks/useViewMode";
 import { CreateProjectDialog } from "@/components/projects/CreateProjectDialog";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Sidebar,
   SidebarContent,
@@ -63,18 +64,28 @@ const workspaceItems: MenuItem[] = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const location = useLocation();
+  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { permissions, isAdmin, isGestor, workspace } = useWorkspace();
   const { viewMode } = useViewMode();
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const isCollapsed = state === "collapsed";
   const isActive = (path: string) => {
     if (path === "/home") return location.pathname === "/home";
     if (path === "/workspace") return location.pathname === "/workspace";
     return location.pathname.startsWith(path);
+  };
+
+  // Handler for project click in focus mode - closes sidebar on mobile
+  const handleFocusProjectClick = (projectId: string) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    navigate(`/my-tasks?projectId=${projectId}`);
   };
 
   const canViewItem = (item: MenuItem) => {
@@ -198,23 +209,21 @@ export function AppSidebar() {
                     
                     return (
                       <SidebarMenuItem key={project.id}>
-                        <SidebarMenuButton asChild>
-                          <NavLink
-                            to={`/my-tasks?projectId=${project.id}`}
-                            className={cn(
-                              "hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg",
-                              isActiveProject && "bg-primary/15 text-primary font-medium",
-                            )}
-                          >
-                            <span 
-                              className={cn("h-2 w-2 rounded-full flex-shrink-0", isCollapsed ? "mx-auto" : "mr-3")} 
-                              style={{ backgroundColor: projectColor }}
-                            />
-                            {!isCollapsed && (
-                              <span className="text-sm truncate flex-1">{project.name}</span>
-                            )}
-                            {isCollapsed && <span className="sr-only">{project.name}</span>}
-                          </NavLink>
+                        <SidebarMenuButton 
+                          onClick={() => handleFocusProjectClick(project.id)}
+                          className={cn(
+                            "hover:bg-sidebar-accent/50 transition-all duration-200 rounded-lg cursor-pointer",
+                            isActiveProject && "bg-primary/15 text-primary font-medium",
+                          )}
+                        >
+                          <span 
+                            className={cn("h-2 w-2 rounded-full flex-shrink-0", isCollapsed ? "mx-auto" : "mr-3")} 
+                            style={{ backgroundColor: projectColor }}
+                          />
+                          {!isCollapsed && (
+                            <span className="text-sm truncate flex-1">{project.name}</span>
+                          )}
+                          {isCollapsed && <span className="sr-only">{project.name}</span>}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
