@@ -10,18 +10,11 @@ export function MobileBottomNav() {
   const currentPath = location.pathname;
   const { viewMode } = useViewMode();
 
-  // In focus mode, clicking Home goes to /my-tasks, and Projects also goes to /my-tasks
+  // Navigation behavior:
+  // - In Focus Mode: all buttons work normally (Projetos -> /projects, Tarefas -> /my-tasks, Home -> /home)
+  // - In Management Mode: same behavior
   const handleNavigation = (path: string) => {
-    if (viewMode === "focus") {
-      // In focus mode, all navigation leads to /my-tasks (possibly with projectId)
-      if (path === "/projects" || path === "/home") {
-        navigate("/my-tasks");
-      } else {
-        navigate(path);
-      }
-    } else {
-      navigate(path);
-    }
+    navigate(path);
   };
 
   // Determine active state
@@ -31,6 +24,9 @@ export function MobileBottomNav() {
     }
     if (path === "/projects") {
       return currentPath === "/projects" || currentPath.startsWith("/projects/");
+    }
+    if (path === "/home") {
+      return currentPath === "/home" || currentPath === "/";
     }
     return currentPath === path;
   };
