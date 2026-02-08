@@ -59,17 +59,17 @@ export function FocusModeHeader({ selectedProject, onCreateTask }: FocusModeHead
   const canEditColor = (isAdmin || isGestor) && selectedProject;
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {selectedProject && (
           <span 
             className="h-3 w-3 rounded-full flex-shrink-0" 
             style={{ backgroundColor: currentColor }}
           />
         )}
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground truncate">
               {selectedProject ? selectedProject.name : "Minhas Tarefas"}
             </h1>
             {canEditColor && (
@@ -78,7 +78,7 @@ export function FocusModeHeader({ selectedProject, onCreateTask }: FocusModeHead
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-7 w-7"
+                    className="h-7 w-7 flex-shrink-0"
                   >
                     <Palette className="h-4 w-4" />
                   </Button>
@@ -103,7 +103,7 @@ export function FocusModeHeader({ selectedProject, onCreateTask }: FocusModeHead
               </Popover>
             )}
           </div>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {selectedProject 
               ? "Todas as tarefas do projeto"
               : "Foco total nas suas tarefas"
@@ -111,8 +111,8 @@ export function FocusModeHeader({ selectedProject, onCreateTask }: FocusModeHead
           </p>
         </div>
       </div>
-      <div className="flex items-center gap-2 w-full sm:w-auto">
-        <Button onClick={onCreateTask} className="gap-2 flex-1 sm:flex-none" size="sm">
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Button onClick={onCreateTask} className="gap-2" size="sm">
           <Plus size={16} />
           <span className="hidden sm:inline">Nova Tarefa</span>
           <span className="sm:hidden">Nova</span>

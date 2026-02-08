@@ -41,7 +41,8 @@ export const AppLayout = ({
   const isMobile = useIsMobile();
   const { viewMode, setViewMode } = useViewMode();
 
-  // Focus Mode: keep the user in the "Todoist" surface (tasks).
+  // Focus Mode: allow task pages, projects, home, and profile.
+  // No longer restricts navigation - all bottom nav destinations are allowed.
   useEffect(() => {
     if (viewMode !== "focus") return;
 
@@ -49,6 +50,10 @@ export const AppLayout = ({
     const isAllowed =
       path === "/my-tasks" ||
       path.startsWith("/tasks/") ||
+      path === "/projects" ||
+      path.startsWith("/projects/") ||
+      path === "/home" ||
+      path === "/" ||
       path === "/profile" ||
       path.startsWith("/workspace/setup");
 
