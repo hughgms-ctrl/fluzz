@@ -75,17 +75,17 @@ export function FocusModeTaskItem({
     <div
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-3 p-3 rounded-lg border bg-card transition-all duration-200 cursor-pointer",
-        "hover:bg-accent/30 hover:border-accent",
+        "group flex items-start gap-3 py-3 px-2 border-b border-border/50 bg-card transition-all duration-200 cursor-pointer",
+        "hover:bg-accent/30",
         isCompleted && "opacity-60"
       )}
     >
-      {/* Circular Checkbox */}
+      {/* Circular Checkbox - Todoist style */}
       <button
         onClick={handleCheckClick}
         disabled={isCompleting}
         className={cn(
-          "flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-200",
+          "flex-shrink-0 w-5 h-5 rounded-full border-2 transition-all duration-200 mt-0.5",
           "flex items-center justify-center",
           isCompleted 
             ? "bg-primary border-primary" 
@@ -101,20 +101,20 @@ export function FocusModeTaskItem({
         )}
       </button>
 
-      {/* Task Content - Simplified */}
-      <div className="flex-1 min-w-0 flex items-center gap-3">
-        {/* Title */}
+      {/* Task Content - Todoist style: title wraps, date below */}
+      <div className="flex-1 min-w-0">
+        {/* Title - Full display, wraps to multiple lines */}
         <p className={cn(
-          "font-medium text-sm sm:text-base leading-snug line-clamp-1 flex-1",
+          "font-medium text-sm leading-snug",
           isCompleted && "line-through text-muted-foreground"
         )}>
           {task.title}
         </p>
 
-        {/* Due Date Only */}
+        {/* Due Date - Below title */}
         {task.due_date && (
           <span className={cn(
-            "flex items-center gap-1 text-xs flex-shrink-0",
+            "flex items-center gap-1 text-xs mt-1",
             isOverdue && "text-destructive font-medium",
             isDueSoon && !isOverdue && "text-warning",
             !isOverdue && !isDueSoon && "text-muted-foreground"
@@ -126,7 +126,7 @@ export function FocusModeTaskItem({
       </div>
 
       {/* Arrow Indicator */}
-      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
+      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0 mt-0.5" />
     </div>
   );
 }
