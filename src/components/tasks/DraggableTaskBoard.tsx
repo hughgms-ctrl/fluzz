@@ -122,8 +122,8 @@ export const DraggableTaskBoard = ({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 500,
-        tolerance: 8,
+        delay: 1000,
+        tolerance: 5,
       },
     })
   );

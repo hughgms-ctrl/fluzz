@@ -88,8 +88,8 @@ export const TaskList = ({
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 300,
-        tolerance: 8,
+        delay: 1000,
+        tolerance: 5,
       },
     })
   );
