@@ -335,7 +335,13 @@ export default function Home() {
                     Criar Primeiro Projeto
                   </Button>
                 </div> : <div className="space-y-3">
-                  {activeProjectsList.slice(0, 5).map(project => <div key={project.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => navigate(`/projects/${project.id}`)}>
+                  {activeProjectsList.slice(0, 5).map(project => <div key={project.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => {
+                      if (viewMode === "focus") {
+                        navigate(`/my-tasks?projectId=${project.id}`);
+                      } else {
+                        navigate(`/projects/${project.id}`);
+                      }
+                    }}>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-foreground truncate">
                           {project.name}
@@ -348,7 +354,7 @@ export default function Home() {
                         {project.status === "completed" ? "Concluído" : project.status === "active" ? "Ativo" : "Pausado"}
                       </Badge>
                     </div>)}
-                  {activeProjectsList.length > 5 && <Button variant="outline" className="w-full mt-2" onClick={() => navigate("/projects")}>
+                  {activeProjectsList.length > 5 && <Button variant="outline" className="w-full mt-2" onClick={() => navigate(viewMode === "focus" ? "/focus-projects" : "/projects")}>
                       Ver Todos os Projetos ({activeProjectsList.length})
                     </Button>}
                 </div>}

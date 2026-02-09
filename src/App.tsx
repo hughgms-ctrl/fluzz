@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Home from "./pages/Home";
+import FocusProjects from "./pages/FocusProjects";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import MyTasks from "./pages/MyTasks";
@@ -79,6 +80,7 @@ const App = () => (
                   <Route path="/home" element={<Home />} />
                   <Route path="/workspace" element={<Workspace />} />
                   <Route path="/projects" element={<Projects />} />
+                  <Route path="/focus-projects" element={<FocusProjects />} />
                   <Route path="/projects/:id" element={<ProjectDetail />} />
                   <Route path="/my-tasks" element={<MyTasks />} />
                   <Route path="/tasks/:id" element={<TaskDetail />} />

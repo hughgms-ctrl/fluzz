@@ -188,7 +188,7 @@ export function FocusModeTaskItemWithActions({
         className="flex-1 min-w-0 cursor-pointer"
       >
         <p className={cn(
-          "font-medium text-sm sm:text-base leading-snug line-clamp-1",
+          "font-medium text-sm leading-snug",
           isCompleted && "line-through text-muted-foreground"
         )}>
           {task.title}
@@ -206,8 +206,8 @@ export function FocusModeTaskItemWithActions({
         )}
       </div>
 
-      {/* Action Buttons - Visible on Hover */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Action Buttons - Visible on Hover, desktop only */}
+      <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {/* Edit Button */}
         <Button
           variant="ghost"
@@ -326,10 +326,10 @@ export function FocusModeTaskItemWithActions({
         </DropdownMenu>
       </div>
 
-      {/* Arrow - Mobile fallback */}
+      {/* Arrow - Mobile */}
       <ChevronRight 
         onClick={onClick}
-        className="h-4 w-4 text-muted-foreground/40 group-hover:hidden transition-colors flex-shrink-0 cursor-pointer sm:hidden" 
+        className="h-4 w-4 text-muted-foreground/40 transition-colors flex-shrink-0 cursor-pointer sm:hidden" 
       />
     </div>
   );
