@@ -14,7 +14,11 @@ export function MobileBottomNav() {
   // - In Focus Mode: all buttons work normally (Projetos -> /projects, Tarefas -> /my-tasks, Home -> /home)
   // - In Management Mode: same behavior
   const handleNavigation = (path: string) => {
-    navigate(path);
+    if (path === "/projects" && viewMode === "focus") {
+      navigate("/focus-projects");
+    } else {
+      navigate(path);
+    }
   };
 
   // Determine active state
@@ -23,7 +27,7 @@ export function MobileBottomNav() {
       return currentPath === "/my-tasks" || currentPath.startsWith("/tasks/");
     }
     if (path === "/projects") {
-      return currentPath === "/projects" || currentPath.startsWith("/projects/");
+      return currentPath === "/projects" || currentPath.startsWith("/projects/") || currentPath === "/focus-projects";
     }
     if (path === "/home") {
       return currentPath === "/home" || currentPath === "/";

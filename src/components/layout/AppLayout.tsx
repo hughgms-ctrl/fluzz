@@ -52,6 +52,7 @@ export const AppLayout = ({
       path.startsWith("/tasks/") ||
       path === "/projects" ||
       path.startsWith("/projects/") ||
+      path === "/focus-projects" ||
       path === "/home" ||
       path === "/" ||
       path === "/profile" ||
@@ -114,7 +115,7 @@ export const AppLayout = ({
           >
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <SidebarTrigger />
-              <h1 className="text-base sm:text-xl font-semibold text-primary truncate">Fluzz</h1>
+              <h1 className="text-sm sm:text-xl font-semibold text-primary flex-shrink-0">Fluzz</h1>
               {workspaceMember && workspaces.length > 0 && <Select value={workspace?.id} onValueChange={value => {
               void changeWorkspace(value);
             }}>
