@@ -239,21 +239,8 @@ export const TimelineView = ({
     setVerticalDraggedTask(null);
   };
 
-  // Filter tasks with dates that are visible in current view
-  const visibleTasks = useMemo(() => {
-    return allTasksSorted.filter(task => {
-      // Tasks without dates are always visible (as ghost bars)
-      if (!task.start_date && !task.due_date) return true;
-      
-      const taskStart = task.start_date ? parseTaskDate(task.start_date) : null;
-      const taskEnd = task.due_date ? parseTaskDate(task.due_date) : taskStart;
-      if (!taskStart && !taskEnd) return true;
-      
-      const start = taskStart || taskEnd!;
-      const end = taskEnd || taskStart!;
-      return end >= viewStart && start <= viewEnd;
-    });
-  }, [allTasksSorted, viewStart, viewEnd]);
+  // Show ALL tasks in the timeline - getTaskBar handles hiding bars outside visible range
+  const visibleTasks = allTasksSorted;
 
   const dayWidth = 40; // Fixed pixel width per day for smooth scrolling
 
