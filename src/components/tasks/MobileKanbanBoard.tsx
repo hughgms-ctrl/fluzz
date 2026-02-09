@@ -131,7 +131,7 @@ export const MobileKanbanBoard = ({
       y: touch.clientY - rect.top
     };
 
-    // Start long press timer (350ms to activate drag)
+    // Start long press timer (1000ms to activate drag)
     longPressTimerRef.current = setTimeout(() => {
       setIsLongPress(true);
       setDraggedTask(task);
@@ -142,7 +142,7 @@ export const MobileKanbanBoard = ({
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-    }, 350);
+    }, 1000);
   }, []);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
