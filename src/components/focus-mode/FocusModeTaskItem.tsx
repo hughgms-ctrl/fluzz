@@ -111,18 +111,25 @@ export function FocusModeTaskItem({
           {task.title}
         </p>
 
-        {/* Due Date - Below title */}
-        {task.due_date && (
-          <span className={cn(
-            "flex items-center gap-1 text-xs mt-1",
-            isOverdue && "text-destructive font-medium",
-            isDueSoon && !isOverdue && "text-warning",
-            !isOverdue && !isDueSoon && "text-muted-foreground"
-          )}>
-            <Calendar className="h-3 w-3" />
-            {formatDateBR(task.due_date).slice(0, 5)}
-          </span>
-        )}
+        {/* Due Date + Project - Below title */}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          {task.due_date && (
+            <span className={cn(
+              "flex items-center gap-1 text-xs",
+              isOverdue && "text-destructive font-medium",
+              isDueSoon && !isOverdue && "text-warning",
+              !isOverdue && !isDueSoon && "text-muted-foreground"
+            )}>
+              <Calendar className="h-3 w-3" />
+              {formatDateBR(task.due_date).slice(0, 5)}
+            </span>
+          )}
+          {task.projects?.name && (
+            <span className="text-xs text-muted-foreground/70 truncate max-w-[140px]">
+              {task.projects.name}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Arrow Indicator */}

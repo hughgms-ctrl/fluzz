@@ -193,17 +193,24 @@ export function FocusModeTaskItemWithActions({
         )}>
           {task.title}
         </p>
-        {task.due_date && (
-          <span className={cn(
-            "text-xs flex items-center gap-1 mt-0.5",
-            isOverdue && "text-destructive font-medium",
-            isDueSoon && !isOverdue && "text-warning",
-            !isOverdue && !isDueSoon && "text-muted-foreground"
-          )}>
-            <Calendar className="h-3 w-3" />
-            {formatDateBR(task.due_date)}
-          </span>
-        )}
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          {task.due_date && (
+            <span className={cn(
+              "text-xs flex items-center gap-1",
+              isOverdue && "text-destructive font-medium",
+              isDueSoon && !isOverdue && "text-warning",
+              !isOverdue && !isDueSoon && "text-muted-foreground"
+            )}>
+              <Calendar className="h-3 w-3" />
+              {formatDateBR(task.due_date)}
+            </span>
+          )}
+          {task.projects?.name && (
+            <span className="text-xs text-muted-foreground/70 truncate max-w-[140px]">
+              {task.projects.name}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Action Buttons - Visible on Hover, desktop only */}
