@@ -478,120 +478,126 @@ export function FocusModeTaskDetail({
 
   // Mobile horizontal scrollable properties
   const MobilePropertyChips = () => (
-    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none">
-      {/* Status chip */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm">
-            {(() => {
-              const StatusIcon = statusConfig[status as keyof typeof statusConfig]?.icon || Clock;
-              return <StatusIcon className="h-3.5 w-3.5" style={{ color: statusConfig[status as keyof typeof statusConfig]?.color }} />;
-            })()}
-            {statusConfig[status as keyof typeof statusConfig]?.label || "Status"}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-40 p-1" align="start">
-          {Object.entries(statusConfig).map(([key, config]) => (
-            <button
-              key={key}
-              onClick={() => handleStatusChange(key)}
-              className={cn(
-                "w-full flex items-center gap-2 p-2 rounded text-sm hover:bg-accent",
-                status === key && "bg-accent"
-              )}
-            >
-              <config.icon className="h-3.5 w-3.5" style={{ color: config.color }} />
-              {config.label}
+    <div className="relative -mx-4">
+      <div className="flex gap-2 overflow-x-auto px-4 pb-2" style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style>{`.mobile-chips-scroll::-webkit-scrollbar { display: none; }`}</style>
+        {/* Status chip */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm whitespace-nowrap">
+              {(() => {
+                const StatusIcon = statusConfig[status as keyof typeof statusConfig]?.icon || Clock;
+                return <StatusIcon className="h-3.5 w-3.5" style={{ color: statusConfig[status as keyof typeof statusConfig]?.color }} />;
+              })()}
+              {statusConfig[status as keyof typeof statusConfig]?.label || "Status"}
             </button>
-          ))}
-        </PopoverContent>
-      </Popover>
+          </PopoverTrigger>
+          <PopoverContent className="w-40 p-1" align="start">
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <button
+                key={key}
+                onClick={() => handleStatusChange(key)}
+                className={cn(
+                  "w-full flex items-center gap-2 p-2 rounded text-sm hover:bg-accent",
+                  status === key && "bg-accent"
+                )}
+              >
+                <config.icon className="h-3.5 w-3.5" style={{ color: config.color }} />
+                {config.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
 
-      {/* Priority chip */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm">
-            <Flag className="h-3.5 w-3.5" />
-            {priorityConfig[priority as keyof typeof priorityConfig]?.label || "Prioridade"}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-36 p-1" align="start">
-          {Object.entries(priorityConfig).map(([key, config]) => (
-            <button
-              key={key}
-              onClick={() => handlePriorityChange(key)}
-              className={cn(
-                "w-full flex items-center gap-2 p-2 rounded text-sm hover:bg-accent",
-                priority === key && "bg-accent"
-              )}
-            >
-              {config.label}
+        {/* Priority chip */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm whitespace-nowrap">
+              <Flag className="h-3.5 w-3.5" />
+              {priorityConfig[priority as keyof typeof priorityConfig]?.label || "Prioridade"}
             </button>
-          ))}
-        </PopoverContent>
-      </Popover>
+          </PopoverTrigger>
+          <PopoverContent className="w-36 p-1" align="start">
+            {Object.entries(priorityConfig).map(([key, config]) => (
+              <button
+                key={key}
+                onClick={() => handlePriorityChange(key)}
+                className={cn(
+                  "w-full flex items-center gap-2 p-2 rounded text-sm hover:bg-accent",
+                  priority === key && "bg-accent"
+                )}
+              >
+                {config.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
 
-      {/* Assignees chip */}
-      <Popover open={showAssigneeSelect} onOpenChange={setShowAssigneeSelect}>
-        <PopoverTrigger asChild>
-          <button className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm">
-            <User className="h-3.5 w-3.5" />
-            {assigneeProfiles.length > 0 ? `${assigneeProfiles.length} responsáve${assigneeProfiles.length > 1 ? 'is' : 'l'}` : "Responsável"}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56 p-2" align="start">
-          <ScrollArea className="max-h-48">
-            <div className="space-y-1">
-              {assigneeProfiles.map((profile: any) => (
-                <div 
-                  key={profile.id} 
-                  className="flex items-center gap-2 p-1.5 rounded hover:bg-destructive/10 cursor-pointer group"
-                  onClick={() => handleRemoveAssignee(profile.id)}
-                >
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={profile.avatar_url} />
-                    <AvatarFallback className="text-[10px]">{profile.full_name?.charAt(0)?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm flex-1 group-hover:text-destructive">{profile.full_name}</span>
-                  <X className="h-3 w-3 text-destructive" />
-                </div>
-              ))}
-              <div className="border-t my-1" />
-              {workspaceMembers?.filter(m => !currentAssignees?.includes(m.user_id)).map((member) => (
-                <button
-                  key={member.user_id}
-                  onClick={() => handleAddAssignee(member.user_id)}
-                  className="w-full flex items-center gap-2 p-1.5 rounded text-sm hover:bg-accent"
-                >
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={member.profile?.avatar_url} />
-                    <AvatarFallback className="text-[10px]">{member.profile?.full_name?.charAt(0)?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <span className="truncate">{member.profile?.full_name || "Sem nome"}</span>
-                </button>
-              ))}
-            </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
+        {/* Assignees chip */}
+        <Popover open={showAssigneeSelect} onOpenChange={setShowAssigneeSelect}>
+          <PopoverTrigger asChild>
+            <button className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm whitespace-nowrap">
+              <User className="h-3.5 w-3.5" />
+              {assigneeProfiles.length > 0 ? `${assigneeProfiles.length} responsáve${assigneeProfiles.length > 1 ? 'is' : 'l'}` : "Responsável"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2" align="start">
+            <ScrollArea className="max-h-48">
+              <div className="space-y-1">
+                {assigneeProfiles.map((profile: any) => (
+                  <div 
+                    key={profile.id} 
+                    className="flex items-center gap-2 p-1.5 rounded hover:bg-destructive/10 cursor-pointer group"
+                    onClick={() => handleRemoveAssignee(profile.id)}
+                  >
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={profile.avatar_url} />
+                      <AvatarFallback className="text-[10px]">{profile.full_name?.charAt(0)?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm flex-1 group-hover:text-destructive">{profile.full_name}</span>
+                    <X className="h-3 w-3 text-destructive" />
+                  </div>
+                ))}
+                <div className="border-t my-1" />
+                {workspaceMembers?.filter(m => !currentAssignees?.includes(m.user_id)).map((member) => (
+                  <button
+                    key={member.user_id}
+                    onClick={() => handleAddAssignee(member.user_id)}
+                    className="w-full flex items-center gap-2 p-1.5 rounded text-sm hover:bg-accent"
+                  >
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={member.profile?.avatar_url} />
+                      <AvatarFallback className="text-[10px]">{member.profile?.full_name?.charAt(0)?.toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate">{member.profile?.full_name || "Sem nome"}</span>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </PopoverContent>
+        </Popover>
 
-      {/* Description chip */}
-      <button 
-        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm"
-        onClick={() => setShowDescription(!showDescription)}
-      >
-        <FileText className="h-3.5 w-3.5" />
-        Descrição
-      </button>
+        {/* Description chip */}
+        <button 
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm whitespace-nowrap"
+          onClick={() => setShowDescription(!showDescription)}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Descrição
+        </button>
 
-      {/* Documentation chip */}
-      <button 
-        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm"
-        onClick={() => setShowDocumentation(!showDocumentation)}
-      >
-        <LinkIcon className="h-3.5 w-3.5" />
-        Docs
-      </button>
+        {/* Documentation chip */}
+        <button 
+          className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted text-sm whitespace-nowrap"
+          onClick={() => setShowDocumentation(!showDocumentation)}
+        >
+          <LinkIcon className="h-3.5 w-3.5" />
+          Docs
+        </button>
+
+        {/* Spacer to ensure last item is scrollable into view */}
+        <div className="flex-shrink-0 w-1" aria-hidden="true" />
+      </div>
     </div>
   );
 
@@ -624,14 +630,14 @@ export function FocusModeTaskDetail({
       </div>
 
       {/* Content */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-hidden">
         <div className={cn(
-          "flex",
-          isMobile ? "flex-col" : "flex-row"
+          "flex h-full",
+          isMobile ? "flex-col overflow-y-auto" : "flex-row"
         )}>
           {/* Main Content Area */}
           <div className={cn(
-            "flex-1 p-4 space-y-4",
+            "flex-1 p-4 space-y-4 overflow-y-auto",
             !isMobile && "border-r"
           )}>
             {/* Checkbox + Title */}
@@ -702,7 +708,7 @@ export function FocusModeTaskDetail({
                   onChange={(e) => setDescription(e.target.value)}
                   onBlur={handleDescriptionBlur}
                   placeholder="Adicione uma descrição..."
-                  className="min-h-[60px] resize-none text-sm"
+                  className="min-h-[60px] resize-y text-sm"
                 />
               </div>
             )}
@@ -716,7 +722,7 @@ export function FocusModeTaskDetail({
                   onChange={(e) => setDocumentation(e.target.value)}
                   onBlur={handleDocumentationBlur}
                   placeholder="Links, referências..."
-                  className="min-h-[60px] resize-none text-sm"
+                  className="min-h-[60px] resize-y text-sm"
                 />
               </div>
             )}
@@ -772,12 +778,12 @@ export function FocusModeTaskDetail({
 
           {/* Desktop Sidebar */}
           {!isMobile && (
-            <div className="w-[240px] flex-shrink-0 p-4">
+            <div className="w-[240px] flex-shrink-0 p-4 overflow-y-auto">
               <PropertiesSidebar />
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
