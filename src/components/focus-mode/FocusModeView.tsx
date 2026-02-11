@@ -7,6 +7,7 @@ import { FocusModeTaskGroup, groupTasksByDate, groupTasksByProject } from "./Foc
 import { FocusModeTaskDetail } from "./FocusModeTaskDetail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface FocusModeViewProps {
@@ -75,15 +76,9 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
   };
 
   return (
-    <div className={cn(
-      "flex h-full",
-      !isMobile && selectedTask && "gap-0"
-    )}>
+    <div className="flex h-full">
       {/* Task List */}
-      <div className={cn(
-        "flex-1 min-w-0 space-y-6",
-        !isMobile && selectedTask && "max-w-[60%]"
-      )}>
+      <div className="flex-1 min-w-0 space-y-6">
         {/* Grouping Tabs */}
         <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as "date" | "project")}>
           <TabsList className="grid w-full max-w-[300px] grid-cols-2">
@@ -218,16 +213,20 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
         )}
       </div>
 
-      {/* Task Detail Panel - Desktop */}
-      {!isMobile && selectedTask && (
-        <div className="w-[400px] min-w-[350px] flex-shrink-0 animate-slide-in-right">
-          <FocusModeTaskDetail
-            task={selectedTask}
-            profiles={profiles || []}
-            onClose={handleCloseDetail}
-            queryKeyToInvalidate={queryKeyToInvalidate}
-          />
-        </div>
+      {/* Task Detail Dialog - Desktop */}
+      {!isMobile && (
+        <Dialog open={!!selectedTask} onOpenChange={(open) => { if (!open) handleCloseDetail(); }}>
+          <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden [&>button.absolute]:hidden">
+            {selectedTask && (
+              <FocusModeTaskDetail
+                task={selectedTask}
+                profiles={profiles || []}
+                onClose={handleCloseDetail}
+                queryKeyToInvalidate={queryKeyToInvalidate}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Task Detail Modal - Mobile */}
