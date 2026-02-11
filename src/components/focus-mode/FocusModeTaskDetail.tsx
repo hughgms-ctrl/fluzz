@@ -608,15 +608,16 @@ export function FocusModeTaskDetail({
     )}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b">
-        <div className="flex items-center gap-2 min-w-0">
-          {task.projects?.name && (
+        <div className="flex items-center gap-1.5 min-w-0">
+          {task.projects?.name ? (
             <>
               <Hash className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-              <span className="text-sm text-muted-foreground truncate max-w-[180px]">
+              <span className="text-sm text-muted-foreground truncate">
                 {task.projects.name}
               </span>
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
             </>
+          ) : (
+            <span className="text-sm text-muted-foreground">Tarefa pessoal</span>
           )}
         </div>
         <div className="flex items-center gap-1">
