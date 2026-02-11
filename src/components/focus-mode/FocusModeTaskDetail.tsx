@@ -601,10 +601,10 @@ export function FocusModeTaskDetail({
     </div>
   );
 
-  return (
+  const content = (
     <div className={cn(
-      "flex flex-col h-full bg-card",
-      isMobile ? "fixed inset-0 z-50" : "border-l"
+      "flex flex-col bg-card",
+      isMobile ? "fixed inset-0 z-50 h-full" : "h-[80vh] max-h-[700px]"
     )}>
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b">
@@ -786,4 +786,6 @@ export function FocusModeTaskDetail({
       </div>
     </div>
   );
+
+  return content;
 }
