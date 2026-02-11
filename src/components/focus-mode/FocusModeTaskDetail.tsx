@@ -89,6 +89,7 @@ export function FocusModeTaskDetail({
   const [showAssigneeSelect, setShowAssigneeSelect] = useState(false);
   const [newSubtask, setNewSubtask] = useState("");
   const [showDescription, setShowDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
   const [showDocumentation, setShowDocumentation] = useState(false);
 
   // Fetch subtasks
@@ -704,13 +705,23 @@ export function FocusModeTaskDetail({
                 {!isMobile && (
                   <label className="text-xs text-muted-foreground">Descrição</label>
                 )}
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onBlur={handleDescriptionBlur}
-                  placeholder="Adicione uma descrição..."
-                  className="min-h-[60px] resize-y text-sm"
-                />
+                {editingDescription ? (
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    onBlur={() => { handleDescriptionBlur(); setEditingDescription(false); }}
+                    placeholder="Adicione uma descrição..."
+                    className="min-h-[60px] resize-y text-sm"
+                    autoFocus
+                  />
+                ) : (
+                  <div
+                    onClick={() => setEditingDescription(true)}
+                    className="text-sm whitespace-pre-wrap cursor-text min-h-[24px] rounded-md px-3 py-2 hover:bg-accent/30 transition-colors"
+                  >
+                    {description || <span className="text-muted-foreground/60">Adicione uma descrição...</span>}
+                  </div>
+                )}
               </div>
             )}
 
