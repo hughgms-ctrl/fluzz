@@ -46,6 +46,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { TaskAttachments } from "@/components/tasks/TaskAttachments";
 
 interface FocusModeTaskDetailProps {
   task: any;
@@ -451,28 +452,10 @@ export function FocusModeTaskDetail({
         </div>
       </div>
 
-      {/* Documentation */}
+      {/* Documentation - Links & Files */}
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1 block">Documentação</label>
-        {showDocumentation || documentation ? (
-          <Textarea
-            value={documentation}
-            onChange={(e) => setDocumentation(e.target.value)}
-            onBlur={handleDocumentationBlur}
-            placeholder="Links, referências..."
-            className="min-h-[60px] resize-none text-sm"
-          />
-        ) : (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-7 gap-1 text-xs w-full justify-start"
-            onClick={() => setShowDocumentation(true)}
-          >
-            <Plus className="h-3 w-3" />
-            Adicionar
-          </Button>
-        )}
+        <TaskAttachments taskId={task.id} isEditing={true} />
       </div>
     </div>
   );
@@ -726,16 +709,10 @@ export function FocusModeTaskDetail({
             )}
 
             {/* Documentation (mobile: togglable) */}
-            {isMobile && (showDocumentation || documentation) && (
+            {isMobile && showDocumentation && (
               <div className="space-y-1">
                 <label className="text-xs text-muted-foreground">Documentação</label>
-                <Textarea
-                  value={documentation}
-                  onChange={(e) => setDocumentation(e.target.value)}
-                  onBlur={handleDocumentationBlur}
-                  placeholder="Links, referências..."
-                  className="min-h-[60px] resize-y text-sm"
-                />
+                <TaskAttachments taskId={task.id} isEditing={true} />
               </div>
             )}
 
