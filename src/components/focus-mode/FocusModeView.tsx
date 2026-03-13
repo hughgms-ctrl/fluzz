@@ -36,6 +36,7 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
   const isMobile = useIsMobile();
   const [selectedTask, setSelectedTask] = useState<any>(null);
   const [groupBy, setGroupBy] = useState<"date" | "project">("date");
+  const [todayOnly, setTodayOnly] = useState(false);
 
   // Fetch profiles for assignee display
   const { data: profiles } = useQuery({
