@@ -613,6 +613,7 @@ export default function MyTasks() {
       <CreateMyTaskDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        defaultProjectId={viewMode === "focus" && projectFilter !== "all" ? projectFilter : null}
       />
     </AppLayout>
   );

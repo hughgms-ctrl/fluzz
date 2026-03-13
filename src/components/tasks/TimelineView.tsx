@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { format, addDays, differenceInDays, isToday, startOfDay, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, ArrowDownAZ, GripVertical, GripHorizontal, User } from "lucide-react";
+import { ArrowDownAZ, GripVertical, GripHorizontal, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -169,10 +169,9 @@ export const TimelineView = ({
     enabled: allUserIds.length > 0,
   });
   
-  // View spans 60 days - 30 before today, 30 after
-  const [viewOffset, setViewOffset] = useState(0);
-  const viewStart = addDays(today, -30 + viewOffset);
-  const totalDays = 90;
+  // View spans ~4 years: 2 years before today, 2 years after (730 days each)
+  const totalDays = 1461; // ~4 years
+  const viewStart = addDays(today, -730);
   const viewEnd = addDays(viewStart, totalDays - 1);
   
   const days = useMemo(() => {
@@ -425,20 +424,25 @@ export const TimelineView = ({
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const goToToday = () => {
-    setViewOffset(0);
-    // Scroll to today after view resets
-    setTimeout(() => {
-      if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) {
-          // Today is at index 30 (30 days before today is viewStart, so today is day 30)
-          const todayScrollPosition = 30 * dayWidth - (viewport.clientWidth / 2) + (dayWidth / 2);
-          viewport.scrollTo({ left: Math.max(0, todayScrollPosition), behavior: 'smooth' });
-        }
+  const scrollToDay = useCallback((dayOffset: number, smooth = true) => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const scrollPosition = dayOffset * dayWidth - (viewport.clientWidth / 2) + (dayWidth / 2);
+        viewport.scrollTo({ left: Math.max(0, scrollPosition), behavior: smooth ? 'smooth' : 'auto' });
       }
-    }, 50);
+    }
+  }, [dayWidth]);
+
+  const goToToday = () => {
+    // Today is at index 730 (730 days from viewStart)
+    scrollToDay(730);
   };
+
+  // Scroll to today on mount
+  useEffect(() => {
+    setTimeout(() => scrollToDay(730, false), 100);
+  }, [scrollToDay]);
 
   // Calculate today indicator position
   const todayIndex = differenceInDays(today, viewStart);
@@ -500,20 +504,6 @@ export const TimelineView = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setViewOffset(offset => offset - 30)}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setViewOffset(offset => offset + 30)}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
             Hoje
           </Button>
@@ -613,29 +603,38 @@ export const TimelineView = ({
             >
               {/* Date header */}
               <div className="h-14 flex border-b bg-muted/50 sticky top-0 z-10">
-                {days.map((day, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex flex-col items-center justify-center border-r text-xs",
-                      isToday(day) && "bg-primary/10"
-                    )}
-                    style={{ width: dayWidth }}
-                  >
-                    <div className={cn(
-                      "font-medium",
-                      isToday(day) && "text-primary font-bold"
-                    )}>
-                      {format(day, "d")}
+                {days.map((day, i) => {
+                  const isFirstOfMonth = day.getDate() === 1;
+                  const monthAbbr = format(day, "MMM", { locale: ptBR });
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex flex-col items-center justify-center border-r text-xs relative",
+                        isToday(day) && "bg-primary/10"
+                      )}
+                      style={{ width: dayWidth }}
+                    >
+                      {isFirstOfMonth && (
+                        <div className="text-[9px] text-muted-foreground/60 font-medium uppercase leading-none">
+                          {monthAbbr}
+                        </div>
+                      )}
+                      <div className={cn(
+                        "font-medium",
+                        isToday(day) && "text-primary font-bold"
+                      )}>
+                        {format(day, "d")}
+                      </div>
+                      <div className={cn(
+                        "text-[10px] text-muted-foreground",
+                        isToday(day) && "text-primary"
+                      )}>
+                        {getDayOfWeek(day)}
+                      </div>
                     </div>
-                    <div className={cn(
-                      "text-[10px] text-muted-foreground",
-                      isToday(day) && "text-primary"
-                    )}>
-                      {getDayOfWeek(day)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Task rows with bars */}

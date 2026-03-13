@@ -43,9 +43,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 interface CreateMyTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultProjectId?: string | null;
 }
 
-export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogProps) => {
+export const CreateMyTaskDialog = ({ open, onOpenChange, defaultProjectId }: CreateMyTaskDialogProps) => {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
@@ -170,7 +171,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogPro
         start_date: startDate || null,
         due_date: dueDate || null,
         documentation: fullDocumentation || null,
-        project_id: null,
+        project_id: defaultProjectId || null,
         workspace_id: workspace?.id || null,
       };
       
