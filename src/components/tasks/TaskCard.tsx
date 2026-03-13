@@ -31,7 +31,7 @@ export const TaskCard = ({ task, onDelete, isDraggable = false }: TaskCardProps)
   const [taskTitle, setTaskTitle] = useState(task.title);
   const [isDragging, setIsDragging] = useState(false);
   const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
-  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [clickTimeout, setClickTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: subtasks } = useQuery({
     queryKey: ["subtasks", task.id],

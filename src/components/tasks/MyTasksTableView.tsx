@@ -203,7 +203,7 @@ function TaskTableRow({
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [assigneeDialogOpen, setAssigneeDialogOpen] = useState(false);
 
   const status = statusConfig[task.status as keyof typeof statusConfig] || statusConfig.todo;
