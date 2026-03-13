@@ -169,10 +169,9 @@ export const TimelineView = ({
     enabled: allUserIds.length > 0,
   });
   
-  // View spans 60 days - 30 before today, 30 after
-  const [viewOffset, setViewOffset] = useState(0);
-  const viewStart = addDays(today, -30 + viewOffset);
-  const totalDays = 90;
+  // View spans ~4 years: 2 years before today, 2 years after (730 days each)
+  const totalDays = 1461; // ~4 years
+  const viewStart = addDays(today, -730);
   const viewEnd = addDays(viewStart, totalDays - 1);
   
   const days = useMemo(() => {

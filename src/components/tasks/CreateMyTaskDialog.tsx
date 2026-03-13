@@ -171,7 +171,7 @@ export const CreateMyTaskDialog = ({ open, onOpenChange, defaultProjectId }: Cre
         start_date: startDate || null,
         due_date: dueDate || null,
         documentation: fullDocumentation || null,
-        project_id: null,
+        project_id: defaultProjectId || null,
         workspace_id: workspace?.id || null,
       };
       
