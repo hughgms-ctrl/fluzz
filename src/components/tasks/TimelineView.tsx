@@ -424,20 +424,25 @@ export const TimelineView = ({
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const goToToday = () => {
-    setViewOffset(0);
-    // Scroll to today after view resets
-    setTimeout(() => {
-      if (scrollAreaRef.current) {
-        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (viewport) {
-          // Today is at index 30 (30 days before today is viewStart, so today is day 30)
-          const todayScrollPosition = 30 * dayWidth - (viewport.clientWidth / 2) + (dayWidth / 2);
-          viewport.scrollTo({ left: Math.max(0, todayScrollPosition), behavior: 'smooth' });
-        }
+  const scrollToDay = useCallback((dayOffset: number, smooth = true) => {
+    if (scrollAreaRef.current) {
+      const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (viewport) {
+        const scrollPosition = dayOffset * dayWidth - (viewport.clientWidth / 2) + (dayWidth / 2);
+        viewport.scrollTo({ left: Math.max(0, scrollPosition), behavior: smooth ? 'smooth' : 'auto' });
       }
-    }, 50);
+    }
+  }, [dayWidth]);
+
+  const goToToday = () => {
+    // Today is at index 730 (730 days from viewStart)
+    scrollToDay(730);
   };
+
+  // Scroll to today on mount
+  useEffect(() => {
+    setTimeout(() => scrollToDay(730, false), 100);
+  }, [scrollToDay]);
 
   // Calculate today indicator position
   const todayIndex = differenceInDays(today, viewStart);
