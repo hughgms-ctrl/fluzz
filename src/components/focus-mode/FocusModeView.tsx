@@ -96,19 +96,30 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
     <div className="flex h-full">
       {/* Task List */}
       <div className="flex-1 min-w-0 space-y-6">
-        {/* Grouping Tabs */}
-        <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as "date" | "project")}>
-          <TabsList className="grid w-full max-w-[300px] grid-cols-2">
-            <TabsTrigger value="date" className="gap-2 text-xs sm:text-sm">
-              <Calendar className="h-3.5 w-3.5" />
-              Por Data
-            </TabsTrigger>
-            <TabsTrigger value="project" className="gap-2 text-xs sm:text-sm">
-              <FolderOpen className="h-3.5 w-3.5" />
-              Por Projeto
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Grouping Tabs + Today filter */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Tabs value={groupBy} onValueChange={(v) => setGroupBy(v as "date" | "project")}>
+            <TabsList className="grid w-full max-w-[300px] grid-cols-2">
+              <TabsTrigger value="date" className="gap-2 text-xs sm:text-sm">
+                <Calendar className="h-3.5 w-3.5" />
+                Por Data
+              </TabsTrigger>
+              <TabsTrigger value="project" className="gap-2 text-xs sm:text-sm">
+                <FolderOpen className="h-3.5 w-3.5" />
+                Por Projeto
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button
+            variant={todayOnly ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5 text-xs sm:text-sm"
+            onClick={() => setTodayOnly(!todayOnly)}
+          >
+            <Sun className="h-3.5 w-3.5" />
+            Hoje
+          </Button>
+        </div>
 
         {tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
