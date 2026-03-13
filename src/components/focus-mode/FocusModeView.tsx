@@ -2,13 +2,15 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
-import { Calendar, FolderOpen, User, RefreshCw, AlertCircle } from "lucide-react";
+import { Calendar, FolderOpen, User, RefreshCw, AlertCircle, Sun } from "lucide-react";
 import { FocusModeTaskGroup, groupTasksByDate, groupTasksByProject } from "./FocusModeTaskGroup";
 import { FocusModeTaskDetail } from "./FocusModeTaskDetail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { parseDateOnly } from "@/lib/utils";
 
 interface FocusModeViewProps {
   tasks: any[];
