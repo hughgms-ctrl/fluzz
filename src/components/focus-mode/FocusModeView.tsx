@@ -121,14 +121,18 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
           </Button>
         </div>
 
-        {tasks.length === 0 ? (
+        {displayTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Calendar className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h3 className="font-medium text-lg mb-1">Nenhuma tarefa</h3>
+            <h3 className="font-medium text-lg mb-1">
+              {todayOnly ? "Nenhuma tarefa para hoje" : "Nenhuma tarefa"}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Você não tem tarefas atribuídas no momento
+              {todayOnly 
+                ? "Você não tem tarefas com prazo para hoje" 
+                : "Você não tem tarefas atribuídas no momento"}
             </p>
           </div>
         ) : groupBy === "date" ? (
