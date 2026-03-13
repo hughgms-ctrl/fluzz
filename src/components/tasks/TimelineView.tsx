@@ -603,29 +603,38 @@ export const TimelineView = ({
             >
               {/* Date header */}
               <div className="h-14 flex border-b bg-muted/50 sticky top-0 z-10">
-                {days.map((day, i) => (
-                  <div
-                    key={i}
-                    className={cn(
-                      "flex flex-col items-center justify-center border-r text-xs",
-                      isToday(day) && "bg-primary/10"
-                    )}
-                    style={{ width: dayWidth }}
-                  >
-                    <div className={cn(
-                      "font-medium",
-                      isToday(day) && "text-primary font-bold"
-                    )}>
-                      {format(day, "d")}
+                {days.map((day, i) => {
+                  const isFirstOfMonth = day.getDate() === 1;
+                  const monthAbbr = format(day, "MMM", { locale: ptBR });
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex flex-col items-center justify-center border-r text-xs relative",
+                        isToday(day) && "bg-primary/10"
+                      )}
+                      style={{ width: dayWidth }}
+                    >
+                      {isFirstOfMonth && (
+                        <div className="text-[9px] text-muted-foreground/60 font-medium uppercase leading-none">
+                          {monthAbbr}
+                        </div>
+                      )}
+                      <div className={cn(
+                        "font-medium",
+                        isToday(day) && "text-primary font-bold"
+                      )}>
+                        {format(day, "d")}
+                      </div>
+                      <div className={cn(
+                        "text-[10px] text-muted-foreground",
+                        isToday(day) && "text-primary"
+                      )}>
+                        {getDayOfWeek(day)}
+                      </div>
                     </div>
-                    <div className={cn(
-                      "text-[10px] text-muted-foreground",
-                      isToday(day) && "text-primary"
-                    )}>
-                      {getDayOfWeek(day)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Task rows with bars */}
