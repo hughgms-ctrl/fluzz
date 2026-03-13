@@ -61,13 +61,27 @@ export function FocusModeView({ tasks, queryKeyToInvalidate = ["my-tasks", "task
     enabled: !!workspace,
   });
 
+  // Filter for today only
+  const displayTasks = useMemo(() => {
+    if (!todayOnly) return tasks;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tasks.filter(t => {
+      if (!t.due_date) return false;
+      const dueDate = parseDateOnly(t.due_date);
+      if (!dueDate) return false;
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate.getTime() === today.getTime();
+    });
+  }, [tasks, todayOnly]);
+
   // Group tasks by date
-  const dateGroups = useMemo(() => groupTasksByDate(tasks), [tasks]);
+  const dateGroups = useMemo(() => groupTasksByDate(displayTasks), [displayTasks]);
   
   // Group tasks by project
   const { projectGroups, personalTasks, routineTasks } = useMemo(
-    () => groupTasksByProject(tasks),
-    [tasks]
+    () => groupTasksByProject(displayTasks),
+    [displayTasks]
   );
 
   const handleTaskClick = (task: any) => {
