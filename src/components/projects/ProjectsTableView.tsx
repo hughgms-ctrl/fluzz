@@ -207,7 +207,7 @@ function TaskTableRow({
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(task.title);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Get all assignees (assigned_to + approval_reviewer_id) with is_reviewer flag
   const getAssignees = () => {
@@ -473,7 +473,7 @@ function ProjectRow({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(project.name);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, isGestor } = useWorkspace();

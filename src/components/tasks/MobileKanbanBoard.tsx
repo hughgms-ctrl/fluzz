@@ -35,7 +35,7 @@ export const MobileKanbanBoard = ({
   const [isLongPress, setIsLongPress] = useState(false);
   const [hoveredColumn, setHoveredColumn] = useState<string | null>(null);
   const [hoveredTaskIndex, setHoveredTaskIndex] = useState<{ column: string; index: number } | null>(null);
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoScrollRef = useRef<number | null>(null);
   const touchOffsetRef = useRef({ x: 0, y: 0 });
 

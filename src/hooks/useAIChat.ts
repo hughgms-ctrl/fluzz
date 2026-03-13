@@ -44,7 +44,7 @@ export function useAIChat() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const messageIdRef = useRef(0);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const generateId = () => {
     messageIdRef.current += 1;
