@@ -276,22 +276,10 @@ export const TimelineView = ({
       }
     }
 
-    // Check if task is completely outside the visible range
-    if (endDate < viewStart || startDate > viewEnd) {
-      return null;
-    }
-
-    const clampedStart = startDate < viewStart ? viewStart : startDate;
-    const clampedEnd = endDate > viewEnd ? viewEnd : endDate;
-
-    // Ensure valid bar (clampedEnd must be >= clampedStart)
-    if (clampedEnd < clampedStart) {
-      return null;
-    }
-
-    const left = differenceInDays(clampedStart, viewStart) * dayWidth;
-    const duration = differenceInDays(clampedEnd, clampedStart) + 1;
-    const width = Math.max(duration * dayWidth, dayWidth); // Minimum 1 day width
+    // Compute real positions - no clamping, tasks outside range still render
+    const left = differenceInDays(startDate, viewStart) * dayWidth;
+    const duration = differenceInDays(endDate, startDate) + 1;
+    const width = Math.max(duration * dayWidth, dayWidth);
 
     return { left, width };
   };
