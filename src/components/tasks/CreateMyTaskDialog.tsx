@@ -43,9 +43,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 interface CreateMyTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultProjectId?: string | null;
 }
 
-export const CreateMyTaskDialog = ({ open, onOpenChange }: CreateMyTaskDialogProps) => {
+export const CreateMyTaskDialog = ({ open, onOpenChange, defaultProjectId }: CreateMyTaskDialogProps) => {
   const { user } = useAuth();
   const { workspace } = useWorkspace();
   const queryClient = useQueryClient();
