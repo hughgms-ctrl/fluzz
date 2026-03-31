@@ -1,165 +1,167 @@
 
-# Plano: Modo Foco Completo + Navegação Mobile Inferior
 
-## Resumo das Alterações
-Este plano implementa o **Modo Foco** nas três páginas principais (Home, Minhas Tarefas, Projetos), persistência completa das preferências do usuário, simplificação visual no modo foco, e uma barra de navegação inferior para dispositivos móveis.
+# Plano: Sistema de Participantes Externos + Notificações WhatsApp (UAZapi)
 
----
-
-## 1. Persistência de Preferências do Usuário
-
-### 1.1 Criar Hook de Preferências Unificado
-Criar `src/hooks/useFocusModePreferences.ts` para gerenciar:
-- **viewMode**: "management" ou "focus" 
-- **hideCompleted**: boolean (ocultar tarefas concluídas)
-- Persistir ambos em `localStorage` automaticamente
-- Carregar preferências na inicialização
+Este é um recurso complexo com 4 partes principais. Vamos dividir em etapas incrementais.
 
 ---
 
-## 2. Adicionar Toggle Modo Foco em Projects.tsx
+## Visão Geral
 
-### 2.1 Modificar `src/pages/Projects.tsx`
-- Importar `ViewModeToggle` e `useViewMode`
-- Adicionar o toggle no header (ao lado do seletor de visualização grid/list/calendar)
-- Implementar visualização Focus Mode para projetos:
-  - Em vez do grid/table, mostrar lista de projetos com tarefas agrupadas
-  - Ao clicar em um projeto, expandir com split-view lateral mostrando tarefas do projeto
-
----
-
-## 3. Simplificar Interface no Modo Foco
-
-### 3.1 Modificar `src/components/focus-mode/FocusModeTaskItem.tsx`
-Remover/ocultar campos extras no modo foco (conforme imagem com campos riscados):
-- Manter apenas: checkbox circular, título, data de vencimento
-- Ocultar: prioridade detalhada, badge de projeto, avatar de responsável
-- Interface ultra-minimalista
-
-### 3.2 Modificar `src/components/focus-mode/FocusModeTaskDetail.tsx`
-Simplificar o painel de detalhes:
-- Focar em: título, descrição, status, prazo
-- Seções de Documentação e Notas acessíveis apenas via botão "Ver Completo" (navega para Workspace)
-
----
-
-## 4. Persistência do Toggle "Ocultar Concluídas"
-
-### 4.1 Atualizar `src/hooks/useViewMode.ts`
-Expandir o hook para incluir:
-```typescript
-interface ViewModePreferences {
-  viewMode: ViewMode;
-  hideCompleted: boolean;
-  setViewMode: (mode: ViewMode) => void;
-  setHideCompleted: (hide: boolean) => void;
-}
-```
-- Persistir `hideCompleted` em `localStorage` 
-- Carregar na inicialização junto com `viewMode`
-
-### 4.2 Atualizar páginas para usar nova preferência
-- **MyTasks.tsx**: Usar `hideCompleted` do hook em vez de estado local
-- **Home.tsx**: Aplicar filtro de concluídas se no modo foco
-- **Projects.tsx**: Aplicar filtro no modo foco
-
----
-
-## 5. Barra de Navegação Inferior Mobile
-
-### 5.1 Criar `src/components/layout/MobileBottomNav.tsx`
-Nova barra fixa na parte inferior da tela (apenas mobile):
-
-```
-+------------------------------------------------+
-|  Projetos  |  Minhas Tarefas  |  Home  |  ≡   |
-|     📁     |       ✓          |   🏠   |      |
-+------------------------------------------------+
+```text
+┌─────────────────────────────────────────────┐
+│           WORKSPACE SETTINGS                │
+│  ┌───────────────────────────────────────┐  │
+│  │  Configuração WhatsApp (UAZapi)       │  │
+│  │  - Subdomínio da instância            │  │
+│  │  - Token da instância                 │  │
+│  │  - Teste de conexão                   │  │
+│  └───────────────────────────────────────┘  │
+├─────────────────────────────────────────────┤
+│         PARTICIPANTES (WORKSPACE)           │
+│  ┌───────────────────────────────────────┐  │
+│  │  Cadastro: Nome, Telefone, Email(op)  │  │
+│  │  Podem ser atribuídos a tarefas       │  │
+│  │  Recebem notificações via WhatsApp    │  │
+│  └───────────────────────────────────────┘  │
+├─────────────────────────────────────────────┤
+│          ATRIBUIÇÃO DE TAREFAS              │
+│  MultiAssigneeDialog mostra participantes   │
+│  externos junto com membros internos        │
+├─────────────────────────────────────────────┤
+│       NOTIFICAÇÕES WHATSAPP (EDGE FN)       │
+│  Triggers: atribuição, mudança status,      │
+│  prazo, lembretes automáticos               │
+└─────────────────────────────────────────────┘
 ```
 
-Estrutura:
-- **Esquerda**: Projetos (ícone FolderKanban)
-- **Centro**: Minhas Tarefas (ícone CheckSquare) - destacado
-- **Centro-Direita**: Home (ícone Home)
-- **Direita**: Menu hamburguer (abre drawer com restante da navegação)
+---
 
-### 5.2 Modificar `src/components/layout/AppLayout.tsx`
-- Importar e renderizar `MobileBottomNav` apenas em mobile (`useIsMobile`)
-- Adicionar padding-bottom ao conteúdo para não sobrepor a navbar
-- Ocultar/minimizar sidebar lateral em mobile quando navbar inferior está ativa
+## Parte 1: Banco de Dados
 
-### 5.3 Criar `src/components/layout/MobileNavDrawer.tsx`
-Drawer lateral que abre ao clicar no menu hamburguer:
-- Lista completa de navegação (Workspace, Analytics, AI, Setores, etc.)
-- Perfil e logout
+### Nova tabela: `external_participants`
+- `id` (uuid, PK)
+- `workspace_id` (uuid, FK → workspaces)
+- `name` (text, NOT NULL)
+- `phone` (text, NOT NULL) — formato internacional ex: 5511999999999
+- `email` (text, nullable)
+- `notes` (text, nullable)
+- `created_by` (uuid)
+- `created_at`, `updated_at`
+
+RLS: workspace members podem CRUD nos participantes do seu workspace. Admin/gestor podem criar/editar/deletar.
+
+### Nova tabela: `task_external_assignees`
+- `id` (uuid, PK)
+- `task_id` (uuid, FK → tasks)
+- `participant_id` (uuid, FK → external_participants)
+- `created_at`
+
+RLS: mesmas regras das task_assignees, baseado no workspace da task.
+
+### Nova tabela: `whatsapp_config`
+- `id` (uuid, PK)
+- `workspace_id` (uuid, FK → workspaces, UNIQUE)
+- `instance_subdomain` (text) — subdomínio UAZapi
+- `instance_token` (text) — token da instância (criptografado/secret)
+- `is_active` (boolean, default false)
+- `created_by` (uuid)
+- `created_at`, `updated_at`
+
+RLS: apenas admin do workspace pode gerenciar.
+
+### Nova tabela: `whatsapp_notification_logs`
+- `id` (uuid, PK)
+- `workspace_id` (uuid)
+- `participant_id` (uuid, FK → external_participants)
+- `task_id` (uuid, FK → tasks)
+- `message_type` (text) — 'task_assigned', 'status_changed', 'due_reminder', etc.
+- `status` (text) — 'sent', 'failed'
+- `error_message` (text, nullable)
+- `sent_at` (timestamptz)
 
 ---
 
-## 6. Configurar Rota Inicial
+## Parte 2: UI — Participantes do Workspace
 
-### 6.1 Modificar redirecionamento padrão
-Quando usuário logado acessa "/", redirecionar para "/my-tasks" em vez de "/home"
-- Modificar `src/pages/Landing.tsx` ou criar lógica em `AppLayout`
+### Painel "Participantes" na página de configurações do workspace
+- Listar participantes com nome e telefone
+- Botão "Adicionar Participante" → dialog com campos: Nome, Telefone (obrigatório), Email (opcional), Observações
+- Editar/excluir participantes existentes
+- Acessível por admin e gestor
 
----
-
-## Arquivos a Criar
-1. `src/components/layout/MobileBottomNav.tsx`
-2. `src/components/layout/MobileNavDrawer.tsx`
-3. `src/components/focus-mode/FocusModeProjectsView.tsx` (vista de projetos em modo foco)
-
-## Arquivos a Modificar
-1. `src/hooks/useViewMode.ts` - Adicionar hideCompleted
-2. `src/pages/Projects.tsx` - Adicionar toggle e modo foco
-3. `src/pages/MyTasks.tsx` - Usar hideCompleted persistido
-4. `src/pages/Home.tsx` - Aplicar filtros no modo foco
-5. `src/components/layout/AppLayout.tsx` - Adicionar navegação mobile
-6. `src/components/focus-mode/FocusModeTaskItem.tsx` - Simplificar visual
-7. `src/components/focus-mode/FocusModeTaskDetail.tsx` - Simplificar campos
+### Aba "Participantes" dentro do ProjectDetail
+- Mostrar participantes que estão atribuídos a tarefas deste projeto
+- Opção de atribuir participante existente a uma tarefa do projeto
 
 ---
 
-## Seção Técnica
+## Parte 3: UI — Atribuição de Participantes Externos a Tarefas
 
-### Estrutura do Hook de Preferências
-```typescript
-// src/hooks/useViewMode.ts (expandido)
-export function useViewMode() {
-  const [viewMode, setViewModeState] = useState<ViewMode>(() => {
-    return (localStorage.getItem("viewMode") as ViewMode) || "management";
-  });
-  
-  const [hideCompleted, setHideCompletedState] = useState<boolean>(() => {
-    return localStorage.getItem("hideCompleted") === "true";
-  });
+### Atualizar `MultiAssigneeDialog`
+- Adicionar seção separada "Participantes Externos" abaixo dos membros internos
+- Mostrar lista de participantes do workspace com checkbox
+- Ao salvar, inserir na tabela `task_external_assignees`
+- Mostrar avatares diferenciados (ícone de pessoa externa) nos cards de tarefa
 
-  const setViewMode = (mode: ViewMode) => {
-    setViewModeState(mode);
-    localStorage.setItem("viewMode", mode);
-  };
+### Atualizar componentes de exibição
+- `MultiAssigneeAvatars` — mostrar participantes externos com badge/ícone diferenciado
+- `TaskCard`, `FocusModeTaskItem` — exibir participantes externos
 
-  const setHideCompleted = (hide: boolean) => {
-    setHideCompletedState(hide);
-    localStorage.setItem("hideCompleted", String(hide));
-  };
+---
 
-  return { viewMode, setViewMode, hideCompleted, setHideCompleted };
-}
-```
+## Parte 4: Configuração WhatsApp (UAZapi) no Workspace
 
-### Estrutura da Navegação Mobile
-```typescript
-// Ícones e rotas da barra inferior
-const mobileNavItems = [
-  { icon: FolderKanban, path: "/projects", label: "Projetos" },
-  { icon: CheckSquare, path: "/my-tasks", label: "Tarefas", isMain: true },
-  { icon: Home, path: "/home", label: "Home" },
-  { icon: Menu, action: "openDrawer", label: "Menu" },
-];
-```
+### UI em Configurações do Workspace
+- Seção "Integração WhatsApp"
+- Campos: Subdomínio da instância, Token
+- Botão "Testar Conexão" — chama edge function que faz um GET na API UAZapi para verificar status
+- Toggle ativar/desativar
 
-### Safe Area para iOS
-Garantir que a barra inferior respeite as safe areas:
-```css
-padding-bottom: env(safe-area-inset-bottom, 0px);
-```
+### Secrets
+- O token da UAZapi será armazenado na tabela `whatsapp_config` (por workspace, não global)
+- A edge function lerá da tabela ao enviar mensagens
+
+---
+
+## Parte 5: Edge Function — Envio de Notificações WhatsApp
+
+### `send-whatsapp-notification` edge function
+- Recebe: `workspace_id`, `participant_id`, `task_id`, `message_type`
+- Busca config do workspace na tabela `whatsapp_config`
+- Busca dados do participante e da tarefa
+- Monta mensagem em português baseada no tipo
+- Chama UAZapi: `POST https://{subdomain}.uazapi.com/sendText` com header `token`
+- Registra log na tabela `whatsapp_notification_logs`
+
+### Tipos de notificação:
+1. **Atribuição** — "Olá {nome}, você foi atribuído à tarefa '{título}' com prazo em {data}."
+2. **Mudança de status** — "A tarefa '{título}' mudou para {status}."
+3. **Prazo próximo** — "Lembrete: a tarefa '{título}' vence em {data}."
+4. **Tarefa atrasada** — "A tarefa '{título}' está atrasada desde {data}."
+
+### Trigger automático
+- Database trigger na tabela `task_external_assignees` (INSERT) → chama edge function
+- Database trigger na tabela `tasks` (UPDATE de status/due_date) → para cada external_assignee, chama edge function
+- Cron job para lembretes de prazo (reutilizar padrão do `check-task-deadlines`)
+
+---
+
+## Ordem de Implementação
+
+1. Migrations (tabelas + RLS)
+2. UI de Participantes (cadastro no workspace)
+3. Integração no MultiAssigneeDialog
+4. UI de configuração WhatsApp
+5. Edge function de envio
+6. Triggers automáticos
+
+---
+
+## Detalhes Técnicos
+
+- **UAZapi endpoint para enviar texto**: `POST https://{subdomain}.uazapi.com/sendText` com body `{ "phone": "5511...", "message": "..." }` e header `token: {instance_token}`
+- Participantes são do workspace (compartilhados entre projetos)
+- A tabela `task_external_assignees` é separada de `task_assignees` para não quebrar FK com auth.users
+- Avatares de participantes externos usarão ícone `UserRoundPlus` ou similar para diferenciação visual
+
