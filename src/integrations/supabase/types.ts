@@ -483,6 +483,50 @@ export type Database = {
           },
         ]
       }
+      external_participants: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_participants_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flows: {
         Row: {
           created_at: string
@@ -1752,6 +1796,42 @@ export type Database = {
           },
         ]
       }
+      task_external_assignees: {
+        Row: {
+          created_at: string
+          id: string
+          participant_id: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participant_id: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participant_id?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_external_assignees_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "external_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_external_assignees_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_processes: {
         Row: {
           created_at: string | null
@@ -2323,6 +2403,102 @@ export type Database = {
           },
           {
             foreignKeyName: "user_subscriptions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_config: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          instance_subdomain: string
+          instance_token: string
+          is_active: boolean
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instance_subdomain?: string
+          instance_token?: string
+          is_active?: boolean
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instance_subdomain?: string
+          instance_token?: string
+          is_active?: boolean
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_config_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_notification_logs: {
+        Row: {
+          error_message: string | null
+          id: string
+          message_type: string
+          participant_id: string | null
+          sent_at: string
+          status: string
+          task_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          message_type: string
+          participant_id?: string | null
+          sent_at?: string
+          status?: string
+          task_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          participant_id?: string | null
+          sent_at?: string
+          status?: string
+          task_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notification_logs_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "external_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notification_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notification_logs_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"

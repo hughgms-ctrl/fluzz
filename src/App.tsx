@@ -49,6 +49,8 @@ import AIAssistant from "./pages/AIAssistant";
 import WorkloadOverview from "./pages/WorkloadOverview";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import Participants from "./pages/workspace/Participants";
+import WhatsAppConfig from "./pages/workspace/WhatsAppConfig";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -107,6 +109,8 @@ const App = () => (
                   <Route path="/positions/:id" element={<PositionDetail />} />
                   <Route path="/routine-tasks/:id" element={<RoutineTaskDetail />} />
                   <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/workspace/participants" element={<Participants />} />
+                  <Route path="/workspace/whatsapp" element={<WhatsAppConfig />} />
                   <Route path="/briefings" element={<BriefingRepository />} />
                   <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
                   <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
