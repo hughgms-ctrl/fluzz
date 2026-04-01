@@ -61,6 +61,8 @@ const workspaceItems: MenuItem[] = [
   { title: "Equipe", url: "/team", icon: Users, adminOnly: true },
   { title: "Setores", url: "/positions", icon: Briefcase, permission: "can_view_positions" },
   { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },
+  { title: "Participantes", url: "/workspace/participants", icon: UserPlus, adminOnly: true },
+  { title: "WhatsApp", url: "/workspace/whatsapp", icon: MessageCircle, adminOnly: true },
 ];
 
 export function AppSidebar() {

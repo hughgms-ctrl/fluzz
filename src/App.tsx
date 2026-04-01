@@ -109,6 +109,8 @@ const App = () => (
                   <Route path="/positions/:id" element={<PositionDetail />} />
                   <Route path="/routine-tasks/:id" element={<RoutineTaskDetail />} />
                   <Route path="/inventory" element={<Inventory />} />
+                  <Route path="/workspace/participants" element={<Participants />} />
+                  <Route path="/workspace/whatsapp" element={<WhatsAppConfig />} />
                   <Route path="/briefings" element={<BriefingRepository />} />
                   <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
                   <Route path="/workspace/admin" element={<WorkspaceAdmin />} />
