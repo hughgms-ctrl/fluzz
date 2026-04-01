@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, Plus, CheckCircle2 } from "lucide-react";
+import { User, Plus, CheckCircle2, UserRoundPlus } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -14,12 +14,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface MultiAssigneeAvatarsProps {
   taskId: string;
   assignees?: { user_id: string; is_reviewer?: boolean }[];
+  externalAssigneeIds?: string[];
   maxDisplay?: number;
   size?: "sm" | "md" | "lg";
   showAddButton?: boolean;
@@ -42,6 +42,7 @@ const overlapClasses = {
 export function MultiAssigneeAvatars({
   taskId,
   assignees = [],
+  externalAssigneeIds = [],
   maxDisplay = 3,
   size = "md",
   showAddButton = false,
@@ -50,7 +51,7 @@ export function MultiAssigneeAvatars({
 }: MultiAssigneeAvatarsProps) {
   const [showAllPopover, setShowAllPopover] = useState(false);
 
-  // Fetch profiles for all assignees
+  // Fetch profiles for internal assignees
   const userIds = assignees.map(a => a.user_id);
   const { data: profiles } = useQuery({
     queryKey: ["profiles-multi", userIds],
@@ -66,19 +67,32 @@ export function MultiAssigneeAvatars({
     enabled: userIds.length > 0,
   });
 
+  // Fetch external participants
+  const { data: externalParticipants } = useQuery({
+    queryKey: ["external-participants-avatars", externalAssigneeIds],
+    queryFn: async () => {
+      if (externalAssigneeIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("external_participants")
+        .select("id, name, phone")
+        .in("id", externalAssigneeIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: externalAssigneeIds.length > 0,
+  });
+
+  const totalCount = assignees.length + externalAssigneeIds.length;
   const displayedAssignees = assignees.slice(0, maxDisplay);
-  const remainingCount = assignees.length - maxDisplay;
+  const remainingInternalSlots = Math.max(0, maxDisplay - displayedAssignees.length);
+  const displayedExternals = (externalParticipants || []).slice(0, remainingInternalSlots);
+  const displayedTotal = displayedAssignees.length + displayedExternals.length;
+  const remainingCount = totalCount - displayedTotal;
 
-  const getProfile = (userId: string) => {
-    return profiles?.find(p => p.id === userId);
-  };
+  const getProfile = (userId: string) => profiles?.find(p => p.id === userId);
+  const getInitials = (name: string | null) => name ? name.charAt(0).toUpperCase() : null;
 
-  const getInitials = (name: string | null) => {
-    if (!name) return null;
-    return name.charAt(0).toUpperCase();
-  };
-
-  if (assignees.length === 0 && !showAddButton) {
+  if (totalCount === 0 && !showAddButton) {
     return (
       <div className="flex justify-center">
         <Avatar className={cn(sizeClasses[size])}>
@@ -94,6 +108,7 @@ export function MultiAssigneeAvatars({
     <div className={cn("flex items-center", className)}>
       <TooltipProvider>
         <div className="flex items-center">
+          {/* Internal assignees */}
           {displayedAssignees.map((assignee, index) => {
             const profile = getProfile(assignee.user_id);
             const initials = getInitials(profile?.full_name || null);
@@ -133,6 +148,33 @@ export function MultiAssigneeAvatars({
             );
           })}
 
+          {/* External assignees */}
+          {displayedExternals.map((ext, index) => (
+            <Tooltip key={ext.id}>
+              <TooltipTrigger asChild>
+                <div className="relative">
+                  <Avatar 
+                    className={cn(
+                      sizeClasses[size],
+                      "border-2 border-dashed border-accent cursor-pointer hover:z-10 transition-transform hover:scale-110",
+                      (displayedAssignees.length + index) > 0 && overlapClasses[size]
+                    )}
+                  >
+                    <AvatarFallback className="bg-accent text-accent-foreground font-medium">
+                      {ext.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute -bottom-0.5 -right-0.5 bg-accent rounded-full p-0.5">
+                    <UserRoundPlus className="h-2 w-2 text-accent-foreground" />
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{ext.name} (Externo)</p>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+
           {remainingCount > 0 && (
             <Popover open={showAllPopover} onOpenChange={setShowAllPopover}>
               <PopoverTrigger asChild>
@@ -156,22 +198,28 @@ export function MultiAssigneeAvatars({
                   {assignees.map(assignee => {
                     const profile = getProfile(assignee.user_id);
                     return (
-                      <div 
-                        key={assignee.user_id}
-                        className="flex items-center gap-2 p-1.5 rounded hover:bg-muted"
-                      >
+                      <div key={assignee.user_id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted">
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={profile?.avatar_url || undefined} />
                           <AvatarFallback className="bg-primary/10 text-primary text-xs">
                             {getInitials(profile?.full_name || null) || <User className="h-2 w-2" />}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm truncate">
-                          {profile?.full_name || "Usuário"}
-                        </span>
+                        <span className="text-sm truncate">{profile?.full_name || "Usuário"}</span>
                       </div>
                     );
                   })}
+                  {(externalParticipants || []).map(ext => (
+                    <div key={ext.id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted">
+                      <Avatar className="h-5 w-5">
+                        <AvatarFallback className="bg-accent text-accent-foreground text-xs">
+                          {ext.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm truncate">{ext.name}</span>
+                      <UserRoundPlus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  ))}
                 </div>
               </PopoverContent>
             </Popover>
@@ -189,7 +237,7 @@ export function MultiAssigneeAvatars({
                     sizeClasses[size],
                     "border-2 border-dashed border-muted-foreground/30 rounded-full flex items-center justify-center",
                     "hover:border-primary hover:bg-primary/5 transition-colors cursor-pointer",
-                    assignees.length > 0 && overlapClasses[size]
+                    totalCount > 0 && overlapClasses[size]
                   )}
                 >
                   <Plus className="h-3 w-3 text-muted-foreground" />
