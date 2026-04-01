@@ -49,6 +49,8 @@ import AIAssistant from "./pages/AIAssistant";
 import WorkloadOverview from "./pages/WorkloadOverview";
 import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
+import Participants from "./pages/workspace/Participants";
+import WhatsAppConfig from "./pages/workspace/WhatsAppConfig";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
