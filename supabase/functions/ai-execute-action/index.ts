@@ -281,7 +281,7 @@ serve(async (req) => {
             assigned_to: params.assigned_to || user.id,
             setor: params.setor || null,
             due_date: params.due_date || null,
-            status: "a fazer",
+            status: "todo",
             workspace_id: workspace_id,
           })
           .select("id, title")
@@ -559,6 +559,201 @@ serve(async (req) => {
         };
 
         result = { success: true, analytics: stats };
+        break;
+      }
+
+      // === NOVAS AÇÕES CONVERSACIONAIS ===
+
+      case "create_project_with_tasks": {
+        if (userRole !== "admin" && userRole !== "gestor") {
+          result = { success: false, error: "Apenas admin/gestor pode criar projetos." };
+          break;
+        }
+
+        const priorityMap: Record<string, string> = {
+          baixa: "low",
+          média: "medium",
+          alta: "high",
+        };
+
+        // 1. Criar o projeto (em modo draft)
+        const { data: project, error: pErr } = await supabase
+          .from("projects")
+          .insert({
+            name: params.name,
+            description: params.description || null,
+            start_date: params.start_date || null,
+            end_date: params.end_date || null,
+            user_id: user.id,
+            workspace_id: workspace_id,
+            status: "active",
+            is_draft: true,
+            pending_notifications: true,
+          })
+          .select("id, name")
+          .single();
+
+        if (pErr) throw pErr;
+
+        const tasksCreated: any[] = [];
+        const tasksFailed: any[] = [];
+
+        // 2. Criar cada tarefa
+        for (const t of params.tasks || []) {
+          let assigneeId: string | null = null;
+          if (t.assignee_name) {
+            const found = await findUserByName(supabase, workspace_id, t.assignee_name);
+            assigneeId = found?.id || null;
+          }
+
+          const { data: task, error: tErr } = await supabase
+            .from("tasks")
+            .insert({
+              title: t.title,
+              description: t.description || null,
+              priority: priorityMap[t.priority] || "medium",
+              project_id: project.id,
+              assigned_to: assigneeId,
+              due_date: t.due_date || null,
+              status: "todo",
+              workspace_id: workspace_id,
+            })
+            .select("id, title")
+            .single();
+
+          if (tErr) {
+            tasksFailed.push({ title: t.title, error: tErr.message });
+            continue;
+          }
+
+          // 3. Criar subtarefas
+          if (t.subtasks && t.subtasks.length > 0) {
+            const subRows = t.subtasks.map((s: any, idx: number) => ({
+              task_id: task.id,
+              title: typeof s === "string" ? s : s.title,
+              subtask_order: idx,
+            }));
+            await supabase.from("subtasks").insert(subRows);
+          }
+
+          tasksCreated.push(task);
+        }
+
+        result = {
+          success: true,
+          project,
+          tasks_created: tasksCreated.length,
+          tasks_failed: tasksFailed.length,
+          message: `Projeto "${project.name}" criado com ${tasksCreated.length} tarefa(s)!${
+            tasksFailed.length > 0 ? ` (${tasksFailed.length} falharam)` : ""
+          }`,
+        };
+        break;
+      }
+
+      case "add_subtasks_to_task": {
+        const subRows = (params.subtasks || []).map((title: string, idx: number) => ({
+          task_id: params.task_id,
+          title,
+          subtask_order: idx,
+        }));
+        const { error } = await supabase.from("subtasks").insert(subRows);
+        if (error) throw error;
+        result = {
+          success: true,
+          message: `${subRows.length} subtarefa(s) adicionada(s)!`,
+        };
+        break;
+      }
+
+      case "create_briefing_for_project": {
+        if (userRole !== "admin" && userRole !== "gestor") {
+          result = { success: false, error: "Apenas admin/gestor pode criar briefings." };
+          break;
+        }
+
+        const { data, error } = await supabase
+          .from("briefings")
+          .insert({
+            project_id: params.project_id,
+            workspace_id: workspace_id,
+            data: params.data || new Date().toISOString().split("T")[0],
+            local: params.local || "A definir",
+            participantes_pagantes: params.participantes_pagantes || 0,
+            investimento_trafego: params.investimento || 0,
+            precos: {},
+            created_by: user.id,
+          })
+          .select("id")
+          .single();
+
+        if (error) throw error;
+        result = { success: true, briefing: data, message: "Briefing criado!" };
+        break;
+      }
+
+      case "update_task": {
+        const updates: any = {};
+        if (params.title) updates.title = params.title;
+        if (params.description !== undefined) updates.description = params.description;
+        if (params.status) {
+          const statusMap: Record<string, string> = {
+            "a fazer": "todo",
+            fazendo: "in_progress",
+            feita: "completed",
+          };
+          updates.status = statusMap[params.status] || params.status;
+        }
+        if (params.priority) {
+          const pMap: Record<string, string> = { baixa: "low", média: "medium", alta: "high" };
+          updates.priority = pMap[params.priority] || params.priority;
+        }
+        if (params.due_date) updates.due_date = params.due_date;
+        if (params.assignee_name) {
+          const found = await findUserByName(supabase, workspace_id, params.assignee_name);
+          if (found) updates.assigned_to = found.id;
+        }
+
+        const { data, error } = await supabase
+          .from("tasks")
+          .update(updates)
+          .eq("id", params.task_id)
+          .select("id, title")
+          .single();
+
+        if (error) throw error;
+        result = { success: true, task: data, message: `Tarefa "${data.title}" atualizada!` };
+        break;
+      }
+
+      case "update_project": {
+        if (userRole !== "admin" && userRole !== "gestor") {
+          result = { success: false, error: "Apenas admin/gestor pode editar projetos." };
+          break;
+        }
+        const updates: any = {};
+        if (params.name) updates.name = params.name;
+        if (params.description !== undefined) updates.description = params.description;
+        if (params.start_date) updates.start_date = params.start_date;
+        if (params.end_date) updates.end_date = params.end_date;
+        if (params.status) updates.status = params.status;
+
+        const { data, error } = await supabase
+          .from("projects")
+          .update(updates)
+          .eq("id", params.project_id)
+          .select("id, name")
+          .single();
+
+        if (error) throw error;
+        result = { success: true, project: data, message: `Projeto "${data.name}" atualizado!` };
+        break;
+      }
+
+      case "delete_task": {
+        const { error } = await supabase.from("tasks").delete().eq("id", params.task_id);
+        if (error) throw error;
+        result = { success: true, message: "Tarefa removida!" };
         break;
       }
 

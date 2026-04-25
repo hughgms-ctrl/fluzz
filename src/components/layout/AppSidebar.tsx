@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch, Plus, UserPlus, MessageCircle } from "lucide-react";
+import { Home, FolderKanban, CheckSquare, User, LogOut, Briefcase, Heart, Target, FileText, BarChart3, Users, Building2, Eye, BookOpen, Package, Bot, Layers, StickyNote, GitBranch, Plus, UserPlus, MessageCircle, Sparkles } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,6 +63,7 @@ const workspaceItems: MenuItem[] = [
   { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },
   { title: "Participantes", url: "/workspace/participants", icon: UserPlus, adminOnly: true },
   { title: "WhatsApp", url: "/workspace/whatsapp", icon: MessageCircle, adminOnly: true },
+  { title: "IA / Fluzz AI", url: "/workspace/ai-config", icon: Sparkles, adminOnly: true },
 ];
 
 export function AppSidebar() {

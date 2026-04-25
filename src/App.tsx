@@ -51,6 +51,7 @@ import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import Participants from "./pages/workspace/Participants";
 import WhatsAppConfig from "./pages/workspace/WhatsAppConfig";
+import AIConfig from "./pages/workspace/AIConfig";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
@@ -111,6 +112,7 @@ const App = () => (
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/workspace/participants" element={<Participants />} />
                   <Route path="/workspace/whatsapp" element={<WhatsAppConfig />} />
+                  <Route path="/workspace/ai-config" element={<AIConfig />} />
                   <Route path="/briefings" element={<BriefingRepository />} />
                   <Route path="/briefing/:briefingId" element={<BriefingDocument />} />
                   <Route path="/workspace/admin" element={<WorkspaceAdmin />} />

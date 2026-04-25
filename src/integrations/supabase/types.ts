@@ -150,6 +150,53 @@ export type Database = {
           },
         ]
       }
+      ai_workspace_config: {
+        Row: {
+          api_key: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          model: string
+          provider: string
+          updated_at: string
+          use_own_key: boolean
+          workspace_id: string
+        }
+        Insert: {
+          api_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string
+          provider?: string
+          updated_at?: string
+          use_own_key?: boolean
+          workspace_id: string
+        }
+        Update: {
+          api_key?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          model?: string
+          provider?: string
+          updated_at?: string
+          use_own_key?: boolean
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_workspace_config_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocked_emails: {
         Row: {
           blocked_by: string | null
