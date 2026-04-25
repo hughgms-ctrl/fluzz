@@ -24,6 +24,12 @@ const QUERY_FUNCTIONS = [
 const ACTION_FUNCTIONS = [
   "create_task",
   "create_project",
+  "create_project_with_tasks",
+  "add_subtasks_to_task",
+  "create_briefing_for_project",
+  "update_task",
+  "update_project",
+  "delete_task",
   "extract_tasks_from_text",
 ];
 
@@ -472,11 +478,15 @@ export function useAIChat() {
       toast.success(result.data?.message || "Ação executada com sucesso!");
       
       // Invalidate relevant queries
-      if (toolCall.name === "create_task") {
+      if (toolCall.name === "create_task" || toolCall.name === "update_task" || toolCall.name === "delete_task" || toolCall.name === "add_subtasks_to_task") {
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["my-tasks"] });
-      } else if (toolCall.name === "create_project") {
+        queryClient.invalidateQueries({ queryKey: ["subtasks"] });
+      } else if (toolCall.name === "create_project" || toolCall.name === "update_project" || toolCall.name === "create_project_with_tasks") {
         queryClient.invalidateQueries({ queryKey: ["projects"] });
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      } else if (toolCall.name === "create_briefing_for_project") {
+        queryClient.invalidateQueries({ queryKey: ["briefings"] });
       }
 
       // Add result to conversation
