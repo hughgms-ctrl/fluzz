@@ -328,13 +328,14 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
               </Button>
             )}
             <Button
-              variant="ghost"
-              size="icon"
+              variant="outline"
+              size="sm"
               onClick={() => setShowConfig(true)}
               title="Configurações de IA"
-              className="h-8 w-8"
+              className="h-8 gap-1.5"
             >
               <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">Configurações</span>
             </Button>
             {showCloseButton && onClose && (
               <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
