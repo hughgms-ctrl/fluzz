@@ -186,6 +186,8 @@ serve(async (req) => {
     }
 
     const { action, params, workspace_id } = await req.json();
+    console.log(`[ai-execute-action] action=${action} workspace=${workspace_id} user=${user.id}`);
+    console.log(`[ai-execute-action] params=`, JSON.stringify(params).slice(0, 500));
 
     // Get user role for permission checking
     const { data: memberData } = await supabase
@@ -761,11 +763,12 @@ serve(async (req) => {
         throw new Error(`Ação desconhecida: ${action}`);
     }
 
+    console.log(`[ai-execute-action] result success=${result?.success}`);
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Erro ao executar ação:", error);
+    console.error("[ai-execute-action] ERRO:", error);
     return new Response(
       JSON.stringify({ success: false, error: error instanceof Error ? error.message : "Erro desconhecido" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
