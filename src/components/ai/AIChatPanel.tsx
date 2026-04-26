@@ -217,6 +217,7 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
 
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -250,6 +251,12 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
       extract_tasks_from_text: "Extrair tarefas",
       create_task: "Criar tarefa",
       create_project: "Criar projeto",
+      create_project_with_tasks: "Criar projeto com tarefas",
+      add_subtasks_to_task: "Adicionar subtarefas",
+      create_briefing_for_project: "Criar briefing",
+      update_task: "Atualizar tarefa",
+      update_project: "Atualizar projeto",
+      delete_task: "Excluir tarefa",
     };
     return labels[name] || name;
   };
