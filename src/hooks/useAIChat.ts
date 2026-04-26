@@ -474,8 +474,13 @@ export function useAIChat() {
       workspace.id
     );
 
-    if (result.success) {
-      toast.success(result.data?.message || "Ação executada com sucesso!");
+    // Edge function pode retornar HTTP 200 com {success:false, error}
+    const innerSuccess = result.success && (result.data?.success !== false);
+    const innerMessage = result.data?.message;
+    const innerError = result.data?.error || result.error;
+
+    if (innerSuccess) {
+      toast.success(innerMessage || "Ação executada com sucesso!");
       
       // Invalidate relevant queries
       if (toolCall.name === "create_task" || toolCall.name === "update_task" || toolCall.name === "delete_task" || toolCall.name === "add_subtasks_to_task") {
@@ -485,6 +490,7 @@ export function useAIChat() {
       } else if (toolCall.name === "create_project" || toolCall.name === "update_project" || toolCall.name === "create_project_with_tasks") {
         queryClient.invalidateQueries({ queryKey: ["projects"] });
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["focus-projects"] });
       } else if (toolCall.name === "create_briefing_for_project") {
         queryClient.invalidateQueries({ queryKey: ["briefings"] });
       }
@@ -495,19 +501,20 @@ export function useAIChat() {
         {
           id: generateId(),
           role: "assistant",
-          content: `✅ ${result.data?.message || "Ação executada com sucesso!"}`,
+          content: `✅ ${innerMessage || "Ação executada com sucesso!"}`,
           timestamp: new Date(),
         },
       ]);
     } else {
-      toast.error(result.data?.error || result.error || "Erro ao executar ação");
+      const errMsg = innerError || "Erro ao executar ação";
+      toast.error(errMsg);
       
       setMessages((prev) => [
         ...prev,
         {
           id: generateId(),
           role: "assistant",
-          content: `❌ ${result.data?.error || result.error || "Erro ao executar ação"}`,
+          content: `❌ ${errMsg}`,
           timestamp: new Date(),
         },
       ]);
