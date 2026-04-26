@@ -63,7 +63,6 @@ const workspaceItems: MenuItem[] = [
   { title: "Inventário", url: "/inventory", icon: Package, permission: "can_view_inventory" },
   { title: "Participantes", url: "/workspace/participants", icon: UserPlus, adminOnly: true },
   { title: "WhatsApp", url: "/workspace/whatsapp", icon: MessageCircle, adminOnly: true },
-  { title: "IA / Fluzz AI", url: "/workspace/ai-config", icon: Sparkles, adminOnly: true },
 ];
 
 export function AppSidebar() {

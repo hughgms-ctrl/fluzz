@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
   Send, Loader2, Trash2, X, Check, Sparkles, Bot, User as UserIcon, 
-  History, Plus, ChevronLeft, ExternalLink, MessageSquare 
+  History, Plus, ChevronLeft, ExternalLink, MessageSquare, Settings 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AIConfigPanel } from "@/components/ai/AIConfigPanel";
 import { useAIChat, Conversation } from "@/hooks/useAIChat";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -215,6 +217,7 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
 
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -248,6 +251,12 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
       extract_tasks_from_text: "Extrair tarefas",
       create_task: "Criar tarefa",
       create_project: "Criar projeto",
+      create_project_with_tasks: "Criar projeto com tarefas",
+      add_subtasks_to_task: "Adicionar subtarefas",
+      create_briefing_for_project: "Criar briefing",
+      update_task: "Atualizar tarefa",
+      update_project: "Atualizar projeto",
+      delete_task: "Excluir tarefa",
     };
     return labels[name] || name;
   };
@@ -318,6 +327,15 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                 <Plus className="h-4 w-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowConfig(true)}
+              title="Configurações de IA"
+              className="h-8 w-8"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             {showCloseButton && onClose && (
               <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
                 <X className="h-4 w-4" />
@@ -325,6 +343,19 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
             )}
           </div>
         </div>
+
+        {/* Config dialog */}
+        <Dialog open={showConfig} onOpenChange={setShowConfig}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-primary" />
+                Configurações do Fluzz AI
+              </DialogTitle>
+            </DialogHeader>
+            <AIConfigPanel />
+          </DialogContent>
+        </Dialog>
 
         {/* Messages */}
         <ScrollArea className="flex-1 px-4" ref={scrollRef}>
@@ -421,6 +452,85 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                                   <p className="text-muted-foreground">{tc.arguments.description}</p>
                                 )}
                               </>
+                            )}
+                            {tc.name === "create_project_with_tasks" && (
+                              <div className="space-y-2">
+                                <p className="font-medium text-base">📁 {tc.arguments.name}</p>
+                                {tc.arguments.description && (
+                                  <p className="text-xs text-muted-foreground">{tc.arguments.description}</p>
+                                )}
+                                {(tc.arguments.start_date || tc.arguments.end_date) && (
+                                  <p className="text-xs text-muted-foreground">
+                                    📅 {tc.arguments.start_date || "—"} → {tc.arguments.end_date || "—"}
+                                  </p>
+                                )}
+                                <div className="space-y-1.5 pt-1">
+                                  <p className="text-xs font-semibold text-muted-foreground">
+                                    {(tc.arguments.tasks || []).length} tarefa(s):
+                                  </p>
+                                  {(tc.arguments.tasks || []).map((task: any, idx: number) => (
+                                    <div key={idx} className="p-2 bg-background rounded-lg border text-xs">
+                                      <p className="font-medium">{idx + 1}. {task.title}</p>
+                                      <div className="flex flex-wrap gap-2 mt-1 text-muted-foreground">
+                                        {task.priority && <span>🎯 {task.priority}</span>}
+                                        {task.assignee_name && <span>👤 {task.assignee_name}</span>}
+                                        {task.due_date && <span>📅 {task.due_date}</span>}
+                                      </div>
+                                      {task.subtasks && task.subtasks.length > 0 && (
+                                        <ul className="mt-1.5 ml-3 list-disc text-muted-foreground">
+                                          {task.subtasks.map((s: any, si: number) => (
+                                            <li key={si}>{typeof s === "string" ? s : s.title}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {tc.name === "add_subtasks_to_task" && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {(tc.arguments.subtasks || []).length} subtarefa(s):
+                                </p>
+                                <ul className="ml-4 list-disc text-sm">
+                                  {(tc.arguments.subtasks || []).map((s: string, i: number) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {tc.name === "create_briefing_for_project" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.data && <p>📅 Data: {tc.arguments.data}</p>}
+                                {tc.arguments.local && <p>📍 Local: {tc.arguments.local}</p>}
+                                {tc.arguments.participantes_pagantes != null && (
+                                  <p>👥 Participantes: {tc.arguments.participantes_pagantes}</p>
+                                )}
+                                {tc.arguments.investimento != null && (
+                                  <p>💰 Investimento: R$ {tc.arguments.investimento}</p>
+                                )}
+                              </div>
+                            )}
+                            {tc.name === "update_task" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.title && <p>Novo título: <strong>{tc.arguments.title}</strong></p>}
+                                {tc.arguments.status && <p>Status: <strong>{tc.arguments.status}</strong></p>}
+                                {tc.arguments.priority && <p>Prioridade: <strong>{tc.arguments.priority}</strong></p>}
+                                {tc.arguments.due_date && <p>Prazo: <strong>{tc.arguments.due_date}</strong></p>}
+                                {tc.arguments.assignee_name && <p>Responsável: <strong>{tc.arguments.assignee_name}</strong></p>}
+                              </div>
+                            )}
+                            {tc.name === "update_project" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.name && <p>Nome: <strong>{tc.arguments.name}</strong></p>}
+                                {tc.arguments.status && <p>Status: <strong>{tc.arguments.status}</strong></p>}
+                                {tc.arguments.start_date && <p>Início: {tc.arguments.start_date}</p>}
+                                {tc.arguments.end_date && <p>Fim: {tc.arguments.end_date}</p>}
+                              </div>
+                            )}
+                            {tc.name === "delete_task" && (
+                              <p className="text-xs text-destructive">Esta ação removerá a tarefa permanentemente.</p>
                             )}
                             {tc.name === "extract_tasks_from_text" && tc.arguments.tasks && (
                               <div className="space-y-2">
