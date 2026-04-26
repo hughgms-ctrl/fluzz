@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
   Send, Loader2, Trash2, X, Check, Sparkles, Bot, User as UserIcon, 
-  History, Plus, ChevronLeft, ExternalLink, MessageSquare 
+  History, Plus, ChevronLeft, ExternalLink, MessageSquare, Settings 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AIConfigPanel } from "@/components/ai/AIConfigPanel";
 import { useAIChat, Conversation } from "@/hooks/useAIChat";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
