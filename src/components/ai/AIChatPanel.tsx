@@ -453,6 +453,85 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                                 )}
                               </>
                             )}
+                            {tc.name === "create_project_with_tasks" && (
+                              <div className="space-y-2">
+                                <p className="font-medium text-base">📁 {tc.arguments.name}</p>
+                                {tc.arguments.description && (
+                                  <p className="text-xs text-muted-foreground">{tc.arguments.description}</p>
+                                )}
+                                {(tc.arguments.start_date || tc.arguments.end_date) && (
+                                  <p className="text-xs text-muted-foreground">
+                                    📅 {tc.arguments.start_date || "—"} → {tc.arguments.end_date || "—"}
+                                  </p>
+                                )}
+                                <div className="space-y-1.5 pt-1">
+                                  <p className="text-xs font-semibold text-muted-foreground">
+                                    {(tc.arguments.tasks || []).length} tarefa(s):
+                                  </p>
+                                  {(tc.arguments.tasks || []).map((task: any, idx: number) => (
+                                    <div key={idx} className="p-2 bg-background rounded-lg border text-xs">
+                                      <p className="font-medium">{idx + 1}. {task.title}</p>
+                                      <div className="flex flex-wrap gap-2 mt-1 text-muted-foreground">
+                                        {task.priority && <span>🎯 {task.priority}</span>}
+                                        {task.assignee_name && <span>👤 {task.assignee_name}</span>}
+                                        {task.due_date && <span>📅 {task.due_date}</span>}
+                                      </div>
+                                      {task.subtasks && task.subtasks.length > 0 && (
+                                        <ul className="mt-1.5 ml-3 list-disc text-muted-foreground">
+                                          {task.subtasks.map((s: any, si: number) => (
+                                            <li key={si}>{typeof s === "string" ? s : s.title}</li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {tc.name === "add_subtasks_to_task" && (
+                              <div>
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {(tc.arguments.subtasks || []).length} subtarefa(s):
+                                </p>
+                                <ul className="ml-4 list-disc text-sm">
+                                  {(tc.arguments.subtasks || []).map((s: string, i: number) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            {tc.name === "create_briefing_for_project" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.data && <p>📅 Data: {tc.arguments.data}</p>}
+                                {tc.arguments.local && <p>📍 Local: {tc.arguments.local}</p>}
+                                {tc.arguments.participantes_pagantes != null && (
+                                  <p>👥 Participantes: {tc.arguments.participantes_pagantes}</p>
+                                )}
+                                {tc.arguments.investimento != null && (
+                                  <p>💰 Investimento: R$ {tc.arguments.investimento}</p>
+                                )}
+                              </div>
+                            )}
+                            {tc.name === "update_task" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.title && <p>Novo título: <strong>{tc.arguments.title}</strong></p>}
+                                {tc.arguments.status && <p>Status: <strong>{tc.arguments.status}</strong></p>}
+                                {tc.arguments.priority && <p>Prioridade: <strong>{tc.arguments.priority}</strong></p>}
+                                {tc.arguments.due_date && <p>Prazo: <strong>{tc.arguments.due_date}</strong></p>}
+                                {tc.arguments.assignee_name && <p>Responsável: <strong>{tc.arguments.assignee_name}</strong></p>}
+                              </div>
+                            )}
+                            {tc.name === "update_project" && (
+                              <div className="space-y-1 text-xs">
+                                {tc.arguments.name && <p>Nome: <strong>{tc.arguments.name}</strong></p>}
+                                {tc.arguments.status && <p>Status: <strong>{tc.arguments.status}</strong></p>}
+                                {tc.arguments.start_date && <p>Início: {tc.arguments.start_date}</p>}
+                                {tc.arguments.end_date && <p>Fim: {tc.arguments.end_date}</p>}
+                              </div>
+                            )}
+                            {tc.name === "delete_task" && (
+                              <p className="text-xs text-destructive">Esta ação removerá a tarefa permanentemente.</p>
+                            )}
                             {tc.name === "extract_tasks_from_text" && tc.arguments.tasks && (
                               <div className="space-y-2">
                                 {tc.arguments.tasks.map((task: any, idx: number) => (
