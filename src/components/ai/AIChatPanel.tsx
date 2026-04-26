@@ -327,6 +327,15 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                 <Plus className="h-4 w-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowConfig(true)}
+              title="Configurações de IA"
+              className="h-8 w-8"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
             {showCloseButton && onClose && (
               <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
                 <X className="h-4 w-4" />
@@ -334,6 +343,19 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
             )}
           </div>
         </div>
+
+        {/* Config dialog */}
+        <Dialog open={showConfig} onOpenChange={setShowConfig}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-primary" />
+                Configurações do Fluzz AI
+              </DialogTitle>
+            </DialogHeader>
+            <AIConfigPanel />
+          </DialogContent>
+        </Dialog>
 
         {/* Messages */}
         <ScrollArea className="flex-1 px-4" ref={scrollRef}>
