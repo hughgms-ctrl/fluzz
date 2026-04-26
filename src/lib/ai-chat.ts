@@ -71,6 +71,26 @@ export async function streamChat(
     const decoder = new TextDecoder();
     let buffer = "";
     let toolCallsBuffer: Record<string, { name: string; arguments: string }> = {};
+    const toolCallIdsByIndex: Record<number, string> = {};
+
+    const flushToolCalls = () => {
+      for (const [id, tc] of Object.entries(toolCallsBuffer)) {
+        if (!tc.name || !tc.arguments.trim()) continue;
+        try {
+          const args = JSON.parse(tc.arguments);
+          onToolCall({
+            id,
+            name: tc.name,
+            arguments: args,
+            status: "pending",
+          });
+        } catch (e) {
+          console.error("Failed to parse tool call arguments:", e, tc);
+        }
+      }
+      toolCallsBuffer = {};
+      Object.keys(toolCallIdsByIndex).forEach((key) => delete toolCallIdsByIndex[Number(key)]);
+    };
 
     while (true) {
       const { done, value } = await reader.read();
@@ -89,20 +109,7 @@ export async function streamChat(
 
         const jsonStr = line.slice(6).trim();
         if (jsonStr === "[DONE]") {
-          // Process any pending tool calls
-          for (const [id, tc] of Object.entries(toolCallsBuffer)) {
-            try {
-              const args = JSON.parse(tc.arguments);
-              onToolCall({
-                id,
-                name: tc.name,
-                arguments: args,
-                status: "pending",
-              });
-            } catch (e) {
-              console.error("Failed to parse tool call arguments:", e);
-            }
-          }
+          flushToolCalls();
           onDone();
           return;
         }
@@ -118,7 +125,8 @@ export async function streamChat(
           if (delta?.tool_calls) {
             for (const tc of delta.tool_calls) {
               const index = tc.index ?? 0;
-              const id = tc.id || `tc_${index}`;
+              const id = tc.id || toolCallIdsByIndex[index] || `tc_${index}`;
+              toolCallIdsByIndex[index] = id;
               
               if (!toolCallsBuffer[id]) {
                 toolCallsBuffer[id] = { name: "", arguments: "" };
@@ -139,6 +147,7 @@ export async function streamChat(
       }
     }
 
+    flushToolCalls();
     onDone();
   } catch (error) {
     console.error("Stream chat error:", error);
