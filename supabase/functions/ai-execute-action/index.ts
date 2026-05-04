@@ -673,12 +673,31 @@ serve(async (req) => {
           tasksCreated.push(task);
         }
 
+        let briefingCreated = false;
+        if (params.briefing) {
+          const { error: briefingErr } = await supabase
+            .from("briefings")
+            .insert({
+              project_id: project.id,
+              workspace_id: workspace_id,
+              data: params.briefing.data || params.start_date || new Date().toISOString().split("T")[0],
+              local: params.briefing.local || "A definir",
+              participantes_pagantes: params.briefing.participantes_pagantes || 0,
+              investimento_trafego: params.briefing.investimento || 0,
+              precos: {},
+              created_by: user.id,
+            });
+          briefingCreated = !briefingErr;
+          if (briefingErr) console.warn("[ai-execute-action] briefing failed", briefingErr.message);
+        }
+
         result = {
           success: true,
           project,
           tasks_created: tasksCreated.length,
           tasks_failed: tasksFailed.length,
-          message: `Projeto "${project.name}" criado com ${tasksCreated.length} tarefa(s)!${
+          briefing_created: briefingCreated,
+          message: `Projeto "${project.name}" criado com ${tasksCreated.length} tarefa(s)${briefingCreated ? " e briefing" : ""}!${
             tasksFailed.length > 0 ? ` (${tasksFailed.length} falharam)` : ""
           }`,
         };
