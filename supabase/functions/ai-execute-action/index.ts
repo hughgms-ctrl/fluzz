@@ -223,7 +223,10 @@ serve(async (req) => {
       });
     }
 
-    const { action, params, workspace_id } = await req.json();
+    const body = await req.json();
+    const action = normalizeToolAction(body.action || body.name || body.tool || body.function_name);
+    const params = body.params || body.arguments || {};
+    const workspace_id = body.workspace_id;
     console.log(`[ai-execute-action] action=${action} workspace=${workspace_id} user=${user.id}`);
     console.log(`[ai-execute-action] params=`, JSON.stringify(params).slice(0, 500));
 
@@ -305,18 +308,12 @@ serve(async (req) => {
           break;
         }
 
-        const priorityMap: Record<string, string> = {
-          baixa: "low",
-          média: "medium",
-          alta: "high",
-        };
-
         const { data, error } = await supabase
           .from("tasks")
           .insert({
             title: params.title,
             description: params.description || null,
-            priority: priorityMap[params.priority] || "medium",
+            priority: mapPriority(params.priority),
             project_id: params.project_id || null,
             assigned_to: params.assigned_to || user.id,
             setor: params.setor || null,
@@ -328,6 +325,7 @@ serve(async (req) => {
           .single();
 
         if (error) throw error;
+        await addTaskAssignee(supabase, data.id, params.assigned_to || user.id, user.id);
         result = { success: true, task: data, message: `Tarefa "${params.title}" criada com sucesso!` };
         break;
       }
