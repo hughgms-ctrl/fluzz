@@ -487,6 +487,15 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
                                     📅 {tc.arguments.start_date || "—"} → {tc.arguments.end_date || "—"}
                                   </p>
                                 )}
+                                {tc.arguments.briefing && (
+                                  <div className="rounded-lg border bg-background p-2 text-xs text-muted-foreground">
+                                    <p className="font-medium text-foreground">📄 Briefing</p>
+                                    {tc.arguments.briefing.data && <p>📅 {tc.arguments.briefing.data}</p>}
+                                    {tc.arguments.briefing.local && <p>📍 {tc.arguments.briefing.local}</p>}
+                                    {tc.arguments.briefing.participantes_pagantes != null && <p>👥 {tc.arguments.briefing.participantes_pagantes} participantes</p>}
+                                    {tc.arguments.briefing.investimento != null && <p>💰 R$ {tc.arguments.briefing.investimento}</p>}
+                                  </div>
+                                )}
                                 <div className="space-y-1.5 pt-1">
                                   <p className="text-xs font-semibold text-muted-foreground">
                                     {(tc.arguments.tasks || []).length} tarefa(s):
