@@ -174,6 +174,16 @@ const tools = [
           description: { type: "string" },
           start_date: { type: "string", description: "YYYY-MM-DD" },
           end_date: { type: "string", description: "YYYY-MM-DD" },
+          briefing: {
+            type: "object",
+            description: "Briefing inicial extraído da conversa/transcrição, se houver dados suficientes",
+            properties: {
+              data: { type: "string", description: "Data do evento/projeto (YYYY-MM-DD)" },
+              local: { type: "string" },
+              participantes_pagantes: { type: "number" },
+              investimento: { type: "number" },
+            },
+          },
           tasks: {
             type: "array",
             description: "Lista de tarefas a criar dentro do projeto",
@@ -638,6 +648,7 @@ Você ajuda o usuário a CRIAR PROJETOS COMPLETOS conversando. O usuário pode d
 TRANSCRIÇÕES DE REUNIÃO:
 - Se a mensagem vier com [TRANSCRIÇÃO ANEXADA], leia a transcrição inteira e extraia: objetivo do projeto, contexto, entregáveis, tarefas, subtarefas, responsáveis mencionados e prazos.
 - Se o projeto, tarefas e prazos estiverem claros o suficiente, proponha a estrutura em texto e chame **create_project_with_tasks** para o usuário confirmar no card.
+- Se houver briefing na conversa, inclua o objeto **briefing** dentro de **create_project_with_tasks** junto com projeto, tarefas e subtarefas.
 - Só faça perguntas se faltar algo essencial para criar com segurança (ex.: nome do projeto impossível de deduzir, prazo crítico ambíguo, responsável citado de forma impossível de identificar).
 - Não use extract_tasks_from_text para transcrições quando houver um projeto claro; use **create_project_with_tasks**.
 
