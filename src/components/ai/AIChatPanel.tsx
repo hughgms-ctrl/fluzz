@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { 
   Send, Loader2, Trash2, X, Check, Sparkles, Bot, User as UserIcon, 
-  History, Plus, ChevronLeft, ExternalLink, MessageSquare, Settings 
+  History, Plus, ChevronLeft, ExternalLink, MessageSquare, Settings,
+  Paperclip, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -218,7 +219,9 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
   const [input, setInput] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [transcriptFile, setTranscriptFile] = useState<{ name: string; content: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -229,9 +232,28 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
-    sendMessage(input.trim());
+    if ((!input.trim() && !transcriptFile) || isLoading) return;
+
+    const message = transcriptFile
+      ? `${input.trim() || "Transforme esta transcrição de reunião em um projeto completo no Fluzz."}\n\n[TRANSCRIÇÃO ANEXADA: ${transcriptFile.name}]\n${transcriptFile.content}\n[/TRANSCRIÇÃO ANEXADA]`
+      : input.trim();
+
+    sendMessage(message);
     setInput("");
+    setTranscriptFile(null);
+  };
+
+  const handleTranscriptUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    try {
+      const content = await file.text();
+      setTranscriptFile({ name: file.name, content });
+    } catch {
+      setTranscriptFile(null);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -594,20 +616,49 @@ export function AIChatPanel({ onClose, showCloseButton = false, className }: AIC
 
         {/* Input */}
         <div className="p-4 border-t bg-card/50 backdrop-blur-sm shrink-0">
+          {transcriptFile && (
+            <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+              <div className="flex min-w-0 items-center gap-2">
+                <FileText className="h-4 w-4 shrink-0 text-primary" />
+                <span className="truncate">{transcriptFile.name}</span>
+              </div>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTranscriptFile(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="flex gap-3">
             <div className="flex-1 relative">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.srt,.vtt,.csv,.json,.log"
+                className="hidden"
+                onChange={handleTranscriptUpload}
+              />
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Digite sua mensagem..."
-                className="min-h-[52px] max-h-[200px] resize-none pr-12 rounded-xl bg-background border-muted-foreground/20"
+                placeholder={transcriptFile ? "Opcional: diga o objetivo, restrições ou prazos importantes..." : "Digite sua mensagem..."}
+                className="min-h-[52px] max-h-[200px] resize-none pl-12 pr-12 rounded-xl bg-background border-muted-foreground/20"
                 disabled={isLoading}
               />
               <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={isLoading}
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute left-2 bottom-2 h-8 w-8 rounded-lg"
+                title="Anexar transcrição"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
+              <Button
                 type="submit"
                 size="icon"
-                disabled={!input.trim() || isLoading}
+                disabled={(!input.trim() && !transcriptFile) || isLoading}
                 className="absolute right-2 bottom-2 h-8 w-8 rounded-lg"
               >
                 {isLoading ? (
