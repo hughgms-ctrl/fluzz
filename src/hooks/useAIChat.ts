@@ -33,6 +33,28 @@ const ACTION_FUNCTIONS = [
   "extract_tasks_from_text",
 ];
 
+const ACTION_ALIASES: Record<string, string> = {
+  criar_projeto_com_tarefas: "create_project_with_tasks",
+  criar_projeto_e_tarefas: "create_project_with_tasks",
+  criar_projeto: "create_project",
+  criar_tarefa: "create_task",
+  criar_briefing: "create_briefing_for_project",
+  adicionar_subtarefas: "add_subtasks_to_task",
+  atualizar_tarefa: "update_task",
+  atualizar_projeto: "update_project",
+  excluir_tarefa: "delete_task",
+};
+
+const normalizeToolName = (name: string) => {
+  const normalized = (name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return ACTION_ALIASES[normalized] || name;
+};
+
 export interface Conversation {
   id: string;
   title: string;
@@ -405,15 +427,16 @@ export function useAIChat() {
     };
 
     const handleToolCall = async (toolCall: ToolCall) => {
+      const normalizedToolCall = { ...toolCall, name: normalizeToolName(toolCall.name) };
       // Se for uma consulta, executa automaticamente
-      if (QUERY_FUNCTIONS.includes(toolCall.name)) {
+      if (QUERY_FUNCTIONS.includes(normalizedToolCall.name)) {
         const result = await executeAction(
-          toolCall.name,
-          toolCall.arguments,
+          normalizedToolCall.name,
+          normalizedToolCall.arguments,
           workspace.id
         );
 
-        const formattedResult = formatQueryResult(toolCall.name, result.data || result);
+        const formattedResult = formatQueryResult(normalizedToolCall.name, result.data || result);
         
         // Adiciona o resultado formatado como mensagem do assistente
         setMessages((prev) => {
@@ -436,8 +459,20 @@ export function useAIChat() {
           ];
         });
       } else {
+        if (!ACTION_FUNCTIONS.includes(normalizedToolCall.name)) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: "assistant",
+              content: "Não consegui montar uma ação válida. Pode reformular o pedido com o nome do projeto, tarefas e prazos?",
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        }
         // Para ações que precisam confirmação, adiciona à lista de pendentes
-        setPendingToolCalls((prev) => [...prev, toolCall]);
+        setPendingToolCalls((prev) => [...prev, normalizedToolCall]);
       }
     };
 

@@ -174,6 +174,16 @@ const tools = [
           description: { type: "string" },
           start_date: { type: "string", description: "YYYY-MM-DD" },
           end_date: { type: "string", description: "YYYY-MM-DD" },
+          briefing: {
+            type: "object",
+            description: "Briefing inicial extraído da conversa/transcrição, se houver dados suficientes",
+            properties: {
+              data: { type: "string", description: "Data do evento/projeto (YYYY-MM-DD)" },
+              local: { type: "string" },
+              participantes_pagantes: { type: "number" },
+              investimento: { type: "number" },
+            },
+          },
           tasks: {
             type: "array",
             description: "Lista de tarefas a criar dentro do projeto",
@@ -596,7 +606,7 @@ serve(async (req) => {
       .maybeSingle();
 
     const provider = aiConfig?.use_own_key ? aiConfig.provider : "lovable";
-    const model = aiConfig?.model || "google/gemini-2.5-flash";
+    const model = aiConfig?.model || "google/gemini-3-flash-preview";
     const apiKey = aiConfig?.use_own_key ? aiConfig.api_key : LOVABLE_API_KEY;
 
     const roleDescription =
@@ -634,6 +644,13 @@ Você ajuda o usuário a CRIAR PROJETOS COMPLETOS conversando. O usuário pode d
 3. **EXECUTAR** — quando o usuário confirmar (sim, pode, cria, vai), use a tool **create_project_with_tasks** UMA ÚNICA VEZ com TODA a estrutura (projeto + tarefas + subtarefas). Não chame create_project + várias create_task — isso é ineficiente.
 
 4. **ITERAR** — depois de criado, o usuário pode pedir ajustes ("adiciona uma tarefa de revisão", "muda o prazo da 2 pra sexta"). Use update_task, add_subtasks_to_task, etc.
+
+TRANSCRIÇÕES DE REUNIÃO:
+- Se a mensagem vier com [TRANSCRIÇÃO ANEXADA], leia a transcrição inteira e extraia: objetivo do projeto, contexto, entregáveis, tarefas, subtarefas, responsáveis mencionados e prazos.
+- Se o projeto, tarefas e prazos estiverem claros o suficiente, proponha a estrutura em texto e chame **create_project_with_tasks** para o usuário confirmar no card.
+- Se houver briefing na conversa, inclua o objeto **briefing** dentro de **create_project_with_tasks** junto com projeto, tarefas e subtarefas.
+- Só faça perguntas se faltar algo essencial para criar com segurança (ex.: nome do projeto impossível de deduzir, prazo crítico ambíguo, responsável citado de forma impossível de identificar).
+- Não use extract_tasks_from_text para transcrições quando houver um projeto claro; use **create_project_with_tasks**.
 
 REGRAS DE OURO:
 - Para CONSULTAS (ver tarefas, listar projetos): execute imediatamente, sem confirmação.

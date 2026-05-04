@@ -48,6 +48,36 @@ function normalizeString(str: string): string {
     .trim();
 }
 
+const priorityMap: Record<string, string> = {
+  baixa: "low",
+  média: "medium",
+  media: "medium",
+  alta: "high",
+  low: "low",
+  medium: "medium",
+  high: "high",
+};
+
+function mapPriority(priority?: string) {
+  return priorityMap[normalizeString(priority || "")] || "medium";
+}
+
+function normalizeToolAction(action?: string) {
+  const normalized = normalizeString(action || "").replace(/\s+/g, "_");
+  const aliases: Record<string, string> = {
+    criar_projeto_com_tarefas: "create_project_with_tasks",
+    criar_projeto_e_tarefas: "create_project_with_tasks",
+    criar_projeto: "create_project",
+    criar_tarefa: "create_task",
+    criar_briefing: "create_briefing_for_project",
+    adicionar_subtarefas: "add_subtasks_to_task",
+    atualizar_tarefa: "update_task",
+    atualizar_projeto: "update_project",
+    excluir_tarefa: "delete_task",
+  };
+  return aliases[normalized] || action || "";
+}
+
 // Busca usuário por nome similar
 async function findUserByName(supabase: any, workspaceId: string, searchName: string) {
   const { data: members } = await supabase
@@ -120,6 +150,14 @@ async function findUserByName(supabase: any, workspaceId: string, searchName: st
   return bestMatch ? { ...bestMatch, similarity: bestScore } : null;
 }
 
+async function addTaskAssignee(supabase: any, taskId: string, userId: string | null, createdBy?: string) {
+  if (!userId) return;
+  const { error } = await supabase
+    .from("task_assignees")
+    .insert({ task_id: taskId, user_id: userId, created_by: createdBy || null });
+  if (error && error.code !== "23505") throw error;
+}
+
 // Get user permissions
 async function getUserPermissions(supabase: any, userId: string, workspaceId: string, userRole: string) {
   // Admin and gestor have full view permissions
@@ -185,7 +223,10 @@ serve(async (req) => {
       });
     }
 
-    const { action, params, workspace_id } = await req.json();
+    const body = await req.json();
+    const action = normalizeToolAction(body.action || body.name || body.tool || body.function_name);
+    const params = body.params || body.arguments || {};
+    const workspace_id = body.workspace_id;
     console.log(`[ai-execute-action] action=${action} workspace=${workspace_id} user=${user.id}`);
     console.log(`[ai-execute-action] params=`, JSON.stringify(params).slice(0, 500));
 
@@ -267,18 +308,12 @@ serve(async (req) => {
           break;
         }
 
-        const priorityMap: Record<string, string> = {
-          baixa: "low",
-          média: "medium",
-          alta: "high",
-        };
-
         const { data, error } = await supabase
           .from("tasks")
           .insert({
             title: params.title,
             description: params.description || null,
-            priority: priorityMap[params.priority] || "medium",
+            priority: mapPriority(params.priority),
             project_id: params.project_id || null,
             assigned_to: params.assigned_to || user.id,
             setor: params.setor || null,
@@ -290,6 +325,7 @@ serve(async (req) => {
           .single();
 
         if (error) throw error;
+        await addTaskAssignee(supabase, data.id, params.assigned_to || user.id, user.id);
         result = { success: true, task: data, message: `Tarefa "${params.title}" criada com sucesso!` };
         break;
       }
@@ -572,12 +608,6 @@ serve(async (req) => {
           break;
         }
 
-        const priorityMap: Record<string, string> = {
-          baixa: "low",
-          média: "medium",
-          alta: "high",
-        };
-
         // 1. Criar o projeto (em modo draft)
         const { data: project, error: pErr } = await supabase
           .from("projects")
@@ -613,7 +643,7 @@ serve(async (req) => {
             .insert({
               title: t.title,
               description: t.description || null,
-              priority: priorityMap[t.priority] || "medium",
+              priority: mapPriority(t.priority),
               project_id: project.id,
               assigned_to: assigneeId,
               due_date: t.due_date || null,
@@ -628,6 +658,8 @@ serve(async (req) => {
             continue;
           }
 
+          await addTaskAssignee(supabase, task.id, assigneeId, user.id);
+
           // 3. Criar subtarefas
           if (t.subtasks && t.subtasks.length > 0) {
             const subRows = t.subtasks.map((s: any, idx: number) => ({
@@ -641,12 +673,31 @@ serve(async (req) => {
           tasksCreated.push(task);
         }
 
+        let briefingCreated = false;
+        if (params.briefing) {
+          const { error: briefingErr } = await supabase
+            .from("briefings")
+            .insert({
+              project_id: project.id,
+              workspace_id: workspace_id,
+              data: params.briefing.data || params.start_date || new Date().toISOString().split("T")[0],
+              local: params.briefing.local || "A definir",
+              participantes_pagantes: params.briefing.participantes_pagantes || 0,
+              investimento_trafego: params.briefing.investimento || 0,
+              precos: {},
+              created_by: user.id,
+            });
+          briefingCreated = !briefingErr;
+          if (briefingErr) console.warn("[ai-execute-action] briefing failed", briefingErr.message);
+        }
+
         result = {
           success: true,
           project,
           tasks_created: tasksCreated.length,
           tasks_failed: tasksFailed.length,
-          message: `Projeto "${project.name}" criado com ${tasksCreated.length} tarefa(s)!${
+          briefing_created: briefingCreated,
+          message: `Projeto "${project.name}" criado com ${tasksCreated.length} tarefa(s)${briefingCreated ? " e briefing" : ""}!${
             tasksFailed.length > 0 ? ` (${tasksFailed.length} falharam)` : ""
           }`,
         };
