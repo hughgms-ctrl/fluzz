@@ -459,6 +459,18 @@ export function useAIChat() {
           ];
         });
       } else {
+        if (!ACTION_FUNCTIONS.includes(normalizedToolCall.name)) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: generateId(),
+              role: "assistant",
+              content: "Não consegui montar uma ação válida. Pode reformular o pedido com o nome do projeto, tarefas e prazos?",
+              timestamp: new Date(),
+            },
+          ]);
+          return;
+        }
         // Para ações que precisam confirmação, adiciona à lista de pendentes
         setPendingToolCalls((prev) => [...prev, normalizedToolCall]);
       }
