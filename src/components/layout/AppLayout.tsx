@@ -167,7 +167,7 @@ export const AppLayout = ({
             {children}
             </main>
           </div>
-          <AIFloatingButton />
+          {location.pathname !== "/ai-assistant" && <AIFloatingButton />}
           <SetupPopup />
           {/* Mobile Bottom Navigation - Show in both modes */}
           {isMobile && <MobileBottomNav />}
