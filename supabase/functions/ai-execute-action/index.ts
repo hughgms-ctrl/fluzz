@@ -48,6 +48,36 @@ function normalizeString(str: string): string {
     .trim();
 }
 
+const priorityMap: Record<string, string> = {
+  baixa: "low",
+  média: "medium",
+  media: "medium",
+  alta: "high",
+  low: "low",
+  medium: "medium",
+  high: "high",
+};
+
+function mapPriority(priority?: string) {
+  return priorityMap[normalizeString(priority || "")] || "medium";
+}
+
+function normalizeToolAction(action?: string) {
+  const normalized = normalizeString(action || "").replace(/\s+/g, "_");
+  const aliases: Record<string, string> = {
+    criar_projeto_com_tarefas: "create_project_with_tasks",
+    criar_projeto_e_tarefas: "create_project_with_tasks",
+    criar_projeto: "create_project",
+    criar_tarefa: "create_task",
+    criar_briefing: "create_briefing_for_project",
+    adicionar_subtarefas: "add_subtasks_to_task",
+    atualizar_tarefa: "update_task",
+    atualizar_projeto: "update_project",
+    excluir_tarefa: "delete_task",
+  };
+  return aliases[normalized] || action || "";
+}
+
 // Busca usuário por nome similar
 async function findUserByName(supabase: any, workspaceId: string, searchName: string) {
   const { data: members } = await supabase
@@ -118,6 +148,14 @@ async function findUserByName(supabase: any, workspaceId: string, searchName: st
   }
 
   return bestMatch ? { ...bestMatch, similarity: bestScore } : null;
+}
+
+async function addTaskAssignee(supabase: any, taskId: string, userId: string | null, createdBy?: string) {
+  if (!userId) return;
+  const { error } = await supabase
+    .from("task_assignees")
+    .insert({ task_id: taskId, user_id: userId, created_by: createdBy || null });
+  if (error && error.code !== "23505") throw error;
 }
 
 // Get user permissions
