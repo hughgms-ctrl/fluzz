@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { AIChatPanel } from "./AIChatPanel";
