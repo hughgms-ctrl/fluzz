@@ -608,12 +608,6 @@ serve(async (req) => {
           break;
         }
 
-        const priorityMap: Record<string, string> = {
-          baixa: "low",
-          média: "medium",
-          alta: "high",
-        };
-
         // 1. Criar o projeto (em modo draft)
         const { data: project, error: pErr } = await supabase
           .from("projects")
@@ -649,7 +643,7 @@ serve(async (req) => {
             .insert({
               title: t.title,
               description: t.description || null,
-              priority: priorityMap[t.priority] || "medium",
+              priority: mapPriority(t.priority),
               project_id: project.id,
               assigned_to: assigneeId,
               due_date: t.due_date || null,
@@ -663,6 +657,8 @@ serve(async (req) => {
             tasksFailed.push({ title: t.title, error: tErr.message });
             continue;
           }
+
+          await addTaskAssignee(supabase, task.id, assigneeId, user.id);
 
           // 3. Criar subtarefas
           if (t.subtasks && t.subtasks.length > 0) {
